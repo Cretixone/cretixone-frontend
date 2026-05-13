@@ -28,6 +28,7 @@ export default {
         sans: ['"Helvetica Neue"', 'Helvetica', 'Arial', 'system-ui', 'sans-serif'],
         display: ['"Helvetica Neue"', 'Helvetica', 'Arial', 'system-ui', 'sans-serif'],
         dm: ['"DM Sans"', 'system-ui', 'sans-serif'],
+        jasmine: ['"JasmineUPC"', 'system-ui', 'sans-serif'],
       },
     },
   },

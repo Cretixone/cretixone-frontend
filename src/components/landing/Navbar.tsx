@@ -14,6 +14,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { Link } from 'react-router-dom'
 
 const NAV_LINKS = [
   { label: 'All Frames', href: '#frames' },
@@ -21,7 +22,7 @@ const NAV_LINKS = [
   { label: 'Stock Photo', href: '#stock' },
   { label: 'Custom Mirror', href: '#mirror' },
   { label: 'Gifts', href: '#gifts' },
-  { label: 'About', href: '#about' },
+  { label: 'About', href: '/about' },
 ]
 
 const SOCIALS = [
@@ -30,10 +31,6 @@ const SOCIALS = [
   { Icon: Instagram, label: 'Instagram', href: '#' },
 ]
 
-// Approximate height of the top header row (logo / socials / cart). Drives
-// the pill nav's vertical offset: while scroll < HEADER_H the pill floats just
-// below the header; once scroll >= HEADER_H - STUCK_GAP the pill sticks at
-// `top: STUCK_GAP` (a small breathing-room margin from the viewport top).
 const HEADER_H = 72
 const STUCK_GAP = 14
 
@@ -57,11 +54,6 @@ function CretixoneLogo({ className }: CretixoneLogoProps) {
   )
 }
 
-/**
- * Top-of-banner header (socials, logo, lang/cart, mobile-menu toggle).
- * Rendered INSIDE Banner so it overlays the hero image; scrolls naturally
- * with the page (NOT sticky).
- */
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -164,16 +156,6 @@ export default function Navbar() {
   )
 }
 
-/**
- * Sticky pill nav — fixed-positioned, lives at the LandingPage root so it
- * isn't trapped inside Banner's isolated stacking context. Initially sits
- * `HEADER_H` px below the viewport top (just under the in-banner header).
- * As the user scrolls, its `top` decreases until it reaches `STUCK_GAP`,
- * where it stays for the remainder of the page — giving a small breathing-
- * room margin from the viewport edge while stuck.
- *
- * Hidden on mobile (the mobile menu inside Navbar handles small viewports).
- */
 export function PillNav() {
   const [pillTop, setPillTop] = useState(HEADER_H)
   const [stuck, setStuck] = useState(false)
@@ -208,12 +190,12 @@ export function PillNav() {
         <ul className="flex items-center gap-1 pr-2">
           {NAV_LINKS.map((l) => (
             <li key={l.label}>
-              <a
-                href={l.href}
+              <Link
+                to={l.href}
                 className="rounded-full px-4 py-2 text-sm font-medium text-white/95 transition hover:bg-white/15"
               >
                 {l.label}
-              </a>
+              </Link>
             </li>
           ))}
         </ul>

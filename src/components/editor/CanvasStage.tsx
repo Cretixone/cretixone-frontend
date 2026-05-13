@@ -4,6 +4,11 @@ import { useEditorStore, OSS_PREFIX } from '@/store/editorStore'
 import type { ApiFrame, ApiScene, ApiEffectItem } from '@/types/api'
 import { useCanvasSize } from '@/hooks/useCanvasSize'
 import { useImageUpload } from '@/hooks/useImageUpload'
+import {
+  isLocalFrame,
+  getCachedLocalFrame,
+  loadLocalFrame,
+} from '@/data/localFrames'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -164,11 +169,20 @@ function mountSprite(L: Layers, tex: PIXI.Texture, renderFn: () => void) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function CanvasStage() {
+interface CanvasStageProps {
+  // When provided, this frame is always used instead of the store's
+  // selectedFrame. Used by the local-frame demo route (/editor?demo=1).
+  frameOverride?: ApiFrame | null
+}
+
+export default function CanvasStage({
+  frameOverride = null,
+}: CanvasStageProps = {}) {
   const mountRef = useRef<HTMLDivElement>(null)
   const containerRef = useCanvasSize()
   const appRef = useRef<PIXI.Application | null>(null)
   const layersRef = useRef<Layers | null>(null)
+  const frameOverrideRef = useRef<ApiFrame | null>(frameOverride)
   const { openFilePicker, handleDrop, handleDragOver } = useImageUpload()
 
   // ── Init ──────────────────────────────────────────────────────────────────
@@ -334,7 +348,7 @@ export default function CanvasStage() {
     const cy = H / 2
 
     const s = useEditorStore.getState()
-    const frame: ApiFrame | null = s.selectedFrame
+    const frame: ApiFrame | null = frameOverrideRef.current ?? s.selectedFrame
     const interior: ApiScene | null = s.selectedInterior
     const scenery: ApiScene | null = s.selectedScenery
     const matSizeItem = s.selectedMatSize
@@ -564,15 +578,45 @@ export default function CanvasStage() {
 
       } else if (validPieceCount >= 4) {
         // ── 8-piece frame construction ──
+        // When the corner image has transparent inner padding (its L-arm
+        // occupies only a fraction of the image), we draw the corner at
+        // `cornerSize = framePx / ratio` so that the visible moulding
+        // thickness equals the stick thickness. Sticks then start at
+        // `cornerSize` from each edge instead of `framePx`. API frames
+        // have ratio=1 (no padding); local frames look it up in the
+        // registry. If a local frame is selected but its measurements
+        // aren't ready yet, trigger the async load and re-render once
+        // it completes.
+        let ratio = 1
+        if (isLocalFrame(frame)) {
+          const loaded = getCachedLocalFrame(frame.id)
+          if (loaded) {
+            ratio = loaded.cornerInsetRatio
+          } else {
+            const snap = frame.id
+            void loadLocalFrame(frame.id)?.then(() => {
+              const L2 = layersRef.current
+              if (!L2) return
+              // Re-render only if this local frame is still the active one.
+              const s2 = useEditorStore.getState()
+              const current = frameOverrideRef.current ?? s2.selectedFrame
+              if (current?.id !== snap) return
+              render()
+            })
+          }
+        }
+        ratio = Math.max(0.05, Math.min(1, ratio))
+        const cornerSize = framePx / ratio
+        const sideOffset = cornerSize
         const pieceDefs = [
-          { url: frame.leftUpImg,    x: frameX0,                        y: frameY0,                        w: framePx,              h: framePx },
-          { url: frame.upImg,        x: frameX0 + framePx,              y: frameY0,                        w: outerW - framePx * 2, h: framePx },
-          { url: frame.rightUpImg,   x: frameX0 + outerW - framePx,     y: frameY0,                        w: framePx,              h: framePx },
-          { url: frame.leftImg,      x: frameX0,                        y: frameY0 + framePx,              w: framePx,              h: outerH - framePx * 2 },
-          { url: frame.rightImg,     x: frameX0 + outerW - framePx,     y: frameY0 + framePx,              w: framePx,              h: outerH - framePx * 2 },
-          { url: frame.leftDownImg,  x: frameX0,                        y: frameY0 + outerH - framePx,     w: framePx,              h: framePx },
-          { url: frame.downImg,      x: frameX0 + framePx,              y: frameY0 + outerH - framePx,     w: outerW - framePx * 2, h: framePx },
-          { url: frame.rightDownImg, x: frameX0 + outerW - framePx,     y: frameY0 + outerH - framePx,     w: framePx,              h: framePx },
+          { url: frame.leftUpImg,    x: frameX0,                            y: frameY0,                            w: cornerSize,                h: cornerSize },
+          { url: frame.upImg,        x: frameX0 + sideOffset,               y: frameY0,                            w: outerW - sideOffset * 2,   h: framePx },
+          { url: frame.rightUpImg,   x: frameX0 + outerW - cornerSize,      y: frameY0,                            w: cornerSize,                h: cornerSize },
+          { url: frame.leftImg,      x: frameX0,                            y: frameY0 + sideOffset,               w: framePx,                   h: outerH - sideOffset * 2 },
+          { url: frame.rightImg,     x: frameX0 + outerW - framePx,         y: frameY0 + sideOffset,               w: framePx,                   h: outerH - sideOffset * 2 },
+          { url: frame.leftDownImg,  x: frameX0,                            y: frameY0 + outerH - cornerSize,      w: cornerSize,                h: cornerSize },
+          { url: frame.downImg,      x: frameX0 + sideOffset,               y: frameY0 + outerH - framePx,         w: outerW - sideOffset * 2,   h: framePx },
+          { url: frame.rightDownImg, x: frameX0 + outerW - cornerSize,      y: frameY0 + outerH - cornerSize,      w: cornerSize,                h: cornerSize },
         ]
           .filter(p => p.url && p.url.length > 0)       // skip empty pieces
           .map(p => ({ ...p, url: prefix + p.url }))    // prepend prefix
@@ -821,6 +865,14 @@ export default function CanvasStage() {
     window.addEventListener('resize', onResize)
     return () => { unsub(); window.removeEventListener('resize', onResize) }
   }, [render])
+
+  // Sync prop-based frame override → ref + re-render
+  useEffect(() => {
+    frameOverrideRef.current = frameOverride ?? null
+    // Force the next render to refetch piece textures for the new frame.
+    if (layersRef.current) layersRef.current.loadedFrameId = -1
+    render()
+  }, [frameOverride, render])
 
   // ── Expose save ───────────────────────────────────────────────────────────
   useEffect(() => {

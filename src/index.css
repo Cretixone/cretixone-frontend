@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── JasmineUPC (self-hosted, regular only) ─────────────────────────────── */
+@font-face {
+  font-family: 'JasmineUPC';
+  src: url('/fonts/Jasmine-upc/JasmineUPCRegular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ── DM Sans (self-hosted, static weights) ──────────────────────────────── */
 @font-face {
   font-family: 'DM Sans';
@@ -328,4 +337,11 @@
 
 .font-rubik {
   font-family: 'Rubik', sans-serif !important;
+}
+.font-jasmine {
+  font-family: 'JasmineUPC', sans-serif !important;
+}
+
+.color-gray {
+  color: #3D3D3D;
 }

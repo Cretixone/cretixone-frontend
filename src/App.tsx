@@ -7,6 +7,8 @@ import { fetchAccessToken } from '@/store/api/axiosInstance'
 const CanvasStage = lazy(() => import('@/components/editor/CanvasStage'))
 const FrameDemoCanvas = lazy(() => import('@/components/editor/FrameDemoCanvas'))
 const LandingPage = lazy(() => import('@/pages/LandingPage'))
+const TermsPage = lazy(() => import('@/pages/TermsPage'))
+const AboutPage = lazy(() => import('@/pages/AboutPage'))
 
 const isDemoMode =
   typeof window !== 'undefined' &&
@@ -39,6 +41,8 @@ export default function App() {
     <Suspense fallback={<FullPageLoader />}>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/about" element={<AboutPage />} />
         <Route path="/editor" element={<EditorApp />} />
         <Route path="/landing" element={<Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />

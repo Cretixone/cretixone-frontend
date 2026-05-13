@@ -1,5 +1,6 @@
 import { Facebook, Twitter, Instagram } from 'lucide-react'
 import { motion, type Variants } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
 const PRODUCT_LINKS = [
@@ -11,7 +12,7 @@ const PRODUCT_LINKS = [
 ]
 
 const COMPANY_LINKS = [
-  { label: 'About', href: '#about' },
+  { label: 'About', href: '/about' },
   { label: 'Team', href: '#team' },
   { label: 'Testimonials', href: '#testimonials' },
 ]
@@ -43,12 +44,6 @@ export default function Footer() {
       <h2 id="footer-heading" className="sr-only">
         Footer
       </h2>
-
-      {/* Warm amber blur — figma Ellipse 2523. Vertical center sits on the
-          copyright divider line: top half of the ellipse washes over the
-          column links (reaching up past Mirror Works), bottom half drops
-          below the footer edge (clipped by `overflow-hidden`). Width spans
-          the page, capped to 140vw so it never triggers horizontal scroll. */}
       <div
         aria-hidden
         className="pointer-events-none absolute left-1/2 z-0 -translate-x-1/2 rounded-full"
@@ -56,7 +51,7 @@ export default function Footer() {
           bottom: '-186px',
           width: 'min(1560px, 140vw)',
           height: '270px',
-          background: 'rgba(244, 199, 120, 0.75)',
+          background: 'rgba(65, 105, 226, 0.2)',
           filter: 'blur(130px)',
         }}
       />
@@ -75,8 +70,8 @@ export default function Footer() {
         >
           {/* Brand */}
           <motion.div className="md:col-span-4" variants={fadeUp}>
-            <a
-              href="/landing"
+            <Link
+              to="/"
               className="inline-flex items-center"
               aria-label="Cretixone home"
             >
@@ -85,7 +80,7 @@ export default function Footer() {
                 alt="Cretixone"
                 className="h-8 w-auto md:h-9"
               />
-            </a>
+            </Link>
             <p className="mt-5 max-w-xs text-sm leading-relaxed text-foreground">
               Our vision is to provide convenience and help increase your sales
               business.
@@ -146,12 +141,12 @@ export default function Footer() {
               >
                 Privacy &amp; Policy
               </a>
-              <a
-                href="#terms"
+              <Link
+                to="/terms"
                 className="transition hover:text-brand-navy"
               >
                 Terms &amp; Condition
-              </a>
+              </Link>
             </div>
           </div>
         </motion.div>
@@ -173,12 +168,12 @@ function FooterColumn({ heading, links, className }: FooterColumnProps) {
       <ul className="mt-5 space-y-3.5">
         {links.map((l) => (
           <li key={l.label}>
-            <a
-              href={l.href}
+            <Link
+              to={l.href}
               className="text-[14px] text-[#1A202C] transition hover:text-brand-navy"
             >
               {l.label}
-            </a>
+            </Link>
           </li>
         ))}
       </ul>

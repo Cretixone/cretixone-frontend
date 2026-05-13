@@ -7,6 +7,7 @@ import {
   useFetchEffectsQuery,
 } from '@/store/api/apiSlice'
 import type { ApiFrame, ApiScene, ApiPaperItem, ApiEffectItem } from '@/types/api'
+import { LOCAL_FRAMES } from '@/data/localFrames'
 import ControlsPanel from '@/components/editor/ControlsPanel'
 import { clsx } from 'clsx'
 import {
@@ -266,7 +267,7 @@ export default function Sidebar() {
                 <p className="text-xs text-red-400 text-center py-4">Failed to load frames</p>
               ) : (
                 <div className="grid grid-cols-3 gap-2">
-                  {framesQuery.data?.map(item => (
+                  {[...LOCAL_FRAMES, ...(framesQuery.data ?? [])].map(item => (
                     <FrameThumb
                       key={item.id}
                       item={item}
