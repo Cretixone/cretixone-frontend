@@ -7,6 +7,7 @@ import { useImageUpload } from '@/hooks/useImageUpload'
 import {
   isLocalFrame,
   getCachedLocalFrame,
+  getLocalFrameGeometry,
   loadLocalFrame,
 } from '@/data/localFrames'
 
@@ -500,7 +501,24 @@ export default function CanvasStage({
     // Detect frame type and compute border thickness
     const dto = (frame?.isOtherFrame && frame.otherFrameInfoDTO) ? frame.otherFrameInfoDTO : null
     // Slider 5–30 maps directly to 5–30% of smaller dimension per side
-    const framePx = Math.round(Math.min(outerW, outerH) * s.frameWidth / 100)
+    let framePx = Math.round(Math.min(outerW, outerH) * s.frameWidth / 100)
+    // For local frames the corner image extends a per-axis amount
+    // inward — horizontally `cornerBboxW × framePx / verticalThicknessSrc`
+    // and vertically `cornerBboxH × framePx / horizontalThicknessSrc`.
+    // Two corners must fit within outerW (horizontally) and outerH
+    // (vertically). Clamp framePx so neither axis overflows. API frames
+    // are unaffected.
+    if (frame && isLocalFrame(frame)) {
+      const geom = getLocalFrameGeometry(frame.id)
+      if (geom) {
+        const ratioH = geom.cornerBboxW / geom.verticalThicknessSrc
+        const ratioV = geom.cornerBboxH / geom.horizontalThicknessSrc
+        const maxFramePxH = Math.floor(outerW / 2 / ratioH)
+        const maxFramePxV = Math.floor(outerH / 2 / ratioV)
+        const maxFramePx = Math.min(maxFramePxH, maxFramePxV)
+        if (framePx > maxFramePx) framePx = maxFramePx
+      }
+    }
 
     // Content area inside the frame border
     // For "other" frames, derive from otherFrameInfoDTO proportions
@@ -578,48 +596,149 @@ export default function CanvasStage({
 
       } else if (validPieceCount >= 4) {
         // ── 8-piece frame construction ──
-        // When the corner image has transparent inner padding (its L-arm
-        // occupies only a fraction of the image), we draw the corner at
-        // `cornerSize = framePx / ratio` so that the visible moulding
-        // thickness equals the stick thickness. Sticks then start at
-        // `cornerSize` from each edge instead of `framePx`. API frames
-        // have ratio=1 (no padding); local frames look it up in the
-        // registry. If a local frame is selected but its measurements
-        // aren't ready yet, trigger the async load and re-render once
-        // it completes.
-        let ratio = 1
-        if (isLocalFrame(frame)) {
-          const loaded = getCachedLocalFrame(frame.id)
-          if (loaded) {
-            ratio = loaded.cornerInsetRatio
-          } else {
-            const snap = frame.id
-            void loadLocalFrame(frame.id)?.then(() => {
-              const L2 = layersRef.current
-              if (!L2) return
-              // Re-render only if this local frame is still the active one.
-              const s2 = useEditorStore.getState()
-              const current = frameOverrideRef.current ?? s2.selectedFrame
-              if (current?.id !== snap) return
-              render()
-            })
-          }
+        // Two paths:
+        //
+        // 1. LOCAL FRAME PATH — uses per-piece moulding-box geometry
+        //    (LocalFrameGeometry) to position each piece so the visible
+        //    moulding (not the transparent outer-shadow padding around
+        //    it) aligns exactly with the frame's outer edge. Each piece
+        //    can have different shadow padding on different sides; the
+        //    image gets drawn slightly larger than the visible moulding
+        //    rectangle, with the extra extending outward into the
+        //    shadow space — never overlapping a neighbor.
+        //
+        // 2. API FRAME PATH — keeps the existing simple model where
+        //    every piece exactly fills its visible slot (corners are
+        //    framePx × framePx, sticks are framePx thick). API frame
+        //    assets are designed for this model.
+
+        const localGeom = frame && isLocalFrame(frame)
+          ? getLocalFrameGeometry(frame.id)
+          : null
+        const localLoaded = frame && isLocalFrame(frame)
+          ? getCachedLocalFrame(frame.id)
+          : null
+
+        // Kick off the eager local-frame load if we haven't yet, so the
+        // geometry-aware path can take over once images are ready.
+        if (frame && isLocalFrame(frame) && !localLoaded) {
+          const snap = frame.id
+          void loadLocalFrame(frame.id)?.then(() => {
+            const L2 = layersRef.current
+            if (!L2) return
+            const s2 = useEditorStore.getState()
+            const current = frameOverrideRef.current ?? s2.selectedFrame
+            if (current?.id !== snap) return
+            render()
+          })
         }
-        ratio = Math.max(0.05, Math.min(1, ratio))
-        const cornerSize = framePx / ratio
-        const sideOffset = cornerSize
-        const pieceDefs = [
-          { url: frame.leftUpImg,    x: frameX0,                            y: frameY0,                            w: cornerSize,                h: cornerSize },
-          { url: frame.upImg,        x: frameX0 + sideOffset,               y: frameY0,                            w: outerW - sideOffset * 2,   h: framePx },
-          { url: frame.rightUpImg,   x: frameX0 + outerW - cornerSize,      y: frameY0,                            w: cornerSize,                h: cornerSize },
-          { url: frame.leftImg,      x: frameX0,                            y: frameY0 + sideOffset,               w: framePx,                   h: outerH - sideOffset * 2 },
-          { url: frame.rightImg,     x: frameX0 + outerW - framePx,         y: frameY0 + sideOffset,               w: framePx,                   h: outerH - sideOffset * 2 },
-          { url: frame.leftDownImg,  x: frameX0,                            y: frameY0 + outerH - cornerSize,      w: cornerSize,                h: cornerSize },
-          { url: frame.downImg,      x: frameX0 + sideOffset,               y: frameY0 + outerH - framePx,         w: outerW - sideOffset * 2,   h: framePx },
-          { url: frame.rightDownImg, x: frameX0 + outerW - cornerSize,      y: frameY0 + outerH - cornerSize,      w: cornerSize,                h: cornerSize },
-        ]
-          .filter(p => p.url && p.url.length > 0)       // skip empty pieces
-          .map(p => ({ ...p, url: prefix + p.url }))    // prepend prefix
+
+        let pieceDefs: Array<{
+          url: string
+          x: number
+          y: number
+          w: number
+          h: number
+        }>
+
+        if (localGeom && localLoaded) {
+          // ── Local-frame moulding-box path ──
+          // Per-axis scaling: the moulding can have a different source
+          // thickness on horizontal sides vs vertical sides. Each side
+          // maps its own source thickness to framePx in canvas.
+          //   sxCorner = framePx / verticalThicknessSrc
+          //   syCorner = framePx / horizontalThicknessSrc
+          // Corner canvas extents come from the corner bbox times the
+          // axis scale.
+          const sxCorner = framePx / localGeom.verticalThicknessSrc
+          const syCorner = framePx / localGeom.horizontalThicknessSrc
+          const cornerCanvasW = localGeom.cornerBboxW * sxCorner
+          const cornerCanvasH = localGeom.cornerBboxH * syCorner
+          const sideH = Math.max(1, outerW - 2 * cornerCanvasW)
+          const sideV = Math.max(1, outerH - 2 * cornerCanvasH)
+
+          // Maps each piece's source moulding box → its canvas target
+          // rectangle. The image itself will be drawn larger than this
+          // box; we then offset by -pieceBox.x*sx, -pieceBox.y*sy so the
+          // moulding region inside the image lands exactly on the target.
+          const slots = [
+            { url: frame.leftUpImg,
+              box: localGeom.pieces.leftUp,
+              tX: frameX0,                            tY: frameY0,
+              tW: cornerCanvasW,                      tH: cornerCanvasH },
+            { url: frame.upImg,
+              box: localGeom.pieces.up,
+              tX: frameX0 + cornerCanvasW,            tY: frameY0,
+              tW: sideH,                              tH: framePx },
+            { url: frame.rightUpImg,
+              box: localGeom.pieces.rightUp,
+              tX: frameX0 + outerW - cornerCanvasW,   tY: frameY0,
+              tW: cornerCanvasW,                      tH: cornerCanvasH },
+            { url: frame.leftImg,
+              box: localGeom.pieces.left,
+              tX: frameX0,                            tY: frameY0 + cornerCanvasH,
+              tW: framePx,                            tH: sideV },
+            { url: frame.rightImg,
+              box: localGeom.pieces.right,
+              tX: frameX0 + outerW - framePx,         tY: frameY0 + cornerCanvasH,
+              tW: framePx,                            tH: sideV },
+            { url: frame.leftDownImg,
+              box: localGeom.pieces.leftDown,
+              tX: frameX0,                            tY: frameY0 + outerH - cornerCanvasH,
+              tW: cornerCanvasW,                      tH: cornerCanvasH },
+            { url: frame.downImg,
+              box: localGeom.pieces.down,
+              tX: frameX0 + cornerCanvasW,            tY: frameY0 + outerH - framePx,
+              tW: sideH,                              tH: framePx },
+            { url: frame.rightDownImg,
+              box: localGeom.pieces.rightDown,
+              tX: frameX0 + outerW - cornerCanvasW,   tY: frameY0 + outerH - cornerCanvasH,
+              tW: cornerCanvasW,                      tH: cornerCanvasH },
+          ]
+
+          // Resolve each slot into (drawX, drawY, drawW, drawH) by
+          // looking up the image's natural size and applying the
+          // pieceBox → target mapping.
+          const imgByUrl = new Map<string, HTMLImageElement>([
+            [frame.leftUpImg,    localLoaded.images.leftUp],
+            [frame.upImg,        localLoaded.images.up],
+            [frame.rightUpImg,   localLoaded.images.rightUp],
+            [frame.leftImg,      localLoaded.images.left],
+            [frame.rightImg,     localLoaded.images.right],
+            [frame.leftDownImg,  localLoaded.images.leftDown],
+            [frame.downImg,      localLoaded.images.down],
+            [frame.rightDownImg, localLoaded.images.rightDown],
+          ])
+
+          pieceDefs = slots
+            .filter(s => s.url && s.url.length > 0)
+            .map(slot => {
+              const img = imgByUrl.get(slot.url)!
+              const sx = slot.tW / slot.box.w
+              const sy = slot.tH / slot.box.h
+              return {
+                url: prefix + slot.url,
+                x: slot.tX - slot.box.x * sx,
+                y: slot.tY - slot.box.y * sy,
+                w: img.naturalWidth * sx,
+                h: img.naturalHeight * sy,
+              }
+            })
+        } else {
+          // ── API-frame path (original behaviour) ──
+          pieceDefs = [
+            { url: frame.leftUpImg,    x: frameX0,                        y: frameY0,                        w: framePx,              h: framePx },
+            { url: frame.upImg,        x: frameX0 + framePx,              y: frameY0,                        w: outerW - framePx * 2, h: framePx },
+            { url: frame.rightUpImg,   x: frameX0 + outerW - framePx,     y: frameY0,                        w: framePx,              h: framePx },
+            { url: frame.leftImg,      x: frameX0,                        y: frameY0 + framePx,              w: framePx,              h: outerH - framePx * 2 },
+            { url: frame.rightImg,     x: frameX0 + outerW - framePx,     y: frameY0 + framePx,              w: framePx,              h: outerH - framePx * 2 },
+            { url: frame.leftDownImg,  x: frameX0,                        y: frameY0 + outerH - framePx,     w: framePx,              h: framePx },
+            { url: frame.downImg,      x: frameX0 + framePx,              y: frameY0 + outerH - framePx,     w: outerW - framePx * 2, h: framePx },
+            { url: frame.rightDownImg, x: frameX0 + outerW - framePx,     y: frameY0 + outerH - framePx,     w: framePx,              h: framePx },
+          ]
+            .filter(p => p.url && p.url.length > 0)
+            .map(p => ({ ...p, url: prefix + p.url }))
+        }
 
         let needsLoad = false
         for (const p of pieceDefs) {

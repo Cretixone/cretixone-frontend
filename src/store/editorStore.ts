@@ -26,6 +26,10 @@ export type EditorState = {
   // Sub-tabs
   activeMatTab: string
   activeEffectTab: string
+  // Frame category — null = "All", a string = category slug.
+  // Initial value is set on first fetch to the first category's slug
+  // so a category is always active by default.
+  activeFrameCategorySlug: string | null
 
   // Sizing
   frameWidth: number              // 5–30, grows inward
@@ -65,6 +69,7 @@ export type EditorState = {
   setSelectedMatBorder: (item: ApiPaperItem | null) => void
   setActiveMatTab: (tab: string) => void
   setActiveEffectTab: (tab: string) => void
+  setActiveFrameCategorySlug: (slug: string | null) => void
   setFrameWidth: (w: number) => void
   setLineWidth: (w: number) => void
   setShadowEnabled: (e: boolean) => void
@@ -93,6 +98,7 @@ export const useEditorStore = create<EditorState>((set) => ({
 
   activeMatTab: 'Size',
   activeEffectTab: 'Light effect',
+  activeFrameCategorySlug: null,
 
   frameWidth: 10,
   lineWidth: 0,
@@ -142,6 +148,7 @@ export const useEditorStore = create<EditorState>((set) => ({
 
   setActiveMatTab: (tab) => set({ activeMatTab: tab }),
   setActiveEffectTab: (tab) => set({ activeEffectTab: tab }),
+  setActiveFrameCategorySlug: (slug) => set({ activeFrameCategorySlug: slug }),
   setFrameWidth: (w) => set({ frameWidth: w }),
   setLineWidth: (w) => set({ lineWidth: w }),
   setShadowEnabled: (e) => set({ shadowEnabled: e }),

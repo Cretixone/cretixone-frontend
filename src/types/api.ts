@@ -12,6 +12,10 @@ export interface ApiFrame {
   urlPrefix: string
   id: number
   type: number
+  // Cretixone backend frames carry a category id so the user-side sidebar
+  // can show category tabs. Bundled/local frames leave this undefined.
+  categoryId?: string | null
+  categorySlug?: string | null
   isVip: boolean
   isSuper: boolean
   leftUpWidth: number

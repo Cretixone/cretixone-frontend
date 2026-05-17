@@ -13,7 +13,6 @@ export interface StackSlide {
 
 export interface StackSliderProps {
   slides: StackSlide[]
-  /** Container height (default 'h-[420px] md:h-[520px] lg:h-[600px]') */
   heightClass?: string
   className?: string
 }

@@ -1,13 +1,14 @@
+import { useEffect, useMemo } from 'react'
 import { useEditorStore, OSS_PREFIX } from '@/store/editorStore'
 import {
   useFetchFramesQuery,
+  useFetchFrameCategoriesQuery,
   useFetchInteriorsQuery,
   useFetchSceneryQuery,
   useFetchPaperQuery,
   useFetchEffectsQuery,
 } from '@/store/api/apiSlice'
 import type { ApiFrame, ApiScene, ApiPaperItem, ApiEffectItem } from '@/types/api'
-import { LOCAL_FRAMES } from '@/data/localFrames'
 import ControlsPanel from '@/components/editor/ControlsPanel'
 import { clsx } from 'clsx'
 import {
@@ -211,14 +212,41 @@ export default function Sidebar() {
     activeMatTab, setActiveMatTab,
     selectedEffect, setSelectedEffect,
     activeEffectTab, setActiveEffectTab,
+    activeFrameCategorySlug, setActiveFrameCategorySlug,
   } = useEditorStore()
 
   // ── API queries (lazy — only fetch when tab is active) ─────────────────────
   const framesQuery = useFetchFramesQuery(undefined, { skip: activeSidebarTab !== 'frames' })
+  const frameCategoriesQuery = useFetchFrameCategoriesQuery(undefined, {
+    skip: activeSidebarTab !== 'frames',
+  })
   const interiorsQuery = useFetchInteriorsQuery(undefined, { skip: activeSidebarTab !== 'interiors' })
   const sceneryQuery = useFetchSceneryQuery(undefined, { skip: activeSidebarTab !== 'scenery' })
   const paperQuery = useFetchPaperQuery(undefined, { skip: activeSidebarTab !== 'mat' })
   const effectsQuery = useFetchEffectsQuery(undefined, { skip: activeSidebarTab !== 'effect' })
+
+  // ── Frame category tabs ───────────────────────────────────────────────────
+  const frameCategories = frameCategoriesQuery.data ?? []
+
+  // Default: as soon as categories load and none is selected, pick the first
+  // so the user always lands on an active tab.
+  useEffect(() => {
+    if (!frameCategories.length) return
+    if (activeFrameCategorySlug == null) {
+      setActiveFrameCategorySlug(frameCategories[0].slug)
+      return
+    }
+    // If the persisted slug no longer exists (e.g. category deleted), fall
+    // back to the first available so the panel doesn't show an empty grid.
+    const stillExists = frameCategories.some(c => c.slug === activeFrameCategorySlug)
+    if (!stillExists) setActiveFrameCategorySlug(frameCategories[0].slug)
+  }, [frameCategories, activeFrameCategorySlug, setActiveFrameCategorySlug])
+
+  const filteredFrames = useMemo(() => {
+    const all = framesQuery.data ?? []
+    if (!activeFrameCategorySlug) return all
+    return all.filter(f => f.categorySlug === activeFrameCategorySlug)
+  }, [framesQuery.data, activeFrameCategorySlug])
 
   // ── Mat sub-tabs from API data ──────────────────────────────────────────────
   const matCategories = paperQuery.data ?? []
@@ -260,14 +288,42 @@ export default function Sidebar() {
                 Select a frame · adjust width below
               </p>
             </div>
+
+            {/* Category tabs — horizontally scrollable so many categories
+                don't push the panel wider than the sidebar. */}
+            <div className="flex gap-1 px-3 pt-2 pb-1 flex-shrink-0 overflow-x-auto scrollbar-thin">
+              {frameCategoriesQuery.isLoading ? (
+                [1, 2, 3].map(i => (
+                  <div key={i} className="skeleton w-14 h-6 rounded-md flex-shrink-0" />
+                ))
+              ) : (
+                frameCategories.map(cat => (
+                  <button
+                    key={cat.id}
+                    className={clsx(
+                      'tab-btn text-[10px] flex-shrink-0',
+                      activeFrameCategorySlug === cat.slug && 'active',
+                    )}
+                    onClick={() => setActiveFrameCategorySlug(cat.slug)}
+                  >
+                    {cat.name}
+                  </button>
+                ))
+              )}
+            </div>
+
             <div className="flex-1 overflow-y-auto px-3 py-3">
               {framesQuery.isLoading ? (
                 <SkeletonGrid count={9} cols={3} />
               ) : framesQuery.isError ? (
                 <p className="text-xs text-red-400 text-center py-4">Failed to load frames</p>
+              ) : filteredFrames.length === 0 ? (
+                <p className="text-xs text-gray-500 text-center py-8">
+                  No frames in this category yet.
+                </p>
               ) : (
                 <div className="grid grid-cols-3 gap-2">
-                  {[...LOCAL_FRAMES, ...(framesQuery.data ?? [])].map(item => (
+                  {filteredFrames.map(item => (
                     <FrameThumb
                       key={item.id}
                       item={item}
