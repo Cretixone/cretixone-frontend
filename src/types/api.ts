@@ -6,87 +6,21 @@ export interface ApiResponse<T> {
   data: T
 }
 
-// ─── Frame (findFrame) ───────────────────────────────────────────────────────
+// ─── Frame ───────────────────────────────────────────────────────────────────
+//
+// Each frame ships two full-frame PNGs (landscape + portrait) plus a square
+// thumbnail. The editor renders whichever full-frame matches the active
+// aspect ratio.
 
 export interface ApiFrame {
-  urlPrefix: string
-  id: number
-  type: number
-  // Cretixone backend frames carry a category id so the user-side sidebar
-  // can show category tabs. Bundled/local frames leave this undefined.
-  categoryId?: string | null
-  categorySlug?: string | null
+  id: number                              // hashed-uuid number so it can coexist with frameit ids
+  categoryId: string | null
+  categorySlug: string | null
   isVip: boolean
-  isSuper: boolean
-  leftUpWidth: number
-  leftUpHeight: number
-  leftUpImg: string
-  upShadowHeight: number
-  upHeight: number
-  upImg: string
-  rightUpWidth: number
-  rightUpHeight: number
-  rightUpImg: string
-  rightWidth: number
-  rightShadowWidth: number
-  rightNeiShadowWidth: number
-  rightImg: string
-  rightDownWidth: number
-  rightDownHeight: number
-  rightDownImg: string
-  downHeight: number
-  downShadowHeight: number
-  downNeiShadowHeight: number
-  downImg: string
-  leftDownWidth: number
-  leftDownHeight: number
-  leftDownImg: string
-  leftWidth: number
-  leftShadowWidth: number
-  leftImg: string
-  roundBorder: number | null
-  imgUrl: string
-  isScroll: number
-  round: number | null
-  rightId: number
-  supportFormat: number
-  supportShadow: boolean
-  supportInnerShadow: boolean
-  leftUpRoundParam: number
-  rightUpRoundParam: number
-  rightDownRoundParam: number
-  leftDownRoundParam: number
-  colorLevel: number
-  colorListOrder: number
   isNew: boolean
-  isOtherFrame: boolean
-  otherFrameInfoDTO: {
-    frameWidth: number
-    frameHeight: number
-    topH: number
-    rightW: number
-    downH: number
-    leftW: number
-    path: string
-    cropWidth: number
-    cropHeight: number
-    cropBackground: string
-  } | null
-  frameWidth: number
-  horizontalAxis: number
-  supportSideView: boolean
-  sideViewMethod: number
-  topSideImg: string | null
-  middleSideImg: string | null
-  bottomSideImg: string | null
-  frontFrameId: number
-  sideFrameId: number
-  frameShadowPreset: number
-  frameShadowOpacity: number
-  supportPaper: boolean
-  frameShadowImgInfoList: unknown
-  supportPutShadow: boolean
-  accessoryInfoList: unknown[]
+  imgUrl: string                          // sidebar thumbnail
+  landscapeUrl: string                    // full-frame landscape PNG
+  portraitUrl: string                     // full-frame portrait PNG
 }
 
 // ─── Scene (findScene — Interiors & Scenery) ─────────────────────────────────
