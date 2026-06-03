@@ -1,9 +1,11 @@
 import type { ApiFrame } from '@/types/api'
 
-// ─── Asset paths ──────────────────────────────────────────────────────────────
+// ─── Piece paths shape ───────────────────────────────────────────────────────
 
-// Generic shape so multiple frames can share the registry type.
-interface LocalFramePiecePaths {
+// Generic shape that the registry uses for each frame's 8 piece URLs.
+// API frames (registered at runtime by `apiSlice.mapCretixFrame`) and
+// any future bundled frames both use this same shape.
+export interface LocalFramePiecePaths {
   leftUp: string
   up: string
   rightUp: string
@@ -14,129 +16,10 @@ interface LocalFramePiecePaths {
   rightDown: string
 }
 
-const FRAME_1_DIR = '/frames/frame-1'
-
-const LOCAL_FRAME_1_PIECES: LocalFramePiecePaths = {
-  leftUp:    `${FRAME_1_DIR}/Left-Top.png`,
-  up:        `${FRAME_1_DIR}/Top-Stick.png`,
-  rightUp:   `${FRAME_1_DIR}/Right-Top.png`,
-  left:      `${FRAME_1_DIR}/left-Stick.png`,
-  right:     `${FRAME_1_DIR}/Right-Stick.png`,
-  leftDown:  `${FRAME_1_DIR}/Bottom-Left.png`,
-  down:      `${FRAME_1_DIR}/Bottom-Stick.png`,
-  rightDown: `${FRAME_1_DIR}/Bottom-Right.png`,
-}
-
-const FRAME_2_DIR = '/frames/frame-2'
-
-const LOCAL_FRAME_2_PIECES: LocalFramePiecePaths = {
-  leftUp:    `${FRAME_2_DIR}/top-left.png`,
-  up:        `${FRAME_2_DIR}/top-stick.png`,
-  rightUp:   `${FRAME_2_DIR}/top-right.png`,
-  left:      `${FRAME_2_DIR}/left-stick.png`,
-  right:     `${FRAME_2_DIR}/right-stick.png`,
-  leftDown:  `${FRAME_2_DIR}/bottom-left.png`,
-  down:      `${FRAME_2_DIR}/bottom-stick.png`,
-  rightDown: `${FRAME_2_DIR}/bottom-right.png`,
-}
-
-// ─── ApiFrame stub ────────────────────────────────────────────────────────────
-// urlPrefix='/' so CanvasStage's `prefix + url` resolves to absolute paths
-// like "/frames/frame-1/Left-Top.png" for the (fallback) 8-sprite path.
-
-export const LOCAL_FRAME_1: ApiFrame = {
-  urlPrefix: '/',
-  id: -1001,
-  type: 0,
-  isVip: false,
-  isSuper: false,
-  leftUpWidth: 0, leftUpHeight: 0, leftUpImg: LOCAL_FRAME_1_PIECES.leftUp.slice(1),
-  upShadowHeight: 0, upHeight: 0, upImg: LOCAL_FRAME_1_PIECES.up.slice(1),
-  rightUpWidth: 0, rightUpHeight: 0, rightUpImg: LOCAL_FRAME_1_PIECES.rightUp.slice(1),
-  rightWidth: 0, rightShadowWidth: 0, rightNeiShadowWidth: 0,
-  rightImg: LOCAL_FRAME_1_PIECES.right.slice(1),
-  rightDownWidth: 0, rightDownHeight: 0,
-  rightDownImg: LOCAL_FRAME_1_PIECES.rightDown.slice(1),
-  downHeight: 0, downShadowHeight: 0, downNeiShadowHeight: 0,
-  downImg: LOCAL_FRAME_1_PIECES.down.slice(1),
-  leftDownWidth: 0, leftDownHeight: 0,
-  leftDownImg: LOCAL_FRAME_1_PIECES.leftDown.slice(1),
-  leftWidth: 0, leftShadowWidth: 0,
-  leftImg: LOCAL_FRAME_1_PIECES.left.slice(1),
-  roundBorder: null,
-  imgUrl: LOCAL_FRAME_1_PIECES.leftUp, // simple corner thumbnail
-  isScroll: 0,
-  round: null,
-  rightId: 0,
-  supportFormat: 0,
-  supportShadow: true,
-  supportInnerShadow: false,
-  leftUpRoundParam: 0, rightUpRoundParam: 0,
-  rightDownRoundParam: 0, leftDownRoundParam: 0,
-  colorLevel: 0, colorListOrder: 0,
-  isNew: true,
-  isOtherFrame: false,
-  otherFrameInfoDTO: null,
-  frameWidth: 0,
-  horizontalAxis: 0,
-  supportSideView: false,
-  sideViewMethod: 0,
-  topSideImg: null, middleSideImg: null, bottomSideImg: null,
-  frontFrameId: 0, sideFrameId: 0,
-  frameShadowPreset: 0, frameShadowOpacity: 0,
-  supportPaper: true,
-  frameShadowImgInfoList: null,
-  supportPutShadow: false,
-  accessoryInfoList: [],
-}
-
-export const LOCAL_FRAME_2: ApiFrame = {
-  urlPrefix: '/',
-  id: -1002,
-  type: 0,
-  isVip: false,
-  isSuper: false,
-  leftUpWidth: 0, leftUpHeight: 0, leftUpImg: LOCAL_FRAME_2_PIECES.leftUp.slice(1),
-  upShadowHeight: 0, upHeight: 0, upImg: LOCAL_FRAME_2_PIECES.up.slice(1),
-  rightUpWidth: 0, rightUpHeight: 0, rightUpImg: LOCAL_FRAME_2_PIECES.rightUp.slice(1),
-  rightWidth: 0, rightShadowWidth: 0, rightNeiShadowWidth: 0,
-  rightImg: LOCAL_FRAME_2_PIECES.right.slice(1),
-  rightDownWidth: 0, rightDownHeight: 0,
-  rightDownImg: LOCAL_FRAME_2_PIECES.rightDown.slice(1),
-  downHeight: 0, downShadowHeight: 0, downNeiShadowHeight: 0,
-  downImg: LOCAL_FRAME_2_PIECES.down.slice(1),
-  leftDownWidth: 0, leftDownHeight: 0,
-  leftDownImg: LOCAL_FRAME_2_PIECES.leftDown.slice(1),
-  leftWidth: 0, leftShadowWidth: 0,
-  leftImg: LOCAL_FRAME_2_PIECES.left.slice(1),
-  roundBorder: null,
-  imgUrl: LOCAL_FRAME_2_PIECES.leftUp,
-  isScroll: 0,
-  round: null,
-  rightId: 0,
-  supportFormat: 0,
-  supportShadow: true,
-  supportInnerShadow: false,
-  leftUpRoundParam: 0, rightUpRoundParam: 0,
-  rightDownRoundParam: 0, leftDownRoundParam: 0,
-  colorLevel: 0, colorListOrder: 0,
-  isNew: true,
-  isOtherFrame: false,
-  otherFrameInfoDTO: null,
-  frameWidth: 0,
-  horizontalAxis: 0,
-  supportSideView: false,
-  sideViewMethod: 0,
-  topSideImg: null, middleSideImg: null, bottomSideImg: null,
-  frontFrameId: 0, sideFrameId: 0,
-  frameShadowPreset: 0, frameShadowOpacity: 0,
-  supportPaper: true,
-  frameShadowImgInfoList: null,
-  supportPutShadow: false,
-  accessoryInfoList: [],
-}
-
-export const LOCAL_FRAMES: ApiFrame[] = [LOCAL_FRAME_1, LOCAL_FRAME_2]
+// No bundled local frames — all frames are now served by the backend
+// (`/cretix-api/frames/public`) and registered into the local-frame
+// renderer at runtime by `apiSlice.mapCretixFrame`.
+export const LOCAL_FRAMES: ApiFrame[] = []
 
 // ─── Piece loading & geometry ─────────────────────────────────────────────────
 
@@ -184,6 +67,20 @@ export interface LocalFrameGeometry {
     down: PieceBox
     rightDown: PieceBox
   }
+  // Corner-interior design style, auto-detected from alpha samples
+  // inside each corner's L-bend triangle area:
+  //   - 'clean-L'  → interior is genuinely transparent (frame-1 style);
+  //                  the photo opening shows through the L's bend.
+  //   - 'filled-L' → interior is opaque decorative moulding (frame-2
+  //                  style); any stray transparent pixels (artifacts)
+  //                  should be backfilled at composite time so the mat
+  //                  backing doesn't bleed through as "dots".
+  cornerStyle: 'clean-L' | 'filled-L'
+  // CSS color string sampled from an opaque spot inside the L's arm.
+  // Used as the destination-over fill for 'filled-L' frames so any
+  // transparent holes inside a corner's bbox blend into the surrounding
+  // moulding instead of revealing the white mat backing.
+  cornerFillColor: string
 }
 
 export interface LoadedLocalFrame {
@@ -195,20 +92,11 @@ export interface LoadedLocalFrame {
 // NOT stored here — it's auto-measured from the alpha channels of the
 // piece images at load time and cached on the LoadedLocalFrame.
 //
-// Two ways to populate the registry:
-//
-//   1. Bundled local frames — declared statically below. Drop the 8 piece
-//      PNGs into /public/frames/frame-N/ and add an entry here.
-//
-//   2. Backend (admin-uploaded) frames — call `registerLocalFrame(id, paths)`
-//      with the hashed numeric id and the eight `/uploads/frames/...` URLs.
-//      `apiSlice.mapCretixFrame` does this when transforming the DTO so the
-//      rendered output reuses the same alpha-measured 8-piece path as the
-//      bundled frames.
-const REGISTRY: Record<number, { paths: LocalFramePiecePaths }> = {
-  [LOCAL_FRAME_1.id]: { paths: LOCAL_FRAME_1_PIECES },
-  [LOCAL_FRAME_2.id]: { paths: LOCAL_FRAME_2_PIECES },
-}
+// The registry is populated entirely at runtime by
+// `apiSlice.mapCretixFrame` calling `registerLocalFrame(id, paths)` for
+// each backend frame returned from `/cretix-api/frames/public`. Every
+// entry then goes through the same alpha-measured 8-piece renderer.
+const REGISTRY: Record<number, { paths: LocalFramePiecePaths }> = {}
 
 /**
  * Add (or replace) a frame in the registry at runtime. After registering,
@@ -228,6 +116,29 @@ export function getLocalFrameGeometry(
   return loadCache.get(frameId)?.geometry ?? null
 }
 
+/**
+ * Returns the frame's "natural" moulding-thickness ratio — i.e. what
+ * fraction of the assembled frame's outer dimension the moulding occupies
+ * when the source pieces are tiled at native pixel size:
+ *
+ *   ratio = horizontalThicknessSrc /
+ *           (leftCornerBboxW + topStickBboxW + rightCornerBboxW)
+ *
+ * Used to set a per-frame default for the `frameWidth` slider so the
+ * editor's render matches what Photoshop produces when the same pieces are
+ * placed at 1:1 scale. The user can still drag the slider to override.
+ *
+ * Returns null if the geometry isn't loaded yet.
+ */
+export function getNaturalFrameWidthPct(frameId: number): number | null {
+  const geom = loadCache.get(frameId)?.geometry
+  if (!geom) return null
+  const naturalAssemblyW =
+    geom.pieces.leftUp.w + geom.pieces.up.w + geom.pieces.rightUp.w
+  if (naturalAssemblyW <= 0) return null
+  return (geom.horizontalThicknessSrc / naturalAssemblyW) * 100
+}
+
 const loadCache = new Map<number, LoadedLocalFrame>()
 const pendingLoads = new Map<number, Promise<LoadedLocalFrame>>()
 
@@ -242,6 +153,15 @@ export function getCachedLocalFrame(frameId: number): LoadedLocalFrame | null {
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
+    // Backend may return absolute URLs (http://localhost:8000/uploads/...).
+    // Without crossOrigin the image loads but the canvas it's drawn to
+    // becomes tainted, and `getImageData` throws — silently breaking the
+    // auto-measure path. Setting it for any non-relative URL is harmless
+    // when the response carries appropriate CORS headers (which our own
+    // backend should), and is a no-op for same-origin URLs.
+    if (/^https?:\/\//i.test(src)) {
+      img.crossOrigin = 'anonymous'
+    }
     img.onload = () => resolve(img)
     img.onerror = () => reject(new Error(`Failed to load ${src}`))
     img.src = src
@@ -382,6 +302,110 @@ function median(values: number[]): number {
     : (sorted[m - 1] + sorted[m]) / 2
 }
 
+// Samples a grid of points inside the L's interior triangle area (the
+// region BEYOND both arms of the L) and returns the fraction that are
+// opaque. Used to classify the corner's design:
+//   - low ratio  → clean-L (interior is genuinely transparent — photo
+//                  opening shows through; frame-1 style)
+//   - high ratio → filled-L (interior is decorative moulding with the
+//                  occasional transparent hole; frame-2 style)
+function measureLInteriorOpacityRatio(
+  img: HTMLImageElement,
+  bbox: PieceBox,
+  slot: CornerSlot,
+  armHorizontal: number,
+  armVertical: number,
+  alphaThreshold = 30,
+): number {
+  const pixels = getAlphaData(img)
+  if (!pixels) return 0
+  const { data, w } = pixels
+
+  // Compute the L-interior rectangle in source coords. For each corner,
+  // the interior is on the side opposite the L's outer corner.
+  const bendOnLeftSide = slot === 'leftUp' || slot === 'leftDown'
+  const isTopCorner = slot === 'leftUp' || slot === 'rightUp'
+  const intX = bendOnLeftSide ? bbox.x + armVertical : bbox.x
+  const intY = isTopCorner ? bbox.y + armHorizontal : bbox.y
+  const intW = bbox.w - armVertical
+  const intH = bbox.h - armHorizontal
+  if (intW <= 1 || intH <= 1) return 0
+
+  // 8×8 sample grid covering the interior rectangle, biased toward the
+  // outer (visible) corners of the interior — that's where artifact
+  // pixels tend to sit, and it's where the user will most readily
+  // notice an unintended hole.
+  const N = 8
+  let opaque = 0
+  let total = 0
+  for (let iy = 0; iy < N; iy++) {
+    const sy = Math.floor(intY + ((iy + 0.5) / N) * intH)
+    for (let ix = 0; ix < N; ix++) {
+      const sx = Math.floor(intX + ((ix + 0.5) / N) * intW)
+      if (data[(sy * w + sx) * 4 + 3] > alphaThreshold) opaque++
+      total++
+    }
+  }
+  return total > 0 ? opaque / total : 0
+}
+
+// Averages opaque-pixel color across a piece image. Used to derive a
+// single moulding color for the whole frame — sticks are the easiest
+// source since their entire bbox is solid moulding, and we fall through
+// pieces in order until one sample yields enough opaque samples.
+function sampleAvgOpaqueColor(img: HTMLImageElement): string | null {
+  const pixels = getAlphaData(img)
+  if (!pixels) return null
+  const { data, w, h } = pixels
+  // 16×16 grid covering the whole image — biased away from the very
+  // edges where anti-aliasing can fade pixels below the alpha cutoff.
+  const N = 16
+  const inset = 0.06 // skip outer 6% on each side
+  let rSum = 0, gSum = 0, bSum = 0, count = 0
+  for (let iy = 0; iy < N; iy++) {
+    const sy = Math.floor((inset + ((iy + 0.5) / N) * (1 - 2 * inset)) * h)
+    for (let ix = 0; ix < N; ix++) {
+      const sx = Math.floor((inset + ((ix + 0.5) / N) * (1 - 2 * inset)) * w)
+      const i = (sy * w + sx) * 4
+      if (data[i + 3] > 200) {
+        rSum += data[i]
+        gSum += data[i + 1]
+        bSum += data[i + 2]
+        count++
+      }
+    }
+  }
+  if (count < 8) return null
+  const r = Math.round(rSum / count)
+  const g = Math.round(gSum / count)
+  const b = Math.round(bSum / count)
+  return `rgb(${r}, ${g}, ${b})`
+}
+
+// Picks a single moulding color for the whole frame. Sticks first
+// (their bbox is just the moulding rectangle, so sampling is robust),
+// then corners. Falls back to a mid-gray so the result is never
+// invisible against the white mat backing.
+function sampleFrameMouldingColor(images: FramePieceImages): string {
+  const order: HTMLImageElement[] = [
+    images.up,
+    images.down,
+    images.left,
+    images.right,
+    images.leftUp,
+    images.rightUp,
+    images.leftDown,
+    images.rightDown,
+  ]
+  for (const img of order) {
+    const c = sampleAvgOpaqueColor(img)
+    if (c) return c
+  }
+  // Visible mid-gray fallback — never `#ffffff`, which would be a no-op
+  // against the white mat backing.
+  return '#888888'
+}
+
 function deriveGeometry(images: FramePieceImages): LocalFrameGeometry {
   const leftUpBox = measureOpaqueBBox(images.leftUp)
   const upBox = measureOpaqueBBox(images.up)
@@ -392,23 +416,28 @@ function deriveGeometry(images: FramePieceImages): LocalFrameGeometry {
   const downBox = measureOpaqueBBox(images.down)
   const rightDownBox = measureOpaqueBBox(images.rightDown)
 
+  // Per-corner arm thicknesses — used for both the global thickness
+  // medians AND for slot-aware interior sampling below.
+  const leftUpArmH    = measureCornerArmThickness(images.leftUp,    leftUpBox,    'leftUp',    'horizontal')
+  const rightUpArmH   = measureCornerArmThickness(images.rightUp,   rightUpBox,   'rightUp',   'horizontal')
+  const leftDownArmH  = measureCornerArmThickness(images.leftDown,  leftDownBox,  'leftDown',  'horizontal')
+  const rightDownArmH = measureCornerArmThickness(images.rightDown, rightDownBox, 'rightDown', 'horizontal')
+  const leftUpArmV    = measureCornerArmThickness(images.leftUp,    leftUpBox,    'leftUp',    'vertical')
+  const rightUpArmV   = measureCornerArmThickness(images.rightUp,   rightUpBox,   'rightUp',   'vertical')
+  const leftDownArmV  = measureCornerArmThickness(images.leftDown,  leftDownBox,  'leftDown',  'vertical')
+  const rightDownArmV = measureCornerArmThickness(images.rightDown, rightDownBox, 'rightDown', 'vertical')
+
   // Horizontal moulding thickness — sources of truth: top/bottom
   // corner-horizontal-arm thicknesses + top/bottom stick bbox heights.
   const horizontalSamples = [
-    measureCornerArmThickness(images.leftUp,    leftUpBox,    'leftUp',    'horizontal'),
-    measureCornerArmThickness(images.rightUp,   rightUpBox,   'rightUp',   'horizontal'),
-    measureCornerArmThickness(images.leftDown,  leftDownBox,  'leftDown',  'horizontal'),
-    measureCornerArmThickness(images.rightDown, rightDownBox, 'rightDown', 'horizontal'),
+    leftUpArmH, rightUpArmH, leftDownArmH, rightDownArmH,
     upBox.h,
     downBox.h,
   ]
   // Vertical moulding thickness — sources of truth: corner-vertical-arm
   // thicknesses + left/right stick bbox widths.
   const verticalSamples = [
-    measureCornerArmThickness(images.leftUp,    leftUpBox,    'leftUp',    'vertical'),
-    measureCornerArmThickness(images.rightUp,   rightUpBox,   'rightUp',   'vertical'),
-    measureCornerArmThickness(images.leftDown,  leftDownBox,  'leftDown',  'vertical'),
-    measureCornerArmThickness(images.rightDown, rightDownBox, 'rightDown', 'vertical'),
+    leftUpArmV, rightUpArmV, leftDownArmV, rightDownArmV,
     leftBox.w,
     rightBox.w,
   ]
@@ -424,11 +453,45 @@ function deriveGeometry(images: FramePieceImages): LocalFrameGeometry {
     (leftUpBox.h + rightUpBox.h + leftDownBox.h + rightDownBox.h) / 4,
   )
 
+  // Classify corner style: are the L-interiors transparent (clean) or
+  // mostly opaque (filled-with-decorative-moulding)?
+  const interiorRatios = [
+    measureLInteriorOpacityRatio(images.leftUp,    leftUpBox,    'leftUp',    leftUpArmH,    leftUpArmV),
+    measureLInteriorOpacityRatio(images.rightUp,   rightUpBox,   'rightUp',   rightUpArmH,   rightUpArmV),
+    measureLInteriorOpacityRatio(images.leftDown,  leftDownBox,  'leftDown',  leftDownArmH,  leftDownArmV),
+    measureLInteriorOpacityRatio(images.rightDown, rightDownBox, 'rightDown', rightDownArmH, rightDownArmV),
+  ]
+  const avgInteriorRatio = interiorRatios.reduce((a, b) => a + b, 0) / 4
+  // Threshold: 0.4 catches frames whose L-interior is dominantly opaque
+  // (decorative moulding) while leaving the clean-L design (interior is
+  // almost entirely transparent → ratio ≈ 0) safely untouched. The
+  // middle ground (40–60% opaque) is rare in practice; treating it as
+  // filled-L is the safer choice because the destination-over fill is a
+  // no-op on already-opaque regions.
+  const cornerStyle: 'clean-L' | 'filled-L' =
+    avgInteriorRatio > 0.4 ? 'filled-L' : 'clean-L'
+
+  // eslint-disable-next-line no-console
+  console.log(
+    `[deriveGeometry] cornerStyle=${cornerStyle} (avg L-interior opacity ` +
+      `${(avgInteriorRatio * 100).toFixed(1)}%) per-corner=[${interiorRatios
+        .map(r => (r * 100).toFixed(0) + '%')
+        .join(', ')}]`,
+  )
+
+  // One moulding color for the whole frame. Sampled from sticks first
+  // (whose bbox is just the moulding strip — most reliable), falling
+  // through to corners. Computed unconditionally so it's available
+  // whether or not the corner-style classifier triggers the fill.
+  const cornerFillColor = sampleFrameMouldingColor(images)
+
   return {
     horizontalThicknessSrc,
     verticalThicknessSrc,
     cornerBboxW,
     cornerBboxH,
+    cornerStyle,
+    cornerFillColor,
     pieces: {
       leftUp: leftUpBox,
       up: upBox,
@@ -478,6 +541,8 @@ export function loadLocalFrame(frameId: number): Promise<LoadedLocalFrame> | nul
           verticalThicknessSrc: geometry.verticalThicknessSrc,
           cornerBboxW: geometry.cornerBboxW,
           cornerBboxH: geometry.cornerBboxH,
+          cornerStyle: geometry.cornerStyle,
+          cornerFillColor: geometry.cornerFillColor,
           pieces: geometry.pieces,
         },
         null,
@@ -490,7 +555,6 @@ export function loadLocalFrame(frameId: number): Promise<LoadedLocalFrame> | nul
   return promise
 }
 
-// Eagerly preload so pieces are ready by the time the user clicks the frame.
-if (typeof window !== 'undefined') {
-  for (const f of LOCAL_FRAMES) void loadLocalFrame(f.id)
-}
+// No static preload — `apiSlice.mapCretixFrame` calls `loadLocalFrame`
+// itself for every API frame as soon as the list is fetched, so pieces
+// are typically measured before the user opens the frames sidebar.

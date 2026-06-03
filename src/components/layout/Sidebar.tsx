@@ -1,4 +1,8 @@
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
+import {
+  getNaturalFrameWidthPct,
+  loadLocalFrame,
+} from '@/data/localFrames'
 import { useEditorStore, OSS_PREFIX } from '@/store/editorStore'
 import {
   useFetchFramesQuery,
@@ -213,7 +217,35 @@ export default function Sidebar() {
     selectedEffect, setSelectedEffect,
     activeEffectTab, setActiveEffectTab,
     activeFrameCategorySlug, setActiveFrameCategorySlug,
+    setFrameWidth,
   } = useEditorStore()
+
+  // When a user picks a frame, default the moulding thickness slider to
+  // the frame's "natural" ratio (the same proportion you get when you tile
+  // the source pieces 1:1 in Photoshop). Each frame has its own ratio
+  // because the pieces are exported at different scales — without this,
+  // tiny-corner frames look chunky and thick-corner frames look hair-thin.
+  // The user can still drag the slider afterwards to override.
+  const pickFrame = useCallback((frame: ApiFrame) => {
+    setSelectedFrame(frame)
+
+    const applyNatural = () => {
+      const pct = getNaturalFrameWidthPct(frame.id)
+      if (pct == null) return
+      // Slider range is 5–30 in the controls panel; clamp so an extreme
+      // source ratio doesn't push the slider off the rail.
+      const clamped = Math.max(5, Math.min(30, Math.round(pct)))
+      setFrameWidth(clamped)
+    }
+
+    if (getNaturalFrameWidthPct(frame.id) != null) {
+      applyNatural()
+    } else {
+      // Geometry hasn't measured yet — apply once the alpha-measurement
+      // finishes. Safe to call repeatedly: loadLocalFrame caches.
+      void loadLocalFrame(frame.id)?.then(applyNatural)
+    }
+  }, [setSelectedFrame, setFrameWidth])
 
   // ── API queries (lazy — only fetch when tab is active) ─────────────────────
   const framesQuery = useFetchFramesQuery(undefined, { skip: activeSidebarTab !== 'frames' })
@@ -328,7 +360,7 @@ export default function Sidebar() {
                       key={item.id}
                       item={item}
                       selected={selectedFrame?.id === item.id}
-                      onClick={() => setSelectedFrame(item)}
+                      onClick={() => pickFrame(item)}
                     />
                   ))}
                 </div>

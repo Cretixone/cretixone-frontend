@@ -1,9 +1,10 @@
 import { useEffect, useRef, useCallback } from 'react'
 import * as PIXI from 'pixi.js'
-import { useEditorStore, OSS_PREFIX } from '@/store/editorStore'
+import { useEditorStore, OSS_PREFIX, getAspectRatioValue } from '@/store/editorStore'
 import type { ApiFrame, ApiScene, ApiEffectItem } from '@/types/api'
 import { useCanvasSize } from '@/hooks/useCanvasSize'
 import { useImageUpload } from '@/hooks/useImageUpload'
+import type { PieceBox } from '@/data/localFrames'
 import {
   isLocalFrame,
   getCachedLocalFrame,
@@ -184,6 +185,17 @@ export default function CanvasStage({
   const appRef = useRef<PIXI.Application | null>(null)
   const layersRef = useRef<Layers | null>(null)
   const frameOverrideRef = useRef<ApiFrame | null>(frameOverride)
+  // Cached single-canvas composite used to render local frames with
+  // pixel-perfect (seam-free) joints. Keyed on the geometry inputs that
+  // affect what gets baked.
+  const localCompositeRef = useRef<{
+    canvas: HTMLCanvasElement
+    minX: number
+    minY: number
+    compositeW: number
+    compositeH: number
+    key: string
+  } | null>(null)
   const { openFilePicker, handleDrop, handleDragOver } = useImageUpload()
 
   // ── Init ──────────────────────────────────────────────────────────────────
@@ -475,6 +487,12 @@ export default function CanvasStage({
 
     // ── Compute frame dimensions ────────────────────────────────────────
     const interiorPos = (bgMode === 'interior' && interior?.position) ? interior.position : null
+    // Aspect ratio = width / height. 'auto' (the default) keeps the legacy
+    // canvas-fit behaviour where the frame is always square. Anything else
+    // sizes the longer axis to fit and derives the shorter from the ratio.
+    const aspectRatio = s.frameAspectRatio === 'auto'
+      ? 1
+      : getAspectRatioValue(s.frameAspectRatio)
     let outerW: number, outerH: number, frameX0: number, frameY0: number
 
     if (interiorPos && bgSceneW > 0) {
@@ -483,17 +501,36 @@ export default function CanvasStage({
       const posCanvasH = interiorPos.h * bgScale
       const posCenterX = bgOffX + (interiorPos.x + interiorPos.w / 2) * bgScale
       const posCenterY = bgOffY + (interiorPos.y + interiorPos.h / 2) * bgScale
-      // Keep frame square — use the smaller dimension
-      const outerSize = Math.min(posCanvasW, posCanvasH)
-      outerW = outerSize
-      outerH = outerSize
-      frameX0 = posCenterX - outerSize / 2
-      frameY0 = posCenterY - outerSize / 2
+      if (s.frameAspectRatio === 'auto') {
+        // Legacy: square frame fit to the smaller side
+        const outerSize = Math.min(posCanvasW, posCanvasH)
+        outerW = outerSize
+        outerH = outerSize
+      } else {
+        // Fit the user-chosen aspect inside the interior's position box.
+        const fitByW = posCanvasW / aspectRatio <= posCanvasH
+        outerW = fitByW ? posCanvasW : posCanvasH * aspectRatio
+        outerH = fitByW ? posCanvasW / aspectRatio : posCanvasH
+      }
+      frameX0 = posCenterX - outerW / 2
+      frameY0 = posCenterY - outerH / 2
     } else {
-      // Default: centered square
-      const outerSize = Math.max(Math.min(W * 0.55, H * 0.65), 280)
-      outerW = outerSize
-      outerH = outerSize
+      // Default: centered, sized to fit the viewport at the chosen ratio.
+      // The "auto" path keeps the original square-fit behaviour exactly.
+      if (s.frameAspectRatio === 'auto') {
+        const outerSize = Math.max(Math.min(W * 0.55, H * 0.65), 280)
+        outerW = outerSize
+        outerH = outerSize
+      } else {
+        // Cap to roughly the same area the auto fit allowed (55% W × 65% H),
+        // then crop to the chosen aspect ratio so portrait and landscape
+        // both feel like "as large as the viewport can comfortably show."
+        const maxW = Math.max(W * 0.55, 280)
+        const maxH = Math.max(H * 0.65, 280)
+        const fitByW = maxW / aspectRatio <= maxH
+        outerW = fitByW ? maxW : maxH * aspectRatio
+        outerH = fitByW ? maxW / aspectRatio : maxH
+      }
       frameX0 = cx - outerW / 2
       frameY0 = cy - outerH / 2
     }
@@ -633,23 +670,19 @@ export default function CanvasStage({
           })
         }
 
-        let pieceDefs: Array<{
-          url: string
-          x: number
-          y: number
-          w: number
-          h: number
-        }>
-
         if (localGeom && localLoaded) {
-          // ── Local-frame moulding-box path ──
-          // Per-axis scaling: the moulding can have a different source
-          // thickness on horizontal sides vs vertical sides. Each side
-          // maps its own source thickness to framePx in canvas.
-          //   sxCorner = framePx / verticalThicknessSrc
-          //   syCorner = framePx / horizontalThicknessSrc
-          // Corner canvas extents come from the corner bbox times the
-          // axis scale.
+          // ── LOCAL FRAME: single-canvas composite ──
+          // Bake all 8 pieces onto ONE offscreen canvas at super-sampled
+          // resolution and hand it to PIXI as a single sprite. Eliminates
+          // inter-piece sampling seams that would appear at design-group
+          // zoom even with mathematically perfect geometry.
+          // eslint-disable-next-line no-console
+          console.log(
+            `[CanvasStage] composite render frame=${frame.id} ` +
+              `cornerStyle=${localGeom.cornerStyle} ` +
+              `cornerFillColor=${localGeom.cornerFillColor} ` +
+              `framePx=${framePx}`,
+          )
           const sxCorner = framePx / localGeom.verticalThicknessSrc
           const syCorner = framePx / localGeom.horizontalThicknessSrc
           const cornerCanvasW = localGeom.cornerBboxW * sxCorner
@@ -657,76 +690,164 @@ export default function CanvasStage({
           const sideH = Math.max(1, outerW - 2 * cornerCanvasW)
           const sideV = Math.max(1, outerH - 2 * cornerCanvasH)
 
-          // Maps each piece's source moulding box → its canvas target
-          // rectangle. The image itself will be drawn larger than this
-          // box; we then offset by -pieceBox.x*sx, -pieceBox.y*sy so the
-          // moulding region inside the image lands exactly on the target.
-          const slots = [
-            { url: frame.leftUpImg,
-              box: localGeom.pieces.leftUp,
-              tX: frameX0,                            tY: frameY0,
-              tW: cornerCanvasW,                      tH: cornerCanvasH },
-            { url: frame.upImg,
-              box: localGeom.pieces.up,
-              tX: frameX0 + cornerCanvasW,            tY: frameY0,
-              tW: sideH,                              tH: framePx },
-            { url: frame.rightUpImg,
-              box: localGeom.pieces.rightUp,
-              tX: frameX0 + outerW - cornerCanvasW,   tY: frameY0,
-              tW: cornerCanvasW,                      tH: cornerCanvasH },
-            { url: frame.leftImg,
-              box: localGeom.pieces.left,
-              tX: frameX0,                            tY: frameY0 + cornerCanvasH,
-              tW: framePx,                            tH: sideV },
-            { url: frame.rightImg,
-              box: localGeom.pieces.right,
-              tX: frameX0 + outerW - framePx,         tY: frameY0 + cornerCanvasH,
-              tW: framePx,                            tH: sideV },
-            { url: frame.leftDownImg,
-              box: localGeom.pieces.leftDown,
-              tX: frameX0,                            tY: frameY0 + outerH - cornerCanvasH,
-              tW: cornerCanvasW,                      tH: cornerCanvasH },
-            { url: frame.downImg,
-              box: localGeom.pieces.down,
-              tX: frameX0 + cornerCanvasW,            tY: frameY0 + outerH - framePx,
-              tW: sideH,                              tH: framePx },
-            { url: frame.rightDownImg,
-              box: localGeom.pieces.rightDown,
-              tX: frameX0 + outerW - cornerCanvasW,   tY: frameY0 + outerH - cornerCanvasH,
-              tW: cornerCanvasW,                      tH: cornerCanvasH },
+          // Frame-local coordinates (0,0 = visible top-left of the
+          // frame). Composite cache is independent of the stage position.
+          type LocalSlot = {
+            img: HTMLImageElement
+            box: PieceBox
+            tX: number; tY: number; tW: number; tH: number
+            kind: 'corner' | 'stick'
+          }
+          const slots: LocalSlot[] = [
+            { img: localLoaded.images.leftUp,    box: localGeom.pieces.leftUp,
+              tX: 0,                          tY: 0,
+              tW: cornerCanvasW,              tH: cornerCanvasH,
+              kind: 'corner' },
+            { img: localLoaded.images.up,        box: localGeom.pieces.up,
+              tX: cornerCanvasW,              tY: 0,
+              tW: sideH,                      tH: framePx,
+              kind: 'stick' },
+            { img: localLoaded.images.rightUp,   box: localGeom.pieces.rightUp,
+              tX: outerW - cornerCanvasW,     tY: 0,
+              tW: cornerCanvasW,              tH: cornerCanvasH,
+              kind: 'corner' },
+            { img: localLoaded.images.left,      box: localGeom.pieces.left,
+              tX: 0,                          tY: cornerCanvasH,
+              tW: framePx,                    tH: sideV,
+              kind: 'stick' },
+            { img: localLoaded.images.right,     box: localGeom.pieces.right,
+              tX: outerW - framePx,           tY: cornerCanvasH,
+              tW: framePx,                    tH: sideV,
+              kind: 'stick' },
+            { img: localLoaded.images.leftDown,  box: localGeom.pieces.leftDown,
+              tX: 0,                          tY: outerH - cornerCanvasH,
+              tW: cornerCanvasW,              tH: cornerCanvasH,
+              kind: 'corner' },
+            { img: localLoaded.images.down,      box: localGeom.pieces.down,
+              tX: cornerCanvasW,              tY: outerH - framePx,
+              tW: sideH,                      tH: framePx,
+              kind: 'stick' },
+            { img: localLoaded.images.rightDown, box: localGeom.pieces.rightDown,
+              tX: outerW - cornerCanvasW,     tY: outerH - cornerCanvasH,
+              tW: cornerCanvasW,              tH: cornerCanvasH,
+              kind: 'corner' },
           ]
 
-          // Resolve each slot into (drawX, drawY, drawW, drawH) by
-          // looking up the image's natural size and applying the
-          // pieceBox → target mapping.
-          const imgByUrl = new Map<string, HTMLImageElement>([
-            [frame.leftUpImg,    localLoaded.images.leftUp],
-            [frame.upImg,        localLoaded.images.up],
-            [frame.rightUpImg,   localLoaded.images.rightUp],
-            [frame.leftImg,      localLoaded.images.left],
-            [frame.rightImg,     localLoaded.images.right],
-            [frame.leftDownImg,  localLoaded.images.leftDown],
-            [frame.downImg,      localLoaded.images.down],
-            [frame.rightDownImg, localLoaded.images.rightDown],
-          ])
+          // Composite bounds (frame-local). Each piece's image may
+          // extend OUTSIDE its moulding box on the outer side (shadow
+          // padding) — grow the canvas so those extensions stay visible.
+          let minX = 0, minY = 0, maxX = outerW, maxY = outerH
+          for (const slot of slots) {
+            const sx = slot.tW / slot.box.w
+            const sy = slot.tH / slot.box.h
+            const drawX = slot.tX - slot.box.x * sx
+            const drawY = slot.tY - slot.box.y * sy
+            const drawW = slot.img.naturalWidth * sx
+            const drawH = slot.img.naturalHeight * sy
+            if (drawX < minX) minX = drawX
+            if (drawY < minY) minY = drawY
+            if (drawX + drawW > maxX) maxX = drawX + drawW
+            if (drawY + drawH > maxY) maxY = drawY + drawH
+          }
+          const compositeW = maxX - minX
+          const compositeH = maxY - minY
 
-          pieceDefs = slots
-            .filter(s => s.url && s.url.length > 0)
-            .map(slot => {
-              const img = imgByUrl.get(slot.url)!
+          const cacheKey = `${frame.id}|${framePx.toFixed(2)}|${outerW.toFixed(2)}|${outerH.toFixed(2)}`
+          let cached = localCompositeRef.current
+          if (!cached || cached.key !== cacheKey) {
+            const SUPER_SAMPLE = 2
+            const dpr = Math.min(window.devicePixelRatio || 1, 2)
+            const bakeScale = SUPER_SAMPLE * dpr
+            const canvas = document.createElement('canvas')
+            canvas.width = Math.max(1, Math.ceil(compositeW * bakeScale))
+            canvas.height = Math.max(1, Math.ceil(compositeH * bakeScale))
+            const cctx = canvas.getContext('2d')!
+            cctx.imageSmoothingEnabled = true
+            cctx.imageSmoothingQuality = 'high'
+            cctx.scale(bakeScale, bakeScale)
+            cctx.translate(-minX, -minY)
+
+            for (const slot of slots) {
               const sx = slot.tW / slot.box.w
               const sy = slot.tH / slot.box.h
-              return {
-                url: prefix + slot.url,
-                x: slot.tX - slot.box.x * sx,
-                y: slot.tY - slot.box.y * sy,
-                w: img.naturalWidth * sx,
-                h: img.naturalHeight * sy,
+              const drawX = slot.tX - slot.box.x * sx
+              const drawY = slot.tY - slot.box.y * sy
+              const drawW = slot.img.naturalWidth * sx
+              const drawH = slot.img.naturalHeight * sy
+              cctx.drawImage(slot.img, drawX, drawY, drawW, drawH)
+
+              // ── Corner backfill ──
+              // Backend-uploaded frames typically have small transparent
+              // pixels somewhere inside each corner image — chamfer dots
+              // at the L's inner corner, exporter artifacts, AA fringes,
+              // etc. The mat backing sitting behind the frame shows
+              // through any such hole as a visible white "dot".
+              //
+              // Paint sampled moulding color BEHIND each corner's full
+              // bbox using destination-over: it only writes to pixels
+              // that are currently transparent, so the opaque moulding
+              // (L-arms + any decorative interior) is left untouched
+              // and every transparent hole inside the bbox gets filled
+              // with the matching moulding color. Universal — works for
+              // any uploaded frame, no per-frame configuration.
+              // ── Corner dot backfill (chamfer only) ──
+              // Backend frames have small transparent pixels right at
+              // the L's inner corner point (the photo-opening corner)
+              // that would otherwise show the mat backing as visible
+              // white "dots". We paint a small box of sampled moulding
+              // color BEHIND the corner JUST at that point — not the
+              // whole bbox. This preserves the corner image's own
+              // shadow / semi-transparent pixels (which sit elsewhere)
+              // and only fills the dot area.
+              //
+              // The L's inner corner sits at (framePx, framePx) in
+              // slot-local canvas coords for top-left, mirrored for the
+              // other 3 corners. `chamfer` sizes the fill — generous
+              // enough to cover the dot, small enough to not intrude
+              // into the rest of the bbox.
+              // ── Corner dot backfill (chamfer only) ──
+              // Backend frames have small transparent pixels right at
+              // the L's inner corner point (the photo-opening corner)
+              // that would otherwise show the mat backing as visible
+              // white "dots". We paint a small box of sampled moulding
+              // color BEHIND the corner JUST at that point — not the
+              // whole bbox — so the corner image's own shadow / semi-
+              // transparent pixels (which sit elsewhere) are preserved.
+              if (slot.kind === 'corner') {
+                const chamfer = Math.max(4, Math.ceil(framePx * 0.35))
+                const half = chamfer / 2
+                const isLeft = slot.tX === 0
+                const isTop = slot.tY === 0
+                const cx = isLeft ? framePx : slot.tW - framePx
+                const cy = isTop  ? framePx : slot.tH - framePx
+                cctx.globalCompositeOperation = 'destination-over'
+                cctx.fillStyle = localGeom.cornerFillColor
+                cctx.fillRect(
+                  slot.tX + cx - half,
+                  slot.tY + cy - half,
+                  chamfer,
+                  chamfer,
+                )
+                cctx.globalCompositeOperation = 'source-over'
               }
-            })
+            }
+
+            cached = { canvas, minX, minY, compositeW, compositeH, key: cacheKey }
+            localCompositeRef.current = cached
+          }
+
+          const tex = PIXI.Texture.from(cached.canvas)
+          tex.source.scaleMode = 'linear'
+          const sp = new PIXI.Sprite(tex)
+          sp.x = frameX0 + cached.minX
+          sp.y = frameY0 + cached.minY
+          sp.width = cached.compositeW
+          sp.height = cached.compositeH
+          L.frameCont.addChild(sp)
+          L.loadedFrameId = frame.id
         } else {
-          // ── API-frame path (original behaviour) ──
-          pieceDefs = [
+          // ── API-frame path (original 8-sprite behaviour) ──
+          const pieceDefs = [
             { url: frame.leftUpImg,    x: frameX0,                        y: frameY0,                        w: framePx,              h: framePx },
             { url: frame.upImg,        x: frameX0 + framePx,              y: frameY0,                        w: outerW - framePx * 2, h: framePx },
             { url: frame.rightUpImg,   x: frameX0 + outerW - framePx,     y: frameY0,                        w: framePx,              h: framePx },
@@ -738,31 +859,31 @@ export default function CanvasStage({
           ]
             .filter(p => p.url && p.url.length > 0)
             .map(p => ({ ...p, url: prefix + p.url }))
-        }
 
-        let needsLoad = false
-        for (const p of pieceDefs) {
-          const cached = texCache.get(p.url)
-          if (cached) {
-            const sp = new PIXI.Sprite(cached)
-            sp.x = p.x; sp.y = p.y
-            sp.width = Math.max(1, p.w); sp.height = Math.max(1, p.h)
-            L.frameCont.addChild(sp)
-          } else {
-            needsLoad = true
+          let needsLoad = false
+          for (const p of pieceDefs) {
+            const cached = texCache.get(p.url)
+            if (cached) {
+              const sp = new PIXI.Sprite(cached)
+              sp.x = p.x; sp.y = p.y
+              sp.width = Math.max(1, p.w); sp.height = Math.max(1, p.h)
+              L.frameCont.addChild(sp)
+            } else {
+              needsLoad = true
+            }
           }
-        }
 
-        if (needsLoad) {
-          const snap = frame.id
-          L.loadedFrameId = snap
-          Promise.all(pieceDefs.map(p => loadTexture(p.url))).then(() => {
-            const L2 = layersRef.current
-            if (!L2 || L2.loadedFrameId !== snap) return
-            render()
-          })
-        } else {
-          L.loadedFrameId = frame.id
+          if (needsLoad) {
+            const snap = frame.id
+            L.loadedFrameId = snap
+            Promise.all(pieceDefs.map(p => loadTexture(p.url))).then(() => {
+              const L2 = layersRef.current
+              if (!L2 || L2.loadedFrameId !== snap) return
+              render()
+            })
+          } else {
+            L.loadedFrameId = frame.id
+          }
         }
 
       } else if (frame.imgUrl) {

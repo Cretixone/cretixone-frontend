@@ -9,6 +9,44 @@ export const OSS_PREFIX = 'https://oss.aiframeit.com/'
 
 export type BackgroundMode = 'interior' | 'scenery' | null
 
+// Frame aspect ratios offered to the user. Stored as a string id so the
+// store/state is serialisable; the actual width/height ratio is derived in
+// the renderer. "auto" = the legacy square canvas-fit calculation.
+export type FrameAspectRatio =
+  | 'auto'   // canvas-fit square (default; backward-compatible)
+  | '1:1'    // square
+  | '4:5'   // portrait Instagram
+  | '2:3'    // portrait standard print
+  | '3:4'    // portrait
+  | '9:16'   // portrait phone / story
+  | '5:4'    // landscape
+  | '3:2'    // landscape standard print
+  | '4:3'    // landscape
+  | '16:9'   // landscape phone / video
+
+export const FRAME_ASPECT_RATIOS: Array<{
+  id: FrameAspectRatio
+  label: string
+  /** width / height — 1.0 means square. */
+  ratio: number
+}> = [
+  { id: 'auto',  label: 'Auto',   ratio: 1 },
+  { id: '1:1',   label: '1:1',    ratio: 1 },
+  { id: '4:5',   label: '4:5',    ratio: 4 / 5 },
+  { id: '2:3',   label: '2:3',    ratio: 2 / 3 },
+  { id: '3:4',   label: '3:4',    ratio: 3 / 4 },
+  { id: '9:16',  label: '9:16',   ratio: 9 / 16 },
+  { id: '5:4',   label: '5:4',    ratio: 5 / 4 },
+  { id: '3:2',   label: '3:2',    ratio: 3 / 2 },
+  { id: '4:3',   label: '4:3',    ratio: 4 / 3 },
+  { id: '16:9',  label: '16:9',   ratio: 16 / 9 },
+]
+
+export const getAspectRatioValue = (id: FrameAspectRatio): number => {
+  const found = FRAME_ASPECT_RATIOS.find((r) => r.id === id)
+  return found?.ratio ?? 1
+}
+
 export type EditorState = {
   // Selected API items
   selectedFrame: ApiFrame | null
@@ -33,6 +71,7 @@ export type EditorState = {
 
   // Sizing
   frameWidth: number              // 5–30, grows inward
+  frameAspectRatio: FrameAspectRatio  // outer frame aspect ratio
   lineWidth: number               // rendered line strip thickness
 
   // Shadow
@@ -71,6 +110,7 @@ export type EditorState = {
   setActiveEffectTab: (tab: string) => void
   setActiveFrameCategorySlug: (slug: string | null) => void
   setFrameWidth: (w: number) => void
+  setFrameAspectRatio: (r: FrameAspectRatio) => void
   setLineWidth: (w: number) => void
   setShadowEnabled: (e: boolean) => void
   setShadowBlur: (b: number) => void
@@ -101,6 +141,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   activeFrameCategorySlug: null,
 
   frameWidth: 10,
+  frameAspectRatio: 'auto',
   lineWidth: 0,
 
   shadowEnabled: false,
@@ -150,6 +191,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   setActiveEffectTab: (tab) => set({ activeEffectTab: tab }),
   setActiveFrameCategorySlug: (slug) => set({ activeFrameCategorySlug: slug }),
   setFrameWidth: (w) => set({ frameWidth: w }),
+  setFrameAspectRatio: (r) => set({ frameAspectRatio: r }),
   setLineWidth: (w) => set({ lineWidth: w }),
   setShadowEnabled: (e) => set({ shadowEnabled: e }),
   setShadowBlur: (b) => set({ shadowBlur: b }),

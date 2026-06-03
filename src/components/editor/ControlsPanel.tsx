@@ -1,4 +1,8 @@
-import { useEditorStore } from '@/store/editorStore'
+import {
+  useEditorStore,
+  FRAME_ASPECT_RATIOS,
+  type FrameAspectRatio,
+} from '@/store/editorStore'
 import { clsx } from 'clsx'
 
 const TABS = ['Style', 'Width', 'Shadow']
@@ -58,10 +62,54 @@ function Slider({
   )
 }
 
+function RatioPicker({
+  value,
+  onChange,
+}: {
+  value: FrameAspectRatio
+  onChange: (next: FrameAspectRatio) => void
+}) {
+  return (
+    <div className="mb-1">
+      <div className="flex justify-between items-center mb-2">
+        <span className="text-xs text-gray-400 uppercase tracking-wider font-medium">
+          Frame Ratio
+        </span>
+        <span className="text-xs text-accent font-mono tabular-nums">
+          {FRAME_ASPECT_RATIOS.find((r) => r.id === value)?.label ?? value}
+        </span>
+      </div>
+      <div className="grid grid-cols-5 gap-1.5">
+        {FRAME_ASPECT_RATIOS.map((r) => (
+          <button
+            key={r.id}
+            type="button"
+            onClick={() => onChange(r.id)}
+            className={clsx(
+              'rounded-md px-1.5 py-1 text-[10px] font-medium transition-colors',
+              value === r.id
+                ? 'bg-accent text-black'
+                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white',
+            )}
+            aria-pressed={value === r.id}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
+      <p className="text-[10px] text-gray-500 mt-2 leading-snug">
+        <strong className="text-gray-400">Auto</strong> fits a square to the
+        viewport. Other ratios crop the frame to the chosen aspect.
+      </p>
+    </div>
+  )
+}
+
 export default function ControlsPanel() {
   const {
     activeControlTab, setActiveControlTab,
     frameWidth, setFrameWidth,
+    frameAspectRatio, setFrameAspectRatio,
     shadowEnabled, setShadowEnabled,
     shadowBlur, setShadowBlur,
     shadowOpacity, setShadowOpacity,
@@ -100,7 +148,7 @@ export default function ControlsPanel() {
 
         {/* ── Width tab ── */}
         {activeControlTab === 'Width' && (
-          <div className="pt-1">
+          <div className="pt-1 space-y-3">
             <Slider
               label="Frame Width"
               value={frameWidth}
@@ -108,6 +156,10 @@ export default function ControlsPanel() {
               max={30}
               unit=""
               onChange={setFrameWidth}
+            />
+            <RatioPicker
+              value={frameAspectRatio}
+              onChange={setFrameAspectRatio}
             />
           </div>
         )}
