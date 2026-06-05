@@ -93,16 +93,30 @@ const hashIdToNumber = (uuid: string): number => {
   return -(2000 + (Math.abs(h) % 1_000_000))
 }
 
+// Host the backend serves /uploads from. Empty in dev — relative paths
+// flow through the vite proxy. In prod we point at api.cretixone.com so
+// the static frontend can load frame PNGs cross-origin.
+const UPLOADS_HOST: string =
+  (import.meta.env.VITE_UPLOADS_HOST as string | undefined) ||
+  (import.meta.env.PROD ? 'https://api.cretixone.com' : '')
+
+const resolveBackendUrl = (url: string | null | undefined): string => {
+  if (!url) return ''
+  if (/^https?:\/\//i.test(url)) return url
+  if (!UPLOADS_HOST) return url
+  return url.startsWith('/') ? `${UPLOADS_HOST}${url}` : `${UPLOADS_HOST}/${url}`
+}
+
 const mapCretixFrame = (f: CretixFrameDto): ApiFrame => ({
   id: hashIdToNumber(f.id),
   categoryId: f.categoryId,
   categorySlug: f.category?.slug ?? null,
   isVip: f.isVip,
   isNew: f.isNew,
-  imgUrl: f.thumbnailUrl,
-  landscapeUrl: f.landscapeUrl,
-  portraitUrl: f.portraitUrl,
-  squareUrl: f.squareUrl ?? null,
+  imgUrl: resolveBackendUrl(f.thumbnailUrl),
+  landscapeUrl: resolveBackendUrl(f.landscapeUrl),
+  portraitUrl: resolveBackendUrl(f.portraitUrl),
+  squareUrl: f.squareUrl ? resolveBackendUrl(f.squareUrl) : null,
 })
 
 // ─── RTK Query API ───────────────────────────────────────────────────────────
