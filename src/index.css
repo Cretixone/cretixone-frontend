@@ -236,82 +236,86 @@
 }
 
 @layer components {
-  .sidebar-btn {
-    @apply flex flex-col items-center justify-center gap-1 w-full py-3 px-1 rounded-lg transition-all duration-200 text-gray-400 hover:text-white hover:bg-white/10 cursor-pointer text-xs;
-  }
-  .sidebar-btn.active {
-    @apply text-accent bg-white/10;
-  }
+  /* Legacy helper kept for non-editor pages that may still rely on it. */
   .pro-badge {
     @apply absolute top-1 right-1 bg-pro text-white text-[8px] font-bold px-1 py-0.5 rounded-sm leading-none;
   }
-  .frame-card {
-    @apply relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 border-transparent hover:border-accent/60 transition-all duration-200;
-  }
-  .frame-card.selected {
-    @apply border-accent;
-  }
-  .tab-btn {
-    @apply px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 whitespace-nowrap;
-  }
-  .tab-btn.active {
-    @apply bg-white/15 text-white;
-  }
-  .tab-btn:not(.active) {
-    @apply text-gray-400 hover:text-gray-200;
-  }
-  .panel-section {
-    @apply border-b border-white/10 pb-4 mb-4;
-  }
-  .control-label {
-    @apply text-xs font-medium text-gray-400 uppercase tracking-wider mb-2;
-  }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 4px;
+/* ── Editor theme tokens ────────────────────────────────────────────────
+ * Scoped to `.editor-shell` only — landing/about/terms are unaffected.
+ * Two variants: light (default, matches landing palette) and dark.
+ * Components consume these via `bg-[var(--ed-panel)]`, etc. */
+.editor-shell.editor-light {
+  --ed-bg: #f4f3ef;
+  --ed-panel: #ffffff;
+  --ed-panel-elevated: #fafaf7;
+  --ed-canvas: #eceae3;
+  --ed-fg: #002365;
+  --ed-fg-muted: #5d6a8a;
+  --ed-fg-subtle: #97a0b8;
+  --ed-border: #e6e2d6;
+  --ed-border-strong: #d4cebd;
+  --ed-accent: #C08C40;
+  --ed-accent-fg: #ffffff;
+  --ed-accent-soft: rgba(192, 140, 64, 0.12);
+  --ed-ring: rgba(0, 35, 101, 0.18);
+  --ed-hover: rgba(0, 35, 101, 0.05);
+  --ed-active: rgba(0, 35, 101, 0.09);
+  --ed-shadow: 0 1px 2px rgba(10, 31, 77, 0.06), 0 8px 24px rgba(10, 31, 77, 0.04);
+  --ed-pixi-bg: 0xeceae3;
 }
-::-webkit-scrollbar-track {
-  background: transparent;
+.editor-shell.editor-dark {
+  --ed-bg: #0c0f1a;
+  --ed-panel: #131726;
+  --ed-panel-elevated: #1a1f33;
+  --ed-canvas: #0e1220;
+  --ed-fg: #e7ecf7;
+  --ed-fg-muted: #99a1b5;
+  --ed-fg-subtle: #6a7388;
+  --ed-border: rgba(255, 255, 255, 0.07);
+  --ed-border-strong: rgba(255, 255, 255, 0.14);
+  --ed-accent: #C08C40;
+  --ed-accent-fg: #0c0f1a;
+  --ed-accent-soft: rgba(192, 140, 64, 0.18);
+  --ed-ring: rgba(192, 140, 64, 0.35);
+  --ed-hover: rgba(255, 255, 255, 0.05);
+  --ed-active: rgba(255, 255, 255, 0.09);
+  --ed-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.32);
+  --ed-pixi-bg: 0x0e1220;
 }
-::-webkit-scrollbar-thumb {
+
+.editor-shell {
+  background: var(--ed-bg);
+  color: var(--ed-fg);
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+}
+
+/* Scoped scrollbar look that adapts to theme. */
+.editor-shell ::-webkit-scrollbar { width: 8px; height: 8px; }
+.editor-shell ::-webkit-scrollbar-track { background: transparent; }
+.editor-shell ::-webkit-scrollbar-thumb {
+  background: var(--ed-border-strong);
+  border-radius: 4px;
+  border: 2px solid var(--ed-panel);
+}
+.editor-shell ::-webkit-scrollbar-thumb:hover { background: var(--ed-fg-subtle); }
+
+/* Subtle inset frame around the canvas area, themed. */
+.editor-shell .canvas-surface {
+  background: var(--ed-canvas);
+  box-shadow: inset 0 1px 0 var(--ed-border);
+}
+
+/* Default scrollbar — only applies OUTSIDE the editor shell. */
+:not(.editor-shell)::-webkit-scrollbar { width: 4px; }
+:not(.editor-shell)::-webkit-scrollbar-track { background: transparent; }
+:not(.editor-shell)::-webkit-scrollbar-thumb {
   background: rgba(255,255,255,0.15);
   border-radius: 2px;
 }
-::-webkit-scrollbar-thumb:hover {
+:not(.editor-shell)::-webkit-scrollbar-thumb:hover {
   background: rgba(255,255,255,0.25);
-}
-
-/* Slider custom style */
-.custom-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 3px;
-  background: rgba(255,255,255,0.15);
-  border-radius: 2px;
-  outline: none;
-  cursor: pointer;
-}
-.custom-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #4ade80;
-  cursor: pointer;
-  border: 2px solid #1a1a2e;
-  box-shadow: 0 0 8px rgba(74,222,128,0.4);
-}
-.custom-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #4ade80;
-  cursor: pointer;
-  border: 2px solid #1a1a2e;
 }
 
 /* Skeleton loader */

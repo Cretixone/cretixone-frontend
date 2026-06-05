@@ -1,16 +1,18 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import * as PIXI from 'pixi.js'
-import { useEditorStore, OSS_PREFIX, getAspectRatioValue } from '@/store/editorStore'
+import {
+  useEditorStore,
+  OSS_PREFIX,
+  getAspectRatioValue,
+} from '@/store/editorStore'
 import type { ApiFrame, ApiScene, ApiEffectItem } from '@/types/api'
 import { useCanvasSize } from '@/hooks/useCanvasSize'
 import { useImageUpload } from '@/hooks/useImageUpload'
-import type { PieceBox } from '@/data/localFrames'
 import {
-  isLocalFrame,
-  getCachedLocalFrame,
-  getLocalFrameGeometry,
-  loadLocalFrame,
-} from '@/data/localFrames'
+  loadFrameAsset,
+  getCachedFrameAsset,
+  pickFrameAssetUrl,
+} from '@/data/frameAssets'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -28,18 +30,33 @@ function resolveUrl(path: string): string {
 // ─── Texture cache ────────────────────────────────────────────────────────────
 
 const texCache = new Map<string, PIXI.Texture>()
+// In-flight loads: when several renders fire in quick succession (e.g.
+// resize storms or state-driven re-renders), all of them check texCache
+// before the first PIXI.Assets.load resolves. Without this pending map,
+// every render kicks off a fresh HTTP request for the same URL,
+// hammering the server with dozens of duplicate fetches.
+const texPending = new Map<string, Promise<PIXI.Texture | null>>()
 
 async function loadTexture(url: string): Promise<PIXI.Texture | null> {
   if (!url) return null
-  if (texCache.has(url)) return texCache.get(url)!
-  try {
-    const tex = await PIXI.Assets.load(url)
-    texCache.set(url, tex)
-    return tex
-  } catch {
-    console.warn('[FrameDesigner] Could not load texture:', url)
-    return null
-  }
+  const cached = texCache.get(url)
+  if (cached) return cached
+  const pending = texPending.get(url)
+  if (pending) return pending
+  const p = (async () => {
+    try {
+      const tex = (await PIXI.Assets.load(url)) as PIXI.Texture
+      texCache.set(url, tex)
+      return tex
+    } catch {
+      console.warn('[FrameDesigner] Could not load texture:', url)
+      return null
+    } finally {
+      texPending.delete(url)
+    }
+  })()
+  texPending.set(url, p)
+  return p
 }
 
 function loadArtworkTexture(url: string): Promise<PIXI.Texture> {
@@ -58,6 +75,39 @@ function loadArtworkTexture(url: string): Promise<PIXI.Texture> {
 }
 
 // ─── Draw helpers ─────────────────────────────────────────────────────────────
+
+/**
+ * Image-upload icon — a rounded square outline containing a small sun
+ * (circle) and a mountain peak (V-stroke). Drawn centred on (cx, cy) at
+ * the requested overall size. Scales cleanly because it's pure vector.
+ */
+function drawUploadIcon(g: PIXI.Graphics, cx: number, cy: number, size: number) {
+  g.clear()
+  const half = size / 2
+  const stroke = Math.max(1.5, size / 16)
+  const color = 0x6b7488
+  const alpha = 0.7
+  const radius = size * 0.16
+
+  // Outer rounded square
+  g.roundRect(cx - half, cy - half, size, size, radius)
+    .stroke({ width: stroke, color, alpha })
+
+  // Sun (upper-right circle)
+  g.circle(cx + size * 0.18, cy - size * 0.18, size * 0.07)
+    .stroke({ width: stroke, color, alpha })
+
+  // Mountain peak (downstroke + upstroke, V from lower-left to lower-right)
+  const baseY = cy + size * 0.22
+  const peakX = cx - size * 0.05
+  const peakY = cy - size * 0.05
+  g.moveTo(cx - size * 0.32, baseY)
+    .lineTo(peakX, peakY)
+    .lineTo(cx + size * 0.05, cy + size * 0.08)
+    .lineTo(cx + size * 0.2, cy - size * 0.05)
+    .lineTo(cx + size * 0.32, baseY)
+    .stroke({ width: stroke, color, alpha })
+}
 
 function drawShadow(
   g: PIXI.Graphics,
@@ -135,8 +185,8 @@ interface Layers {
   artMask: PIXI.Graphics
   uploadOverlay: PIXI.Container
   overlayBg: PIXI.Graphics
-  overlayText: PIXI.Text
-  overlaySubText: PIXI.Text
+  overlayIcon: PIXI.Graphics
+  overlayLabel: PIXI.Text
 
   // Front layer (foreground objects from interior, on top of design)
   frontContainer: PIXI.Container
@@ -155,15 +205,36 @@ interface Layers {
   artSprite: PIXI.Sprite | null
 }
 
-function mountSprite(L: Layers, tex: PIXI.Texture, renderFn: () => void) {
+function mountSprite(
+  L: Layers,
+  tex: PIXI.Texture,
+  renderFn: () => void,
+  openFilePicker: () => void,
+) {
   if (L.artSprite) {
     L.artworkCont.removeChild(L.artSprite)
     L.artSprite.destroy()
   }
   const sp = new PIXI.Sprite(tex)
-  sp.anchor.set(0.5)
+  // Horizontal centre, vertical top — the picture is anchored to the
+  // TOP edge of the opening so when the user switches frame ratios the
+  // image always starts flush with the top of the new opening, never
+  // showing empty space above the picture.
+  sp.anchor.set(0.5, 0)
   sp.eventMode = 'static'
   sp.cursor = 'grab'
+  // Double-click on the picture → re-open the file picker so the user
+  // can swap the picture without first having to clear it.
+  let lastTap = 0
+  sp.on('pointertap', () => {
+    const now = performance.now()
+    if (now - lastTap < 350) {
+      lastTap = 0
+      openFilePicker()
+    } else {
+      lastTap = now
+    }
+  })
   L.artSprite = sp
   L.artworkCont.addChildAt(sp, 0)
   renderFn()
@@ -185,18 +256,17 @@ export default function CanvasStage({
   const appRef = useRef<PIXI.Application | null>(null)
   const layersRef = useRef<Layers | null>(null)
   const frameOverrideRef = useRef<ApiFrame | null>(frameOverride)
-  // Cached single-canvas composite used to render local frames with
-  // pixel-perfect (seam-free) joints. Keyed on the geometry inputs that
-  // affect what gets baked.
-  const localCompositeRef = useRef<{
-    canvas: HTMLCanvasElement
-    minX: number
-    minY: number
-    compositeW: number
-    compositeH: number
-    key: string
-  } | null>(null)
   const { openFilePicker, handleDrop, handleDragOver } = useImageUpload()
+  // The mat-opening rectangle in canvas (stage) coords, updated each
+  // render. The wheel handler reads this to decide whether the cursor
+  // is over the picture (→ picture zoom) or over the frame moulding /
+  // canvas background (→ canvas zoom).
+  const openingScreenRectRef = useRef({ x: 0, y: 0, w: 0, h: 0 })
+  // Maximum allowed |frameOffsetX| / |frameOffsetY|. Updated each render
+  // from the current outer-frame size and design zoom — the pan handler
+  // reads it to clamp the offset so the frame can't be dragged fully
+  // off the canvas.
+  const panBoundsRef = useRef({ maxX: 0, maxY: 0 })
 
   // ── Init ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -207,12 +277,19 @@ export default function CanvasStage({
     const app = new PIXI.Application()
 
     const boot = async () => {
+      // Initial background matches the editor's current theme (set on the
+      // root `.editor-shell` element via CSS variables). We re-read it
+      // each theme toggle below.
+      const initialBg = useEditorStore.getState().editorTheme === 'dark' ? 0x0e1220 : 0xeceae3
       await app.init({
         resizeTo: container,
-        backgroundColor: 0x1a1a2e,
+        backgroundColor: initialBg,
         antialias: true,
         autoDensity: true,
         resolution: Math.min(window.devicePixelRatio || 1, 2),
+        // Required so extract.canvas / toDataURL capture the current
+        // frame instead of an empty (black) post-swap buffer.
+        preserveDrawingBuffer: true,
       })
 
       if (cancelled) {
@@ -222,6 +299,12 @@ export default function CanvasStage({
 
       appRef.current = app
       container.appendChild(app.canvas)
+      // Canvas always fills its container so there's never an empty
+      // band when the right inspector collapses. To avoid the browser
+      // stretching an OLD drawing buffer into the NEW CSS box during
+      // resize, we synchronously resize PIXI's buffer in a
+      // useLayoutEffect below (which runs after the DOM commit but
+      // BEFORE the next browser paint).
       ;(app.canvas as HTMLCanvasElement).style.cssText =
         'display:block;width:100%;height:100%'
 
@@ -232,41 +315,50 @@ export default function CanvasStage({
       const bgGraphics = new PIXI.Graphics()
       bgContainer.addChild(bgGraphics)
 
-      // 2. Design group (zoomable)
+      // 2. Design group (zoomable + pannable)
       const designGroup = new PIXI.Container()
       const shadowG = new PIXI.Graphics()
       const frameCont = new PIXI.Container()
+      // The frame sprite is drawn on top of the artwork; its bounding
+      // box is the whole outerW × outerH rectangle so without this it
+      // would intercept all pointer events in the inner opening and
+      // break artwork drag.
+      frameCont.eventMode = 'none'
       const matSolidG = new PIXI.Graphics()
       const matTexCont = new PIXI.Container()
       const artworkCont = new PIXI.Container()
       const artMask = new PIXI.Graphics()
       const uploadOverlay = new PIXI.Container()
       const overlayBg = new PIXI.Graphics()
+      // Centred image-upload icon (image frame with a mountain peak and
+      // a small sun). Re-drawn each render so it scales with the
+      // picture rect.
+      const overlayIcon = new PIXI.Graphics()
 
-      const overlayText = new PIXI.Text({
-        text: 'Click here to\nupload',
+      // Single-line caption under the icon. Style is finalised in render
+      // (fontSize scales with the opening).
+      const overlayLabel = new PIXI.Text({
+        text: 'Upload image',
         style: new PIXI.TextStyle({
           fontFamily: 'DM Sans, sans-serif',
-          fontSize: 26, fontWeight: '700',
-          fill: '#111111', align: 'center',
-          wordWrap: true, wordWrapWidth: 220, lineHeight: 34,
+          fontSize: 13,
+          fontWeight: '500',
+          fill: '#6b7488',
+          align: 'center',
         }),
       })
-      overlayText.anchor.set(0.5)
+      overlayLabel.anchor.set(0.5, 0)
 
-      const overlaySubText = new PIXI.Text({
-        text: 'Scroll to zoom',
-        style: new PIXI.TextStyle({
-          fontFamily: 'DM Sans, sans-serif',
-          fontSize: 14, fill: '#666666',
-        }),
-      })
-      overlaySubText.anchor.set(0.5, 0)
-
-      uploadOverlay.addChild(overlayBg, overlayText, overlaySubText)
+      uploadOverlay.addChild(overlayBg, overlayIcon, overlayLabel)
       uploadOverlay.eventMode = 'static'
       uploadOverlay.cursor = 'pointer'
-      uploadOverlay.on('pointerdown', () => openFilePicker())
+      uploadOverlay.on('pointerdown', (e: PIXI.FederatedPointerEvent) => {
+        // Open the file picker and STOP the event from bubbling — otherwise
+        // the stage's pan handler would also fire and the user would start
+        // dragging the frame the moment they clicked the upload button.
+        e.stopPropagation()
+        openFilePicker()
+      })
 
       artworkCont.addChild(artMask)
       artworkCont.mask = artMask
@@ -277,10 +369,18 @@ export default function CanvasStage({
       designGroup.addChild(shadowG, matSolidG, matTexCont, artworkCont, frameCont, uploadOverlay)
 
       // 3. Front container (foreground objects from interior scenes)
+      // Render-only — must not intercept pointer events, otherwise the
+      // interior foreground sprite (vase, table, lamp, etc.) sits above
+      // the design group's upload overlay and swallows the click that
+      // should open the file picker.
       const frontContainer = new PIXI.Container()
+      frontContainer.eventMode = 'none'
 
       // 4. Effect container (not zoomable)
+      // Render-only too — effect overlays cover the whole canvas and
+      // would otherwise block clicks on the picture / upload overlay.
       const effectContainer = new PIXI.Container()
+      effectContainer.eventMode = 'none'
 
       // Stage z-order: bg → design → front → effect
       app.stage.addChild(bgContainer, designGroup, frontContainer, effectContainer)
@@ -291,7 +391,7 @@ export default function CanvasStage({
         designGroup, shadowG, frameCont,
         matSolidG, matTexCont,
         artworkCont, artMask,
-        uploadOverlay, overlayBg, overlayText, overlaySubText,
+        uploadOverlay, overlayBg, overlayIcon, overlayLabel,
         frontContainer, frontSprite: null, loadedFrontUrl: '',
         effectContainer, effectSprite: null,
         loadedFrameId: -1,
@@ -301,9 +401,20 @@ export default function CanvasStage({
         artSprite: null,
       }
 
-      // ── Artwork drag ──────────────────────────────────────────────────
+      // ── Drag handlers ─────────────────────────────────────────────────
+      // Two kinds of drag:
+      //   1. Artwork drag — when the pointer is over the loaded picture,
+      //      drag moves the picture inside the mat opening.
+      //   2. Frame pan — when the pointer is on empty canvas, drag pans
+      //      the whole frame so the user can reposition it on the stage.
+      // We let both pointerdowns fire (artworkCont's listener runs before
+      // the stage's) and use the `dragging` flag to short-circuit pan
+      // when artwork drag has already started.
       let dragging = false
+      let panning = false
       let startX = 0, startY = 0, origX = 0, origY = 0
+      let panStartX = 0, panStartY = 0
+      let panOrigX = 0, panOrigY = 0
 
       artworkCont.on('pointerdown', (e: PIXI.FederatedPointerEvent) => {
         if (!layersRef.current?.artSprite) return
@@ -312,23 +423,68 @@ export default function CanvasStage({
         origX = useEditorStore.getState().artworkX
         origY = useEditorStore.getState().artworkY
       })
-      app.stage.on('pointermove', (e: PIXI.FederatedPointerEvent) => {
-        if (!dragging) return
-        useEditorStore.getState().setArtworkPosition(
-          origX + e.globalX - startX,
-          origY + e.globalY - startY
-        )
+      app.stage.on('pointerdown', (e: PIXI.FederatedPointerEvent) => {
+        if (dragging) return
+        panning = true
+        panStartX = e.globalX; panStartY = e.globalY
+        const s2 = useEditorStore.getState()
+        panOrigX = s2.frameOffsetX
+        panOrigY = s2.frameOffsetY
       })
-      const stopDrag = () => { dragging = false }
+      app.stage.on('pointermove', (e: PIXI.FederatedPointerEvent) => {
+        if (dragging) {
+          useEditorStore.getState().setArtworkPosition(
+            origX + e.globalX - startX,
+            origY + e.globalY - startY,
+          )
+        } else if (panning) {
+          const bounds = panBoundsRef.current
+          const rawX = panOrigX + e.globalX - panStartX
+          const rawY = panOrigY + e.globalY - panStartY
+          const clampedX = Math.max(-bounds.maxX, Math.min(bounds.maxX, rawX))
+          const clampedY = Math.max(-bounds.maxY, Math.min(bounds.maxY, rawY))
+          useEditorStore.getState().setFrameOffset(clampedX, clampedY)
+        }
+      })
+      const stopDrag = () => { dragging = false; panning = false }
       app.stage.on('pointerup', stopDrag)
       app.stage.on('pointerupoutside', stopDrag)
 
-      // ── Wheel zoom — zooms design group only ──────────────────────────
+      // ── Wheel zoom ─────────────────────────────────────────────────────
+      // Cursor-position aware:
+      //   • Cursor over the picture (inside the mat opening) → zoom the
+      //     PICTURE (fit / crop the uploaded image).
+      //   • Cursor over the frame moulding or empty canvas → zoom the
+      //     WHOLE FRAME (canvas zoom).
+      // The opening rect in stage coords is refreshed each render via
+      // openingScreenRectRef so the check stays in sync with the live
+      // frame size + pan offset.
       ;(app.canvas as HTMLElement).addEventListener('wheel', (e: WheelEvent) => {
         e.preventDefault()
         const s = useEditorStore.getState()
-        const newZoom = Math.min(3, Math.max(0.3, s.designZoom * (e.deltaY < 0 ? 1.06 : 0.94)))
-        s.setDesignZoom(newZoom)
+        const factor = e.deltaY < 0 ? 1.06 : 0.94
+
+        const canvasEl = app.canvas as HTMLCanvasElement
+        const bounds = canvasEl.getBoundingClientRect()
+        const mouseX = e.clientX - bounds.left
+        const mouseY = e.clientY - bounds.top
+
+        const r = openingScreenRectRef.current
+        const cursorOverPicture =
+          !!s.artworkImageUrl &&
+          mouseX >= r.x && mouseX <= r.x + r.w &&
+          mouseY >= r.y && mouseY <= r.y + r.h
+
+        if (cursorOverPicture) {
+          const next = Math.min(8, Math.max(0.1, s.artworkScale * factor))
+          s.setArtworkScale(next)
+        } else {
+          // Canvas zoom is clamped to [1, 3]: 1.0 = the frame's natural
+          // viewport-fit size (you can never shrink the frame below
+          // that), 3.0 = three times bigger for inspection.
+          const next = Math.min(3, Math.max(1, s.designZoom * factor))
+          s.setDesignZoom(next)
+        }
       }, { passive: false })
 
       render()
@@ -482,111 +638,210 @@ export default function CanvasStage({
     // ── 2. Design group zoom + position ─────────────────────────────────
     const zoom = s.designZoom
     L.designGroup.scale.set(zoom)
-    L.designGroup.x = cx - cx * zoom
-    L.designGroup.y = cy - cy * zoom
+    L.designGroup.x = cx - cx * zoom + s.frameOffsetX
+    L.designGroup.y = cy - cy * zoom + s.frameOffsetY
 
     // ── Compute frame dimensions ────────────────────────────────────────
+    // Three modes — the FRAME OUTER is always drawn at the chosen source
+    // PNG's native aspect, so the moulding is never anisotropically
+    // stretched:
+    //   landscape / portrait → renders the corresponding source PNG;
+    //     the picture fills the alpha-detected opening.
+    //   custom               → renders whichever PNG matches the user's
+    //     cm orientation (landscape if width ≥ height, portrait
+    //     otherwise). The cm dimensions only shape the PICTURE rect
+    //     INSIDE the opening — the picture rect is fit at width:height
+    //     aspect, top-anchored, and the mat fills the surrounding gap.
     const interiorPos = (bgMode === 'interior' && interior?.position) ? interior.position : null
-    // Aspect ratio = width / height. 'auto' (the default) keeps the legacy
-    // canvas-fit behaviour where the frame is always square. Anything else
-    // sizes the longer axis to fit and derives the shorter from the ratio.
-    const aspectRatio = s.frameAspectRatio === 'auto'
-      ? 1
-      : getAspectRatioValue(s.frameAspectRatio)
+    const isCustom = s.frameAspectRatio === 'custom'
+    // Square is "wanted" by either the Square radio OR Custom mode with
+    // exactly equal width × height (e.g. 40 × 40 cm). When the admin
+    // uploaded a dedicated square PNG we route to that asset directly
+    // so the picture fills its own opening (no side-strip mat needed).
+    // Otherwise we fall back to landscape and the renderer fits a 1:1
+    // picture rect inside its opening, with mat filling the side gap.
+    const wantSquare =
+      s.frameAspectRatio === 'square' ||
+      (isCustom && s.customWidthCm === s.customHeightCm)
+    // When a dedicated square PNG is uploaded for this frame, route to
+    // it whenever Square is wanted — including in interior mode. The
+    // interior position fitting below still constrains the outer rect,
+    // so the square frame fits cleanly inside the wall area at the
+    // smaller of the position's width / height. Without a dedicated
+    // square PNG, fall back to the landscape PNG and fit a 1:1 picture
+    // rect inside its opening (the moulding stays landscape-shaped —
+    // that's the unavoidable cost of not having a square asset).
+    const hasDedicatedSquare = wantSquare && !!frame?.squareUrl
+    let orientation: 'landscape' | 'portrait' | 'square'
+    if (wantSquare) {
+      orientation = hasDedicatedSquare ? 'square' : 'landscape'
+    } else if (isCustom) {
+      orientation = s.customWidthCm < s.customHeightCm ? 'portrait' : 'landscape'
+    } else {
+      orientation = s.frameAspectRatio === 'portrait' ? 'portrait' : 'landscape'
+    }
+
+    // Kick off the async load of the chosen PNG so we know its native
+    // dimensions on the next render.
+    let frameAsset = null as ReturnType<typeof getCachedFrameAsset>
+    if (frame) {
+      const assetUrl = pickFrameAssetUrl(frame, orientation)
+      frameAsset = getCachedFrameAsset(assetUrl)
+      if (!frameAsset) {
+        const snap = frame.id
+        void loadFrameAsset(assetUrl).then(() => {
+          const L2 = layersRef.current
+          if (!L2) return
+          const s2 = useEditorStore.getState()
+          const current = frameOverrideRef.current ?? s2.selectedFrame
+          if (current?.id !== snap) return
+          render()
+        })
+      }
+    }
+
+    // Frame outer aspect = ALWAYS the source PNG's native aspect (so
+    // moulding is never stretched). Prefer the PIXI texture dims when
+    // available, since that's what actually gets drawn — using only the
+    // alpha-detector's frameAsset can drift if its load races with the
+    // PIXI texture load, which produced visible anisotropic stretching
+    // on canvas-resize events. Until either loads we fall back to a
+    // coarse orientation-based ratio.
+    const frameAssetUrlForAspect = frame ? pickFrameAssetUrl(frame, orientation) : ''
+    const cachedFrameTex = frameAssetUrlForAspect
+      ? texCache.get(frameAssetUrlForAspect)
+      : undefined
+    const fallbackAspect = orientation === 'portrait' ? 2 / 3 : 3 / 2
+    let aspectRatio: number
+    if (cachedFrameTex && cachedFrameTex.width > 0 && cachedFrameTex.height > 0) {
+      aspectRatio = cachedFrameTex.width / cachedFrameTex.height
+    } else if (frameAsset && frameAsset.width > 0 && frameAsset.height > 0) {
+      aspectRatio = frameAsset.width / frameAsset.height
+    } else {
+      aspectRatio = isCustom ? fallbackAspect : getAspectRatioValue(s.frameAspectRatio)
+    }
+
     let outerW: number, outerH: number, frameX0: number, frameY0: number
 
     if (interiorPos && bgSceneW > 0) {
-      // Map interior position to canvas coordinates
       const posCanvasW = interiorPos.w * bgScale
       const posCanvasH = interiorPos.h * bgScale
       const posCenterX = bgOffX + (interiorPos.x + interiorPos.w / 2) * bgScale
       const posCenterY = bgOffY + (interiorPos.y + interiorPos.h / 2) * bgScale
-      if (s.frameAspectRatio === 'auto') {
-        // Legacy: square frame fit to the smaller side
-        const outerSize = Math.min(posCanvasW, posCanvasH)
-        outerW = outerSize
-        outerH = outerSize
-      } else {
-        // Fit the user-chosen aspect inside the interior's position box.
-        const fitByW = posCanvasW / aspectRatio <= posCanvasH
-        outerW = fitByW ? posCanvasW : posCanvasH * aspectRatio
-        outerH = fitByW ? posCanvasW / aspectRatio : posCanvasH
+      const fitByW = posCanvasW / aspectRatio <= posCanvasH
+      outerW = fitByW ? posCanvasW : posCanvasH * aspectRatio
+      outerH = fitByW ? posCanvasW / aspectRatio : posCanvasH
+
+      // Square frame cap. Interior position rects vary a lot in aspect:
+      // some are wide (great for landscape frames), some are tall
+      // (designed for portrait frames). For a wider position the square
+      // fits comfortably by height, but for tall positions a square
+      // fitting the smaller dim ends up much TALLER than a landscape
+      // frame would render there — which the user perceives as "too
+      // large" on some interiors and "perfect" on others. Cap the
+      // square side to the projected height of a landscape frame in
+      // the same position, so square never visually exceeds the wall
+      // area a landscape frame would occupy.
+      if (wantSquare && hasDedicatedSquare) {
+        const fallbackLandscape = 3 / 2
+        const landscapeTex = frame ? texCache.get(frame.landscapeUrl) : undefined
+        const landscapeAspect = (landscapeTex && landscapeTex.width > 0 && landscapeTex.height > 0)
+          ? landscapeTex.width / landscapeTex.height
+          : fallbackLandscape
+        const lFitByW = posCanvasW / landscapeAspect <= posCanvasH
+        const landscapeHeight = lFitByW ? posCanvasW / landscapeAspect : posCanvasH
+        const cappedSide = Math.min(outerW, outerH, landscapeHeight)
+        outerW = cappedSide
+        outerH = cappedSide
       }
+
       frameX0 = posCenterX - outerW / 2
       frameY0 = posCenterY - outerH / 2
     } else {
-      // Default: centered, sized to fit the viewport at the chosen ratio.
-      // The "auto" path keeps the original square-fit behaviour exactly.
-      if (s.frameAspectRatio === 'auto') {
-        const outerSize = Math.max(Math.min(W * 0.55, H * 0.65), 280)
-        outerW = outerSize
-        outerH = outerSize
-      } else {
-        // Cap to roughly the same area the auto fit allowed (55% W × 65% H),
-        // then crop to the chosen aspect ratio so portrait and landscape
-        // both feel like "as large as the viewport can comfortably show."
-        const maxW = Math.max(W * 0.55, 280)
-        const maxH = Math.max(H * 0.65, 280)
-        const fitByW = maxW / aspectRatio <= maxH
-        outerW = fitByW ? maxW : maxH * aspectRatio
-        outerH = fitByW ? maxW / aspectRatio : maxH
+      // Default viewport cap — fits frame to 55% W / 65% H of canvas.
+      let maxW = Math.max(W * 0.55, 280)
+      let maxH = Math.max(H * 0.65, 280)
+      // In Custom mode the cm Width × Height ALSO scale the displayed
+      // frame: bigger cm → bigger preview, until the dim crosses the
+      // reference size (CUSTOM_REF_CM) where the frame is at full
+      // viewport size. Small frames stay smaller; large frames are
+      // capped so the preview never escapes the canvas. The frame outer
+      // aspect stays at the source PNG's native ratio (no stretch).
+      if (isCustom) {
+        const CUSTOM_REF_CM = 60 // cm dim that fills the viewport box
+        const maxCm = Math.max(1, s.customWidthCm, s.customHeightCm)
+        const scale = Math.max(0.2, Math.min(1, maxCm / CUSTOM_REF_CM))
+        maxW *= scale
+        maxH *= scale
       }
+      const fitByW = maxW / aspectRatio <= maxH
+      outerW = fitByW ? maxW : maxH * aspectRatio
+      outerH = fitByW ? maxW / aspectRatio : maxH
       frameX0 = cx - outerW / 2
       frameY0 = cy - outerH / 2
     }
 
-    // Detect frame type and compute border thickness
-    const dto = (frame?.isOtherFrame && frame.otherFrameInfoDTO) ? frame.otherFrameInfoDTO : null
-    // Slider 5–30 maps directly to 5–30% of smaller dimension per side
-    let framePx = Math.round(Math.min(outerW, outerH) * s.frameWidth / 100)
-    // For local frames the corner image extends a per-axis amount
-    // inward — horizontally `cornerBboxW × framePx / verticalThicknessSrc`
-    // and vertically `cornerBboxH × framePx / horizontalThicknessSrc`.
-    // Two corners must fit within outerW (horizontally) and outerH
-    // (vertically). Clamp framePx so neither axis overflows. API frames
-    // are unaffected.
-    if (frame && isLocalFrame(frame)) {
-      const geom = getLocalFrameGeometry(frame.id)
-      if (geom) {
-        const ratioH = geom.cornerBboxW / geom.verticalThicknessSrc
-        const ratioV = geom.cornerBboxH / geom.horizontalThicknessSrc
-        const maxFramePxH = Math.floor(outerW / 2 / ratioH)
-        const maxFramePxV = Math.floor(outerH / 2 / ratioV)
-        const maxFramePx = Math.min(maxFramePxH, maxFramePxV)
-        if (framePx > maxFramePx) framePx = maxFramePx
-      }
-    }
-
-    // Content area inside the frame border
-    // For "other" frames, derive from otherFrameInfoDTO proportions
+    // Inner content rectangle (where mat + artwork sit), derived from the
+    // alpha-measured opening on the source PNG and mapped into canvas
+    // pixels. With no asset loaded yet we fall back to a centred 60%
+    // window so the upload overlay has a sane default position.
     let contentX: number, contentY: number, contentW: number, contentH: number
-
-    if (dto) {
-      const srcW = (dto.leftW || 0) + (dto.cropWidth || 1) + (dto.rightW || 0)
-      const srcH = (dto.topH || 0) + (dto.cropHeight || 1) + (dto.downH || 0)
-      contentX = frameX0 + Math.round(outerW * (dto.leftW || 0) / srcW)
-      contentY = frameY0 + Math.round(outerH * (dto.topH || 0) / srcH)
-      contentW = Math.round(outerW * (dto.cropWidth || 1) / srcW)
-      contentH = Math.round(outerH * (dto.cropHeight || 1) / srcH)
+    if (frameAsset && frameAsset.width > 0 && frameAsset.height > 0) {
+      const sxAsset = outerW / frameAsset.width
+      const syAsset = outerH / frameAsset.height
+      contentX = frameX0 + frameAsset.opening.x * sxAsset
+      contentY = frameY0 + frameAsset.opening.y * syAsset
+      contentW = frameAsset.opening.w * sxAsset
+      contentH = frameAsset.opening.h * syAsset
     } else {
-      contentX = frameX0 + framePx
-      contentY = frameY0 + framePx
-      contentW = outerW - framePx * 2
-      contentH = outerH - framePx * 2
+      contentX = frameX0 + outerW * 0.2
+      contentY = frameY0 + outerH * 0.2
+      contentW = outerW * 0.6
+      contentH = outerH * 0.6
     }
 
     // Mat border from selected mat size ratio (0 when none → no gap)
     const matRatio = matSizeItem?.leftRatio ?? 0
     const matBorder = Math.round(Math.min(contentW, contentH) * matRatio)
 
-    const openW = Math.max(contentW - matBorder * 2, 20)
-    const openH = Math.max(contentH - matBorder * 2, 20)
     const matX = contentX
     const matY = contentY
     const matTotalW = contentW
     const matTotalH = contentH
-    const openX = matX + matBorder
-    const openY = matY + matBorder
+
+    // Picture rect — sized depending on the active mode:
+    //   - landscape / portrait / custom → fills the available opening.
+    //   - square (1:1)                  → fit a 1:1 picture rect inside
+    //     the available area, centred horizontally and top-anchored; the
+    //     mat fills the surrounding side strips.
+    const availX = contentX + matBorder
+    const availY = contentY + matBorder
+    const availW = Math.max(contentW - matBorder * 2, 20)
+    const availH = Math.max(contentH - matBorder * 2, 20)
+    // Square mode: when there's a dedicated square PNG we use its
+    // opening as-is (picture fills it). When falling back to the
+    // landscape PNG we fit a 1:1 picture rect inside the opening with
+    // mat filling the side gap.
+    const needsSquareInsideFit = wantSquare && !hasDedicatedSquare
+
+    let openX: number, openY: number, openW: number, openH: number
+    if (needsSquareInsideFit) {
+      const side = Math.min(availW, availH)
+      openW = side
+      openH = side
+      openX = availX + (availW - side) / 2
+      openY = availY
+    } else {
+      openX = availX
+      openY = availY
+      openW = availW
+      openH = availH
+    }
+    // A non-zero gap inside the opening (anything other than the full
+    // openW × openH rect) means the mat backing needs to fill the whole
+    // contentRect so the gap is visibly mat, not the white default.
+    const hasPictureMatGap = needsSquareInsideFit &&
+      (openW < availW - 0.5 || openH < availH - 0.5)
 
     // ── 3. Shadow ──────────────────────────────────────────────────────
     const frameCx = frameX0 + outerW / 2
@@ -601,329 +856,55 @@ export default function CanvasStage({
     L.frameCont.removeChildren()
 
     if (frame) {
-      const prefix = frame.urlPrefix || OSS_PREFIX
-
-      // Check which pieces have valid images
-      const pieceImages = [
-        frame.leftUpImg, frame.upImg, frame.rightUpImg,
-        frame.leftImg, frame.rightImg,
-        frame.leftDownImg, frame.downImg, frame.rightDownImg,
-      ]
-      const validPieceCount = pieceImages.filter(img => img && img.length > 0).length
-
-      if (dto && dto.cropBackground) {
-        // ── "Other" frame: single image with transparent inner area ──
-        const frameImgUrl = dto.cropBackground
-        const cached = texCache.get(frameImgUrl)
-        if (cached) {
-          const sp = new PIXI.Sprite(cached)
-          sp.x = frameX0; sp.y = frameY0
-          sp.width = outerW; sp.height = outerH
-          L.frameCont.addChild(sp)
-          L.loadedFrameId = frame.id
-        } else {
-          const snap = frame.id
-          L.loadedFrameId = snap
-          loadTexture(frameImgUrl).then(() => {
-            const L2 = layersRef.current
-            if (!L2 || L2.loadedFrameId !== snap) return
-            render()
-          })
-        }
-
-      } else if (validPieceCount >= 4) {
-        // ── 8-piece frame construction ──
-        // Two paths:
-        //
-        // 1. LOCAL FRAME PATH — uses per-piece moulding-box geometry
-        //    (LocalFrameGeometry) to position each piece so the visible
-        //    moulding (not the transparent outer-shadow padding around
-        //    it) aligns exactly with the frame's outer edge. Each piece
-        //    can have different shadow padding on different sides; the
-        //    image gets drawn slightly larger than the visible moulding
-        //    rectangle, with the extra extending outward into the
-        //    shadow space — never overlapping a neighbor.
-        //
-        // 2. API FRAME PATH — keeps the existing simple model where
-        //    every piece exactly fills its visible slot (corners are
-        //    framePx × framePx, sticks are framePx thick). API frame
-        //    assets are designed for this model.
-
-        const localGeom = frame && isLocalFrame(frame)
-          ? getLocalFrameGeometry(frame.id)
-          : null
-        const localLoaded = frame && isLocalFrame(frame)
-          ? getCachedLocalFrame(frame.id)
-          : null
-
-        // Kick off the eager local-frame load if we haven't yet, so the
-        // geometry-aware path can take over once images are ready.
-        if (frame && isLocalFrame(frame) && !localLoaded) {
-          const snap = frame.id
-          void loadLocalFrame(frame.id)?.then(() => {
-            const L2 = layersRef.current
-            if (!L2) return
-            const s2 = useEditorStore.getState()
-            const current = frameOverrideRef.current ?? s2.selectedFrame
-            if (current?.id !== snap) return
-            render()
-          })
-        }
-
-        if (localGeom && localLoaded) {
-          // ── LOCAL FRAME: single-canvas composite ──
-          // Bake all 8 pieces onto ONE offscreen canvas at super-sampled
-          // resolution and hand it to PIXI as a single sprite. Eliminates
-          // inter-piece sampling seams that would appear at design-group
-          // zoom even with mathematically perfect geometry.
-          // eslint-disable-next-line no-console
-          console.log(
-            `[CanvasStage] composite render frame=${frame.id} ` +
-              `cornerStyle=${localGeom.cornerStyle} ` +
-              `cornerFillColor=${localGeom.cornerFillColor} ` +
-              `framePx=${framePx}`,
-          )
-          const sxCorner = framePx / localGeom.verticalThicknessSrc
-          const syCorner = framePx / localGeom.horizontalThicknessSrc
-          const cornerCanvasW = localGeom.cornerBboxW * sxCorner
-          const cornerCanvasH = localGeom.cornerBboxH * syCorner
-          const sideH = Math.max(1, outerW - 2 * cornerCanvasW)
-          const sideV = Math.max(1, outerH - 2 * cornerCanvasH)
-
-          // Frame-local coordinates (0,0 = visible top-left of the
-          // frame). Composite cache is independent of the stage position.
-          type LocalSlot = {
-            img: HTMLImageElement
-            box: PieceBox
-            tX: number; tY: number; tW: number; tH: number
-            kind: 'corner' | 'stick'
-          }
-          const slots: LocalSlot[] = [
-            { img: localLoaded.images.leftUp,    box: localGeom.pieces.leftUp,
-              tX: 0,                          tY: 0,
-              tW: cornerCanvasW,              tH: cornerCanvasH,
-              kind: 'corner' },
-            { img: localLoaded.images.up,        box: localGeom.pieces.up,
-              tX: cornerCanvasW,              tY: 0,
-              tW: sideH,                      tH: framePx,
-              kind: 'stick' },
-            { img: localLoaded.images.rightUp,   box: localGeom.pieces.rightUp,
-              tX: outerW - cornerCanvasW,     tY: 0,
-              tW: cornerCanvasW,              tH: cornerCanvasH,
-              kind: 'corner' },
-            { img: localLoaded.images.left,      box: localGeom.pieces.left,
-              tX: 0,                          tY: cornerCanvasH,
-              tW: framePx,                    tH: sideV,
-              kind: 'stick' },
-            { img: localLoaded.images.right,     box: localGeom.pieces.right,
-              tX: outerW - framePx,           tY: cornerCanvasH,
-              tW: framePx,                    tH: sideV,
-              kind: 'stick' },
-            { img: localLoaded.images.leftDown,  box: localGeom.pieces.leftDown,
-              tX: 0,                          tY: outerH - cornerCanvasH,
-              tW: cornerCanvasW,              tH: cornerCanvasH,
-              kind: 'corner' },
-            { img: localLoaded.images.down,      box: localGeom.pieces.down,
-              tX: cornerCanvasW,              tY: outerH - framePx,
-              tW: sideH,                      tH: framePx,
-              kind: 'stick' },
-            { img: localLoaded.images.rightDown, box: localGeom.pieces.rightDown,
-              tX: outerW - cornerCanvasW,     tY: outerH - cornerCanvasH,
-              tW: cornerCanvasW,              tH: cornerCanvasH,
-              kind: 'corner' },
-          ]
-
-          // Composite bounds (frame-local). Each piece's image may
-          // extend OUTSIDE its moulding box on the outer side (shadow
-          // padding) — grow the canvas so those extensions stay visible.
-          let minX = 0, minY = 0, maxX = outerW, maxY = outerH
-          for (const slot of slots) {
-            const sx = slot.tW / slot.box.w
-            const sy = slot.tH / slot.box.h
-            const drawX = slot.tX - slot.box.x * sx
-            const drawY = slot.tY - slot.box.y * sy
-            const drawW = slot.img.naturalWidth * sx
-            const drawH = slot.img.naturalHeight * sy
-            if (drawX < minX) minX = drawX
-            if (drawY < minY) minY = drawY
-            if (drawX + drawW > maxX) maxX = drawX + drawW
-            if (drawY + drawH > maxY) maxY = drawY + drawH
-          }
-          const compositeW = maxX - minX
-          const compositeH = maxY - minY
-
-          const cacheKey = `${frame.id}|${framePx.toFixed(2)}|${outerW.toFixed(2)}|${outerH.toFixed(2)}`
-          let cached = localCompositeRef.current
-          if (!cached || cached.key !== cacheKey) {
-            const SUPER_SAMPLE = 2
-            const dpr = Math.min(window.devicePixelRatio || 1, 2)
-            const bakeScale = SUPER_SAMPLE * dpr
-            const canvas = document.createElement('canvas')
-            canvas.width = Math.max(1, Math.ceil(compositeW * bakeScale))
-            canvas.height = Math.max(1, Math.ceil(compositeH * bakeScale))
-            const cctx = canvas.getContext('2d')!
-            cctx.imageSmoothingEnabled = true
-            cctx.imageSmoothingQuality = 'high'
-            cctx.scale(bakeScale, bakeScale)
-            cctx.translate(-minX, -minY)
-
-            for (const slot of slots) {
-              const sx = slot.tW / slot.box.w
-              const sy = slot.tH / slot.box.h
-              const drawX = slot.tX - slot.box.x * sx
-              const drawY = slot.tY - slot.box.y * sy
-              const drawW = slot.img.naturalWidth * sx
-              const drawH = slot.img.naturalHeight * sy
-              cctx.drawImage(slot.img, drawX, drawY, drawW, drawH)
-
-              // ── Corner backfill ──
-              // Backend-uploaded frames typically have small transparent
-              // pixels somewhere inside each corner image — chamfer dots
-              // at the L's inner corner, exporter artifacts, AA fringes,
-              // etc. The mat backing sitting behind the frame shows
-              // through any such hole as a visible white "dot".
-              //
-              // Paint sampled moulding color BEHIND each corner's full
-              // bbox using destination-over: it only writes to pixels
-              // that are currently transparent, so the opaque moulding
-              // (L-arms + any decorative interior) is left untouched
-              // and every transparent hole inside the bbox gets filled
-              // with the matching moulding color. Universal — works for
-              // any uploaded frame, no per-frame configuration.
-              // ── Corner dot backfill (chamfer only) ──
-              // Backend frames have small transparent pixels right at
-              // the L's inner corner point (the photo-opening corner)
-              // that would otherwise show the mat backing as visible
-              // white "dots". We paint a small box of sampled moulding
-              // color BEHIND the corner JUST at that point — not the
-              // whole bbox. This preserves the corner image's own
-              // shadow / semi-transparent pixels (which sit elsewhere)
-              // and only fills the dot area.
-              //
-              // The L's inner corner sits at (framePx, framePx) in
-              // slot-local canvas coords for top-left, mirrored for the
-              // other 3 corners. `chamfer` sizes the fill — generous
-              // enough to cover the dot, small enough to not intrude
-              // into the rest of the bbox.
-              // ── Corner dot backfill (chamfer only) ──
-              // Backend frames have small transparent pixels right at
-              // the L's inner corner point (the photo-opening corner)
-              // that would otherwise show the mat backing as visible
-              // white "dots". We paint a small box of sampled moulding
-              // color BEHIND the corner JUST at that point — not the
-              // whole bbox — so the corner image's own shadow / semi-
-              // transparent pixels (which sit elsewhere) are preserved.
-              if (slot.kind === 'corner') {
-                const chamfer = Math.max(4, Math.ceil(framePx * 0.35))
-                const half = chamfer / 2
-                const isLeft = slot.tX === 0
-                const isTop = slot.tY === 0
-                const cx = isLeft ? framePx : slot.tW - framePx
-                const cy = isTop  ? framePx : slot.tH - framePx
-                cctx.globalCompositeOperation = 'destination-over'
-                cctx.fillStyle = localGeom.cornerFillColor
-                cctx.fillRect(
-                  slot.tX + cx - half,
-                  slot.tY + cy - half,
-                  chamfer,
-                  chamfer,
-                )
-                cctx.globalCompositeOperation = 'source-over'
-              }
-            }
-
-            cached = { canvas, minX, minY, compositeW, compositeH, key: cacheKey }
-            localCompositeRef.current = cached
-          }
-
-          const tex = PIXI.Texture.from(cached.canvas)
-          tex.source.scaleMode = 'linear'
-          const sp = new PIXI.Sprite(tex)
-          sp.x = frameX0 + cached.minX
-          sp.y = frameY0 + cached.minY
-          sp.width = cached.compositeW
-          sp.height = cached.compositeH
-          L.frameCont.addChild(sp)
-          L.loadedFrameId = frame.id
-        } else {
-          // ── API-frame path (original 8-sprite behaviour) ──
-          const pieceDefs = [
-            { url: frame.leftUpImg,    x: frameX0,                        y: frameY0,                        w: framePx,              h: framePx },
-            { url: frame.upImg,        x: frameX0 + framePx,              y: frameY0,                        w: outerW - framePx * 2, h: framePx },
-            { url: frame.rightUpImg,   x: frameX0 + outerW - framePx,     y: frameY0,                        w: framePx,              h: framePx },
-            { url: frame.leftImg,      x: frameX0,                        y: frameY0 + framePx,              w: framePx,              h: outerH - framePx * 2 },
-            { url: frame.rightImg,     x: frameX0 + outerW - framePx,     y: frameY0 + framePx,              w: framePx,              h: outerH - framePx * 2 },
-            { url: frame.leftDownImg,  x: frameX0,                        y: frameY0 + outerH - framePx,     w: framePx,              h: framePx },
-            { url: frame.downImg,      x: frameX0 + framePx,              y: frameY0 + outerH - framePx,     w: outerW - framePx * 2, h: framePx },
-            { url: frame.rightDownImg, x: frameX0 + outerW - framePx,     y: frameY0 + outerH - framePx,     w: framePx,              h: framePx },
-          ]
-            .filter(p => p.url && p.url.length > 0)
-            .map(p => ({ ...p, url: prefix + p.url }))
-
-          let needsLoad = false
-          for (const p of pieceDefs) {
-            const cached = texCache.get(p.url)
-            if (cached) {
-              const sp = new PIXI.Sprite(cached)
-              sp.x = p.x; sp.y = p.y
-              sp.width = Math.max(1, p.w); sp.height = Math.max(1, p.h)
-              L.frameCont.addChild(sp)
-            } else {
-              needsLoad = true
-            }
-          }
-
-          if (needsLoad) {
-            const snap = frame.id
-            L.loadedFrameId = snap
-            Promise.all(pieceDefs.map(p => loadTexture(p.url))).then(() => {
-              const L2 = layersRef.current
-              if (!L2 || L2.loadedFrameId !== snap) return
-              render()
-            })
-          } else {
-            L.loadedFrameId = frame.id
-          }
-        }
-
-      } else if (frame.imgUrl) {
-        // ── Single-image frame (use imgUrl as full frame image) ──
-        const frameImgUrl = frame.imgUrl
-        const cached = texCache.get(frameImgUrl)
-        if (cached) {
-          const sp = new PIXI.Sprite(cached)
-          sp.x = frameX0; sp.y = frameY0
-          sp.width = outerW; sp.height = outerH
-          L.frameCont.addChild(sp)
-          // For non-transparent images, apply border-strip mask
-          if (!frameImgUrl.endsWith('.png')) {
-            const mask = new PIXI.Graphics()
-            mask.rect(frameX0, frameY0, outerW, framePx).fill({ color: 0xffffff })
-            mask.rect(frameX0, frameY0 + outerH - framePx, outerW, framePx).fill({ color: 0xffffff })
-            mask.rect(frameX0, frameY0 + framePx, framePx, outerH - framePx * 2).fill({ color: 0xffffff })
-            mask.rect(frameX0 + outerW - framePx, frameY0 + framePx, framePx, outerH - framePx * 2).fill({ color: 0xffffff })
-            L.frameCont.addChild(mask)
-            sp.mask = mask
-          }
-          L.loadedFrameId = frame.id
-        } else {
-          const snap = frame.id
-          L.loadedFrameId = snap
-          loadTexture(frameImgUrl).then(() => {
-            const L2 = layersRef.current
-            if (!L2 || L2.loadedFrameId !== snap) return
-            render()
-          })
-        }
+      // ── Full-frame single-sprite render ──
+      // The chosen full-frame PNG (landscape or portrait) is drawn at the
+      // texture's native aspect using a UNIFORM scale — assigning
+      // sp.width / sp.height independently can drift into anisotropic
+      // stretching when outerW/outerH is computed from a stale fallback
+      // aspect (e.g. during canvas resize). Computing a single scale
+      // factor from the texture's own dimensions guarantees the moulding
+      // is never squished, and we recentre inside the outer rect if the
+      // fit picks a smaller axis.
+      const assetUrl = pickFrameAssetUrl(frame, orientation)
+      const cachedTex = texCache.get(assetUrl)
+      if (cachedTex && cachedTex.width > 0 && cachedTex.height > 0) {
+        const sp = new PIXI.Sprite(cachedTex)
+        const sx = outerW / cachedTex.width
+        const sy = outerH / cachedTex.height
+        const k = Math.min(sx, sy)
+        sp.scale.set(k, k)
+        const drawnW = cachedTex.width * k
+        const drawnH = cachedTex.height * k
+        sp.x = frameX0 + (outerW - drawnW) / 2
+        sp.y = frameY0 + (outerH - drawnH) / 2
+        L.frameCont.addChild(sp)
+        L.loadedFrameId = frame.id
+      } else if (cachedTex) {
+        const sp = new PIXI.Sprite(cachedTex)
+        sp.x = frameX0
+        sp.y = frameY0
+        sp.width = outerW
+        sp.height = outerH
+        L.frameCont.addChild(sp)
+        L.loadedFrameId = frame.id
+      } else {
+        const snap = frame.id
+        L.loadedFrameId = snap
+        loadTexture(assetUrl).then(() => {
+          const L2 = layersRef.current
+          if (!L2 || L2.loadedFrameId !== snap) return
+          render()
+        })
       }
     } else {
       // No frame selected — draw fallback
       L.loadedFrameId = -1
       const g = new PIXI.Graphics()
       g.rect(frameX0, frameY0, outerW, outerH).fill({ color: 0xd4c4a0 })
-      g.rect(matX, matY, matTotalW, matTotalH).fill({ color: 0xffffff })
+      g.rect(contentX, contentY, contentW, contentH).fill({ color: 0xffffff })
       L.frameCont.addChild(g)
     }
+
 
     // ── 5. White backing + Mat ─────────────────────────────────────────
     L.matSolidG.clear()
@@ -931,6 +912,39 @@ export default function CanvasStage({
 
     // White canvas backing — fills only the content area inside the frame border
     L.matSolidG.rect(contentX, contentY, contentW, contentH).fill({ color: 0xffffff })
+
+    // Square mode introduces a side gap between the (smaller) picture
+    // rect and the (wider) available area inside the opening. Fill the
+    // whole contentRect with the mat appearance so that gap reads as
+    // mat instead of as the white backing. The picture (drawn later)
+    // covers openX/Y/W/H on top.
+    const matTexUrlForSquare = matTextureItem?.ossUrl ? resolveUrl(matTextureItem.ossUrl) : ''
+    const matColorHexForSquare = matColorItem?.color || ''
+    if (hasPictureMatGap) {
+      if (matTexUrlForSquare) {
+        const cached = texCache.get(matTexUrlForSquare)
+        const placeTexture = (tex: PIXI.Texture) => {
+          L.matTexCont.removeChildren()
+          const ts = new PIXI.TilingSprite({
+            texture: tex,
+            width: Math.max(1, contentW),
+            height: Math.max(1, contentH),
+            tileScale: new PIXI.Point(contentW / tex.width, contentH / tex.height),
+          })
+          ts.x = contentX
+          ts.y = contentY
+          L.matTexCont.addChild(ts)
+        }
+        if (cached) placeTexture(cached)
+        else loadTexture(matTexUrlForSquare).then(tex => {
+          if (!tex || !layersRef.current) return
+          placeTexture(tex)
+        })
+      } else {
+        const matFill = matColorHexForSquare ? hexToNum(matColorHexForSquare) : 0xf8f8f8
+        L.matSolidG.rect(contentX, contentY, contentW, contentH).fill({ color: matFill })
+      }
+    }
 
     // Mat strips (drawn on top of white backing, below artwork)
     if (matBorder > 0) {
@@ -1004,6 +1018,30 @@ export default function CanvasStage({
     L.artMask.clear()
     L.artMask.rect(openX, openY, openW, openH).fill({ color: 0xffffff })
 
+    // Record the opening in canvas (stage) coords so the wheel handler
+    // can tell when the cursor is hovering the picture vs the frame.
+    // The designGroup transform is x = (cx - cx*zoom + offset), scale =
+    // zoom — so a point (px, py) in designGroup-local lands at
+    // (px * zoom + designGroup.x, py * zoom + designGroup.y) in stage.
+    openingScreenRectRef.current = {
+      x: L.designGroup.x + openX * zoom,
+      y: L.designGroup.y + openY * zoom,
+      w: openW * zoom,
+      h: openH * zoom,
+    }
+
+    // Pan clamp bounds. The on-stage frame centre sits at (cx + offsetX,
+    // cy + offsetY) regardless of zoom. We want either the frame to stay
+    // inside the canvas (when it fits) OR the canvas viewport to stay
+    // inside the frame (when the frame is bigger than the canvas). Both
+    // conditions reduce to |offsetX| ≤ |cx - outerW × zoom / 2| and
+    // similarly on Y — so the pan handler can clamp without branching
+    // on which case it is.
+    panBoundsRef.current = {
+      maxX: Math.abs(cx - (outerW * zoom) / 2),
+      maxY: Math.abs(cy - (outerH * zoom) / 2),
+    }
+
     // ── 8. Artwork ──────────────────────────────────────────────────
     if (s.artworkImageUrl) {
       L.uploadOverlay.visible = false
@@ -1016,22 +1054,40 @@ export default function CanvasStage({
           const L2 = layersRef.current
           if (!L2 || L2.loadedArtUrl !== urlSnap) return
           if (!tex) return
-          mountSprite(L2, tex, render)
+          mountSprite(L2, tex, render, openFilePicker)
         }).catch((err) => {
           console.error('[FrameDesigner] Failed to load artwork:', err)
         })
       } else if (L.artSprite) {
+        // Cover fit — the picture FILLS the mat opening on both axes
+        // (cropping the longer dimension via the artMask). Runs every
+        // render, so any change to mat size / frame ratio / opening
+        // dimensions automatically re-fits the picture. The user's
+        // zoom factor (artworkScale) and drag offset (artworkX/Y) are
+        // applied on TOP of the cover fit so a manual zoom survives a
+        // mat change.
         const sp = L.artSprite
         const tex = sp.texture
         const imgA = tex.width / tex.height
         const areaA = openW / openH
         let bw: number, bh: number
-        if (imgA > areaA) { bw = openW; bh = openW / imgA }
-        else { bh = openH; bw = openH * imgA }
+        if (imgA > areaA) {
+          // Image wider than opening → fit by height, overflow horizontally.
+          bh = openH
+          bw = openH * imgA
+        } else {
+          // Image taller → fit by width, overflow vertically.
+          bw = openW
+          bh = openW / imgA
+        }
         sp.width = bw * s.artworkScale
         sp.height = bh * s.artworkScale
         sp.x = openX + openW / 2 + s.artworkX
-        sp.y = openY + openH / 2 + s.artworkY
+        // sp.anchor.y = 0 → sp.y is the picture's top edge. artworkY = 0
+        // therefore pins the top of the picture to the top of the opening;
+        // any drag stores a positive Y to shift the picture down, negative
+        // to shift it up.
+        sp.y = openY + s.artworkY
       }
     } else {
       // Upload overlay
@@ -1044,11 +1100,39 @@ export default function CanvasStage({
       }
       L.overlayBg.clear()
       L.overlayBg.rect(openX, openY, openW, openH).fill({ color: 0xffffff })
-      L.overlayText.style.wordWrapWidth = openW * 0.72
-      L.overlayText.x = openX + openW / 2
-      L.overlayText.y = openY + openH / 2 - 12
-      L.overlaySubText.x = openX + openW / 2
-      L.overlaySubText.y = openY + openH / 2 + L.overlayText.height / 2 - 4
+      // Centred image-upload icon + "Upload image" caption below it.
+      // Both scale with the picture rect; both hide entirely when the
+      // opening is too small to render them cleanly. The click target
+      // stays via uploadOverlay's hitArea (the full opening).
+      const minDim = Math.min(openW, openH)
+      const iconSize = Math.max(18, Math.min(96, Math.round(minDim * 0.26)))
+      const labelSize = Math.max(9, Math.min(14, Math.round(minDim / 14)))
+      const gap = Math.max(4, Math.round(iconSize * 0.18))
+      const labelH = labelSize * 1.3 // approx — anchor 0.5,0 makes this less critical
+      // The icon + gap + label form a single column. Centre that whole
+      // column vertically inside the opening so the visual mid is the
+      // group's mid, not just the icon's mid.
+      const blockH = iconSize + gap + labelH
+      const showIcon = minDim > 30
+      const showLabel = showIcon && openH > blockH + 6 && openW > 60
+
+      L.overlayIcon.visible = showIcon
+      if (showIcon) {
+        const cxIcon = openX + openW / 2
+        const cyIconTop = openY + (openH - (showLabel ? blockH : iconSize)) / 2
+        const cyIcon = cyIconTop + iconSize / 2
+        drawUploadIcon(L.overlayIcon, cxIcon, cyIcon, iconSize)
+
+        L.overlayLabel.visible = showLabel
+        if (showLabel) {
+          L.overlayLabel.style.fontSize = labelSize
+          L.overlayLabel.x = openX + openW / 2
+          L.overlayLabel.y = cyIcon + iconSize / 2 + gap
+        }
+      } else {
+        L.overlayIcon.clear()
+        L.overlayLabel.visible = false
+      }
       L.uploadOverlay.hitArea = new PIXI.Rectangle(openX, openY, openW, openH)
     }
 
@@ -1114,17 +1198,108 @@ export default function CanvasStage({
     render()
   }, [frameOverride, render])
 
+  // ── Inspector collapse / expand → flush PIXI buffer before paint ─────────
+  // The canvas element has CSS width/height: 100% so it always fills its
+  // container. When the right inspector collapses, the flex layout
+  // immediately gives that space to the canvas main area. Without this
+  // synchronous resize, the browser would paint the OLD drawing buffer
+  // pixels stretched into the NEW (wider) CSS box for at least one frame,
+  // producing a visible anisotropic stretch. useLayoutEffect runs after
+  // React's DOM commit but BEFORE the next browser paint — we resize the
+  // renderer + redraw in that gap so the first paint already shows the
+  // correctly-sized buffer.
+  const inspectorCollapsed = useEditorStore((s) => s.inspectorCollapsed)
+  useLayoutEffect(() => {
+    const app = appRef.current
+    if (!app) return
+    try {
+      app.resize()
+    } catch {
+      /* renderer torn down */
+    }
+    render()
+  }, [inspectorCollapsed, render])
+
+  // Live theme → PIXI renderer background.
+  useEffect(() => {
+    const apply = () => {
+      const app = appRef.current
+      if (!app) return
+      const theme = useEditorStore.getState().editorTheme
+      const bg = theme === 'dark' ? 0x0e1220 : 0xeceae3
+      // PIXI v8 renderer background.
+      ;(app.renderer as any).background.color = bg
+      render()
+    }
+    apply()
+    const unsub = useEditorStore.subscribe((s, prev) => {
+      if (s.editorTheme !== prev.editorTheme) apply()
+    })
+    return unsub
+  }, [render])
+
+  // ── Re-render the instant the PIXI canvas resizes ─────────────────────────
+  // When the right inspector collapses/expands (or any sibling shifts the
+  // canvas column's width), the container reflows and PIXI's resizeTo
+  // resizes the drawing buffer asynchronously. Without an immediate
+  // re-render, the browser briefly rasterises the OLD buffer pixels into
+  // the NEW canvas CSS box, which looks like an anisotropic stretch of
+  // the whole canvas (including the frame and the mat backing). Hooking
+  // PIXI's own 'resize' event guarantees we redraw at the exact moment
+  // the buffer changes size.
+  useEffect(() => {
+    const app = appRef.current
+    if (!app) return
+    const onPixiResize = () => render()
+    app.renderer.on('resize', onPixiResize)
+    // Also observe the host container so we redraw if a layout change
+    // happens before PIXI's own observer notices.
+    const container = mountRef.current
+    let ro: ResizeObserver | null = null
+    if (container && typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => {
+        // Force PIXI to flush the new size, then redraw.
+        try { app.resize() } catch { /* renderer torn down */ }
+        render()
+      })
+      ro.observe(container)
+    }
+    return () => {
+      app.renderer.off('resize', onPixiResize)
+      ro?.disconnect()
+    }
+  }, [render])
+
   // ── Expose save ───────────────────────────────────────────────────────────
   useEffect(() => {
     ;(window as any).__frameSave = () => {
-      const canvas = appRef.current?.canvas as HTMLCanvasElement | undefined
-      if (!canvas) return
-      const a = document.createElement('a')
-      a.download = 'framed-artwork.png'
-      a.href = canvas.toDataURL('image/png')
-      a.click()
+      const app = appRef.current
+      if (!app) return
+      // Force one fresh render so the back buffer matches the latest
+      // state, THEN extract via PIXI's renderer.extract — which writes
+      // pixels straight from the framebuffer to a fresh canvas. This
+      // avoids the all-black PNG you get when toDataURL races against
+      // WebGL's buffer swap.
+      try {
+        render()
+        app.renderer.render(app.stage)
+        const extractedCanvas = app.renderer.extract.canvas(app.stage) as HTMLCanvasElement
+        const a = document.createElement('a')
+        a.download = 'framed-artwork.png'
+        a.href = extractedCanvas.toDataURL('image/png')
+        a.click()
+      } catch (err) {
+        console.error('[FrameDesigner] Save failed:', err)
+        // Fallback to the raw canvas (works when preserveDrawingBuffer is on).
+        const canvas = app.canvas as HTMLCanvasElement | undefined
+        if (!canvas) return
+        const a = document.createElement('a')
+        a.download = 'framed-artwork.png'
+        a.href = canvas.toDataURL('image/png')
+        a.click()
+      }
     }
-  }, [])
+  }, [render])
 
   return (
     <div ref={containerRef} className="relative w-full h-full">
@@ -1135,8 +1310,8 @@ export default function CanvasStage({
         onDragOver={handleDragOver}
       />
       <div className="absolute inset-x-0 bottom-5 flex justify-center pointer-events-none">
-        <div className="bg-black/40 backdrop-blur-sm border border-white/10 rounded-full px-4 py-1.5 text-xs text-gray-400">
-          Drag &amp; drop image · Scroll to zoom · Drag to reposition
+        <div className="bg-black/75 backdrop-blur-md border border-white/15 rounded-full px-4 py-1.5 text-xs font-medium text-white/95 shadow-lg">
+          Scroll over picture = zoom picture · Scroll outside = zoom frame · Drag to reposition
         </div>
       </div>
     </div>
