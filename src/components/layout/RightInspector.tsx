@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Lock, RectangleHorizontal, RectangleVertical, Sliders } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Lock, RectangleHorizontal, RectangleVertical, Sliders, Square as SquareIcon } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
   useEditorStore,
@@ -189,7 +189,7 @@ function RatioPanel() {
   return (
     <div className="space-y-3">
       <SectionCard title="Frame ratio">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <RatioCard
             id="landscape"
             label="Landscape"
@@ -202,6 +202,13 @@ function RatioPanel() {
             label="Portrait"
             icon={RectangleVertical}
             selected={frameAspectRatio === 'portrait'}
+            onChange={setFrameAspectRatio}
+          />
+          <RatioCard
+            id="square"
+            label="Square 1:1"
+            icon={SquareIcon}
+            selected={frameAspectRatio === 'square'}
             onChange={setFrameAspectRatio}
           />
           <RatioCard

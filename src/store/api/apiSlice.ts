@@ -66,6 +66,7 @@ interface CretixFrameDto {
   thumbnailUrl: string
   landscapeUrl: string
   portraitUrl: string
+  squareUrl: string | null
   sortOrder: number
 }
 
@@ -101,6 +102,7 @@ const mapCretixFrame = (f: CretixFrameDto): ApiFrame => ({
   imgUrl: f.thumbnailUrl,
   landscapeUrl: f.landscapeUrl,
   portraitUrl: f.portraitUrl,
+  squareUrl: f.squareUrl ?? null,
 })
 
 // ─── RTK Query API ───────────────────────────────────────────────────────────

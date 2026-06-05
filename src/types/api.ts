@@ -21,6 +21,7 @@ export interface ApiFrame {
   imgUrl: string                          // sidebar thumbnail
   landscapeUrl: string                    // full-frame landscape PNG
   portraitUrl: string                     // full-frame portrait PNG
+  squareUrl: string | null                // optional 1:1 PNG (falls back to landscape)
 }
 
 // ─── Scene (findScene — Interiors & Scenery) ─────────────────────────────────

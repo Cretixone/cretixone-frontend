@@ -23,15 +23,20 @@ const pendingLoads = new Map<string, Promise<FrameAsset>>()
 
 /**
  * Pick which full-frame asset URL to load for a given frame + orientation
- * choice. Landscape ratios use the landscape PNG; portrait uses the
- * portrait PNG. `orientation === 'auto'` defaults to landscape (custom
- * size with W === H falls into this case per spec).
+ * choice.
+ *   - 'landscape' / 'auto' → landscape PNG
+ *   - 'portrait'           → portrait PNG
+ *   - 'square'             → dedicated square PNG when the admin
+ *     uploaded one; otherwise the landscape PNG (the editor then fits
+ *     a 1:1 picture rect inside its opening so the user still gets a
+ *     square picture even though the moulding isn't 1:1).
  */
 export function pickFrameAssetUrl(
-  frame: Pick<ApiFrame, 'landscapeUrl' | 'portraitUrl'>,
-  orientation: 'landscape' | 'portrait' | 'auto',
+  frame: Pick<ApiFrame, 'landscapeUrl' | 'portraitUrl' | 'squareUrl'>,
+  orientation: 'landscape' | 'portrait' | 'square' | 'auto',
 ): string {
   if (orientation === 'portrait') return frame.portraitUrl
+  if (orientation === 'square') return frame.squareUrl || frame.landscapeUrl
   return frame.landscapeUrl
 }
 

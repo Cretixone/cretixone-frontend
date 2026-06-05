@@ -76,6 +76,39 @@ function loadArtworkTexture(url: string): Promise<PIXI.Texture> {
 
 // ─── Draw helpers ─────────────────────────────────────────────────────────────
 
+/**
+ * Image-upload icon — a rounded square outline containing a small sun
+ * (circle) and a mountain peak (V-stroke). Drawn centred on (cx, cy) at
+ * the requested overall size. Scales cleanly because it's pure vector.
+ */
+function drawUploadIcon(g: PIXI.Graphics, cx: number, cy: number, size: number) {
+  g.clear()
+  const half = size / 2
+  const stroke = Math.max(1.5, size / 16)
+  const color = 0x6b7488
+  const alpha = 0.7
+  const radius = size * 0.16
+
+  // Outer rounded square
+  g.roundRect(cx - half, cy - half, size, size, radius)
+    .stroke({ width: stroke, color, alpha })
+
+  // Sun (upper-right circle)
+  g.circle(cx + size * 0.18, cy - size * 0.18, size * 0.07)
+    .stroke({ width: stroke, color, alpha })
+
+  // Mountain peak (downstroke + upstroke, V from lower-left to lower-right)
+  const baseY = cy + size * 0.22
+  const peakX = cx - size * 0.05
+  const peakY = cy - size * 0.05
+  g.moveTo(cx - size * 0.32, baseY)
+    .lineTo(peakX, peakY)
+    .lineTo(cx + size * 0.05, cy + size * 0.08)
+    .lineTo(cx + size * 0.2, cy - size * 0.05)
+    .lineTo(cx + size * 0.32, baseY)
+    .stroke({ width: stroke, color, alpha })
+}
+
 function drawShadow(
   g: PIXI.Graphics,
   cx: number, cy: number,
@@ -152,8 +185,8 @@ interface Layers {
   artMask: PIXI.Graphics
   uploadOverlay: PIXI.Container
   overlayBg: PIXI.Graphics
-  overlayText: PIXI.Text
-  overlaySubText: PIXI.Text
+  overlayIcon: PIXI.Graphics
+  overlayLabel: PIXI.Text
 
   // Front layer (foreground objects from interior, on top of design)
   frontContainer: PIXI.Container
@@ -297,28 +330,26 @@ export default function CanvasStage({
       const artMask = new PIXI.Graphics()
       const uploadOverlay = new PIXI.Container()
       const overlayBg = new PIXI.Graphics()
+      // Centred image-upload icon (image frame with a mountain peak and
+      // a small sun). Re-drawn each render so it scales with the
+      // picture rect.
+      const overlayIcon = new PIXI.Graphics()
 
-      const overlayText = new PIXI.Text({
-        text: 'Click here to\nupload',
+      // Single-line caption under the icon. Style is finalised in render
+      // (fontSize scales with the opening).
+      const overlayLabel = new PIXI.Text({
+        text: 'Upload image',
         style: new PIXI.TextStyle({
           fontFamily: 'DM Sans, sans-serif',
-          fontSize: 26, fontWeight: '700',
-          fill: '#111111', align: 'center',
-          wordWrap: true, wordWrapWidth: 220, lineHeight: 34,
+          fontSize: 13,
+          fontWeight: '500',
+          fill: '#6b7488',
+          align: 'center',
         }),
       })
-      overlayText.anchor.set(0.5)
+      overlayLabel.anchor.set(0.5, 0)
 
-      const overlaySubText = new PIXI.Text({
-        text: 'Scroll to zoom',
-        style: new PIXI.TextStyle({
-          fontFamily: 'DM Sans, sans-serif',
-          fontSize: 14, fill: '#666666',
-        }),
-      })
-      overlaySubText.anchor.set(0.5, 0)
-
-      uploadOverlay.addChild(overlayBg, overlayText, overlaySubText)
+      uploadOverlay.addChild(overlayBg, overlayIcon, overlayLabel)
       uploadOverlay.eventMode = 'static'
       uploadOverlay.cursor = 'pointer'
       uploadOverlay.on('pointerdown', (e: PIXI.FederatedPointerEvent) => {
@@ -360,7 +391,7 @@ export default function CanvasStage({
         designGroup, shadowG, frameCont,
         matSolidG, matTexCont,
         artworkCont, artMask,
-        uploadOverlay, overlayBg, overlayText, overlaySubText,
+        uploadOverlay, overlayBg, overlayIcon, overlayLabel,
         frontContainer, frontSprite: null, loadedFrontUrl: '',
         effectContainer, effectSprite: null,
         loadedFrameId: -1,
@@ -448,7 +479,10 @@ export default function CanvasStage({
           const next = Math.min(8, Math.max(0.1, s.artworkScale * factor))
           s.setArtworkScale(next)
         } else {
-          const next = Math.min(3, Math.max(0.3, s.designZoom * factor))
+          // Canvas zoom is clamped to [1, 3]: 1.0 = the frame's natural
+          // viewport-fit size (you can never shrink the frame below
+          // that), 3.0 = three times bigger for inspection.
+          const next = Math.min(3, Math.max(1, s.designZoom * factor))
           s.setDesignZoom(next)
         }
       }, { passive: false })
@@ -620,9 +654,32 @@ export default function CanvasStage({
     //     aspect, top-anchored, and the mat fills the surrounding gap.
     const interiorPos = (bgMode === 'interior' && interior?.position) ? interior.position : null
     const isCustom = s.frameAspectRatio === 'custom'
-    const orientation: 'landscape' | 'portrait' = isCustom
-      ? (s.customWidthCm < s.customHeightCm ? 'portrait' : 'landscape')
-      : (s.frameAspectRatio === 'portrait' ? 'portrait' : 'landscape')
+    // Square is "wanted" by either the Square radio OR Custom mode with
+    // exactly equal width × height (e.g. 40 × 40 cm). When the admin
+    // uploaded a dedicated square PNG we route to that asset directly
+    // so the picture fills its own opening (no side-strip mat needed).
+    // Otherwise we fall back to landscape and the renderer fits a 1:1
+    // picture rect inside its opening, with mat filling the side gap.
+    const wantSquare =
+      s.frameAspectRatio === 'square' ||
+      (isCustom && s.customWidthCm === s.customHeightCm)
+    // When a dedicated square PNG is uploaded for this frame, route to
+    // it whenever Square is wanted — including in interior mode. The
+    // interior position fitting below still constrains the outer rect,
+    // so the square frame fits cleanly inside the wall area at the
+    // smaller of the position's width / height. Without a dedicated
+    // square PNG, fall back to the landscape PNG and fit a 1:1 picture
+    // rect inside its opening (the moulding stays landscape-shaped —
+    // that's the unavoidable cost of not having a square asset).
+    const hasDedicatedSquare = wantSquare && !!frame?.squareUrl
+    let orientation: 'landscape' | 'portrait' | 'square'
+    if (wantSquare) {
+      orientation = hasDedicatedSquare ? 'square' : 'landscape'
+    } else if (isCustom) {
+      orientation = s.customWidthCm < s.customHeightCm ? 'portrait' : 'landscape'
+    } else {
+      orientation = s.frameAspectRatio === 'portrait' ? 'portrait' : 'landscape'
+    }
 
     // Kick off the async load of the chosen PNG so we know its native
     // dimensions on the next render.
@@ -674,6 +731,30 @@ export default function CanvasStage({
       const fitByW = posCanvasW / aspectRatio <= posCanvasH
       outerW = fitByW ? posCanvasW : posCanvasH * aspectRatio
       outerH = fitByW ? posCanvasW / aspectRatio : posCanvasH
+
+      // Square frame cap. Interior position rects vary a lot in aspect:
+      // some are wide (great for landscape frames), some are tall
+      // (designed for portrait frames). For a wider position the square
+      // fits comfortably by height, but for tall positions a square
+      // fitting the smaller dim ends up much TALLER than a landscape
+      // frame would render there — which the user perceives as "too
+      // large" on some interiors and "perfect" on others. Cap the
+      // square side to the projected height of a landscape frame in
+      // the same position, so square never visually exceeds the wall
+      // area a landscape frame would occupy.
+      if (wantSquare && hasDedicatedSquare) {
+        const fallbackLandscape = 3 / 2
+        const landscapeTex = frame ? texCache.get(frame.landscapeUrl) : undefined
+        const landscapeAspect = (landscapeTex && landscapeTex.width > 0 && landscapeTex.height > 0)
+          ? landscapeTex.width / landscapeTex.height
+          : fallbackLandscape
+        const lFitByW = posCanvasW / landscapeAspect <= posCanvasH
+        const landscapeHeight = lFitByW ? posCanvasW / landscapeAspect : posCanvasH
+        const cappedSide = Math.min(outerW, outerH, landscapeHeight)
+        outerW = cappedSide
+        outerH = cappedSide
+      }
+
       frameX0 = posCenterX - outerW / 2
       frameY0 = posCenterY - outerH / 2
     } else {
@@ -728,17 +809,39 @@ export default function CanvasStage({
     const matTotalW = contentW
     const matTotalH = contentH
 
-    // Picture rect ALWAYS fills the available opening (after the Mat
-    // Size border). This holds for all three modes:
-    //   - landscape / portrait → picture fills the picked PNG's opening.
-    //   - custom               → cm Width × Height drive the orientation
-    //     pick (landscape PNG vs portrait PNG) and act as a print-size
-    //     annotation; the picture still fills the opening so the frame
-    //     "fits" the image and there's no visible empty mat gap.
-    const openX = contentX + matBorder
-    const openY = contentY + matBorder
-    const openW = Math.max(contentW - matBorder * 2, 20)
-    const openH = Math.max(contentH - matBorder * 2, 20)
+    // Picture rect — sized depending on the active mode:
+    //   - landscape / portrait / custom → fills the available opening.
+    //   - square (1:1)                  → fit a 1:1 picture rect inside
+    //     the available area, centred horizontally and top-anchored; the
+    //     mat fills the surrounding side strips.
+    const availX = contentX + matBorder
+    const availY = contentY + matBorder
+    const availW = Math.max(contentW - matBorder * 2, 20)
+    const availH = Math.max(contentH - matBorder * 2, 20)
+    // Square mode: when there's a dedicated square PNG we use its
+    // opening as-is (picture fills it). When falling back to the
+    // landscape PNG we fit a 1:1 picture rect inside the opening with
+    // mat filling the side gap.
+    const needsSquareInsideFit = wantSquare && !hasDedicatedSquare
+
+    let openX: number, openY: number, openW: number, openH: number
+    if (needsSquareInsideFit) {
+      const side = Math.min(availW, availH)
+      openW = side
+      openH = side
+      openX = availX + (availW - side) / 2
+      openY = availY
+    } else {
+      openX = availX
+      openY = availY
+      openW = availW
+      openH = availH
+    }
+    // A non-zero gap inside the opening (anything other than the full
+    // openW × openH rect) means the mat backing needs to fill the whole
+    // contentRect so the gap is visibly mat, not the white default.
+    const hasPictureMatGap = needsSquareInsideFit &&
+      (openW < availW - 0.5 || openH < availH - 0.5)
 
     // ── 3. Shadow ──────────────────────────────────────────────────────
     const frameCx = frameX0 + outerW / 2
@@ -809,6 +912,39 @@ export default function CanvasStage({
 
     // White canvas backing — fills only the content area inside the frame border
     L.matSolidG.rect(contentX, contentY, contentW, contentH).fill({ color: 0xffffff })
+
+    // Square mode introduces a side gap between the (smaller) picture
+    // rect and the (wider) available area inside the opening. Fill the
+    // whole contentRect with the mat appearance so that gap reads as
+    // mat instead of as the white backing. The picture (drawn later)
+    // covers openX/Y/W/H on top.
+    const matTexUrlForSquare = matTextureItem?.ossUrl ? resolveUrl(matTextureItem.ossUrl) : ''
+    const matColorHexForSquare = matColorItem?.color || ''
+    if (hasPictureMatGap) {
+      if (matTexUrlForSquare) {
+        const cached = texCache.get(matTexUrlForSquare)
+        const placeTexture = (tex: PIXI.Texture) => {
+          L.matTexCont.removeChildren()
+          const ts = new PIXI.TilingSprite({
+            texture: tex,
+            width: Math.max(1, contentW),
+            height: Math.max(1, contentH),
+            tileScale: new PIXI.Point(contentW / tex.width, contentH / tex.height),
+          })
+          ts.x = contentX
+          ts.y = contentY
+          L.matTexCont.addChild(ts)
+        }
+        if (cached) placeTexture(cached)
+        else loadTexture(matTexUrlForSquare).then(tex => {
+          if (!tex || !layersRef.current) return
+          placeTexture(tex)
+        })
+      } else {
+        const matFill = matColorHexForSquare ? hexToNum(matColorHexForSquare) : 0xf8f8f8
+        L.matSolidG.rect(contentX, contentY, contentW, contentH).fill({ color: matFill })
+      }
+    }
 
     // Mat strips (drawn on top of white backing, below artwork)
     if (matBorder > 0) {
@@ -964,26 +1100,39 @@ export default function CanvasStage({
       }
       L.overlayBg.clear()
       L.overlayBg.rect(openX, openY, openW, openH).fill({ color: 0xffffff })
-      // Scale the upload text + sub-text to the picture rect so the
-      // overlay never overflows on small openings (e.g. interior scenes
-      // with a compact position rect on the wall). The main text is
-      // sized off the smaller axis with a generous floor/ceiling so it
-      // stays readable. The subtext hides when the opening is too small
-      // to fit it gracefully.
+      // Centred image-upload icon + "Upload image" caption below it.
+      // Both scale with the picture rect; both hide entirely when the
+      // opening is too small to render them cleanly. The click target
+      // stays via uploadOverlay's hitArea (the full opening).
       const minDim = Math.min(openW, openH)
-      const mainSize = Math.max(8, Math.min(26, Math.round(minDim / 6.5)))
-      const subSize = Math.max(7, Math.min(14, Math.round(minDim / 14)))
-      const showSub = openH > mainSize * 3 && openW > 80
-      L.overlayText.style.fontSize = mainSize
-      L.overlayText.style.lineHeight = mainSize * 1.3
-      L.overlayText.style.wordWrapWidth = Math.max(40, openW * 0.85)
-      L.overlaySubText.style.fontSize = subSize
-      L.overlaySubText.visible = showSub
-      L.overlayText.x = openX + openW / 2
-      const subGap = showSub ? subSize * 0.5 : 0
-      L.overlayText.y = openY + openH / 2 - L.overlayText.height / 2 - subGap
-      L.overlaySubText.x = openX + openW / 2
-      L.overlaySubText.y = L.overlayText.y + L.overlayText.height + 2
+      const iconSize = Math.max(18, Math.min(96, Math.round(minDim * 0.26)))
+      const labelSize = Math.max(9, Math.min(14, Math.round(minDim / 14)))
+      const gap = Math.max(4, Math.round(iconSize * 0.18))
+      const labelH = labelSize * 1.3 // approx — anchor 0.5,0 makes this less critical
+      // The icon + gap + label form a single column. Centre that whole
+      // column vertically inside the opening so the visual mid is the
+      // group's mid, not just the icon's mid.
+      const blockH = iconSize + gap + labelH
+      const showIcon = minDim > 30
+      const showLabel = showIcon && openH > blockH + 6 && openW > 60
+
+      L.overlayIcon.visible = showIcon
+      if (showIcon) {
+        const cxIcon = openX + openW / 2
+        const cyIconTop = openY + (openH - (showLabel ? blockH : iconSize)) / 2
+        const cyIcon = cyIconTop + iconSize / 2
+        drawUploadIcon(L.overlayIcon, cxIcon, cyIcon, iconSize)
+
+        L.overlayLabel.visible = showLabel
+        if (showLabel) {
+          L.overlayLabel.style.fontSize = labelSize
+          L.overlayLabel.x = openX + openW / 2
+          L.overlayLabel.y = cyIcon + iconSize / 2 + gap
+        }
+      } else {
+        L.overlayIcon.clear()
+        L.overlayLabel.visible = false
+      }
       L.uploadOverlay.hitArea = new PIXI.Rectangle(openX, openY, openW, openH)
     }
 

@@ -9,27 +9,29 @@ export const OSS_PREFIX = 'https://oss.aiframeit.com/'
 
 export type BackgroundMode = 'interior' | 'scenery' | null
 
-// The user picks one of three options in the Ratio tab:
-//   - Landscape → render the LANDSCAPE source PNG at its native aspect
-//   - Portrait  → render the PORTRAIT source PNG at its native aspect
-//   - Custom    → enter width × height in cm and the PNG (landscape if
-//                 width ≥ height, otherwise portrait) is stretched to
-//                 that aspect.
-// The two fallback ratios below are only used until the picked source
-// PNG has loaded; Custom always uses the cm dimensions on the store.
-export type FrameAspectRatio = 'landscape' | 'portrait' | 'custom'
+// The user picks one of four options in the Ratio tab:
+//   - Landscape → render the LANDSCAPE source PNG; picture fills its opening.
+//   - Portrait  → render the PORTRAIT source PNG; picture fills its opening.
+//   - Square    → render the LANDSCAPE source PNG at native aspect; the
+//                 picture rect inside the opening is fit to 1:1 and the
+//                 mat fills the surrounding side strips.
+//   - Custom    → enter width × height in cm. The orientation flips
+//                 (landscape PNG vs portrait PNG) by which dimension is
+//                 larger, and the frame's preview size scales with cm.
+// Fallback ratios below are only used briefly before the picked source
+// PNG loads; Custom uses the cm dimensions on the store.
+export type FrameAspectRatio = 'landscape' | 'portrait' | 'square' | 'custom'
 
 export const FRAME_ASPECT_RATIOS: Array<{
   id: FrameAspectRatio
   label: string
-  /** Fallback width/height (used by Landscape/Portrait until the PNG
-   *  loads; for Custom this is just a placeholder — the actual aspect
-   *  comes from customWidthCm / customHeightCm). */
+  /** Fallback width/height used until the PNG loads. */
   ratio: number
   orientation: 'landscape' | 'portrait' | 'auto'
 }> = [
   { id: 'landscape', label: 'Landscape', ratio: 3 / 2, orientation: 'landscape' },
   { id: 'portrait',  label: 'Portrait',  ratio: 2 / 3, orientation: 'portrait'  },
+  { id: 'square',    label: 'Square',    ratio: 1,     orientation: 'landscape' },
   { id: 'custom',    label: 'Custom',    ratio: 1,     orientation: 'auto'      },
 ]
 
@@ -236,7 +238,12 @@ export const useEditorStore = create<EditorState>((set) => ({
   setArtworkImageUrl: (url) => set({ artworkImageUrl: url, artworkX: 0, artworkY: 0, artworkScale: 1 }),
   setArtworkScale: (s) => set({ artworkScale: s }),
   setArtworkPosition: (x, y) => set({ artworkX: x, artworkY: y }),
-  setDesignZoom: (z) => set({ designZoom: z }),
+  // Clamp to [1, 3] at the store level so any caller (wheel handler,
+  // future reset paths, restored persisted state) can never set the
+  // canvas zoom below its natural-fit size. Going below 1 would shrink
+  // the design group and expose empty canvas/background bands around
+  // the frame, which is exactly the artifact the user reported.
+  setDesignZoom: (z) => set({ designZoom: Math.min(3, Math.max(1, z)) }),
   setFrameOffset: (x, y) => set({ frameOffsetX: x, frameOffsetY: y }),
   setActiveSidebarTab: (tab) => set({ activeSidebarTab: tab }),
   setActiveControlTab: (tab) => set({ activeControlTab: tab }),
