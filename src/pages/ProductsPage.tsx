@@ -250,7 +250,7 @@ export default function ProductsPage() {
 // ── Static gold pill nav (non-floating variant for inner pages) ────────────
 function PillNavStatic() {
   return (
-    <div className="mx-auto -mt-1 flex w-full max-w-[1400px] justify-center px-5 pb-2 md:px-10">
+    <div className="mx-auto -mt-1 hidden w-full max-w-[1400px] justify-center px-5 pb-2 md:px-10 lg:flex">
       <div className="flex w-full max-w-[820px] items-center justify-between gap-1 rounded-full bg-brand-gold p-1.5 pl-3 shadow-[0_10px_30px_-12px_rgba(192,140,64,0.6)]">
         <ul className="flex items-center gap-1">
           {NAV_LINKS.map((l) => (
