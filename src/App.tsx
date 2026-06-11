@@ -13,6 +13,7 @@ const CanvasStage = lazy(() => import('@/components/editor/CanvasStage'))
 const LandingPage = lazy(() => import('@/pages/LandingPage'))
 const TermsPage = lazy(() => import('@/pages/TermsPage'))
 const AboutPage = lazy(() => import('@/pages/AboutPage'))
+const ProductsPage = lazy(() => import('@/pages/ProductsPage'))
 
 function LoadingCanvas() {
   return (
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/about" element={<AboutPage />} />
+        <Route path="/products" element={<ProductsPage />} />
         <Route path="/editor" element={<EditorApp />} />
         <Route path="/landing" element={<Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
