@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom'
 import Topbar from '@/components/layout/Topbar'
 import ToolRail from '@/components/layout/ToolRail'
 import ToolPanel from '@/components/layout/ToolPanel'
@@ -7,6 +7,7 @@ import RightInspector from '@/components/layout/RightInspector'
 import StatusBar from '@/components/layout/StatusBar'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useEditorStore } from '@/store/editorStore'
+import { useFetchFramesQuery } from '@/store/api/apiSlice'
 import { fetchAccessToken } from '@/store/api/axiosInstance'
 
 const CanvasStage = lazy(() => import('@/components/editor/CanvasStage'))
@@ -48,9 +49,20 @@ function FullPageLoader() {
   )
 }
 
+// Reset scroll to the top on every navigation (pathname or query change) so
+// each page — and footer category links into /products — starts from the top.
+function ScrollToTop() {
+  const { pathname, search } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname, search])
+  return null
+}
+
 export default function App() {
   return (
     <Suspense fallback={<FullPageLoader />}>
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/terms" element={<TermsPage />} />
@@ -67,10 +79,29 @@ export default function App() {
 function EditorApp() {
   const [ready, setReady] = useState(false)
   const editorTheme = useEditorStore((s) => s.editorTheme)
+  const [searchParams] = useSearchParams()
 
   useEffect(() => {
     fetchAccessToken().then(() => setReady(true))
   }, [])
+
+  // Resolve a ?frame=<id> deep-link (or hard refresh of /editor?frame=…)
+  // into the selected frame once the frames list is available. When the
+  // user arrives by clicking a product card the store is already set, so
+  // this is a no-op; on a cold load it re-selects the matching frame.
+  const { data: frames } = useFetchFramesQuery()
+  useEffect(() => {
+    const frameId = searchParams.get('frame')
+    if (!frameId || !frames) return
+    const current = useEditorStore.getState().selectedFrame
+    if (current && String(current.id) === frameId) return
+    const match = frames.find((f) => String(f.id) === frameId)
+    if (match) {
+      useEditorStore.getState().setSelectedFrame(match)
+      if (match.categorySlug)
+        useEditorStore.getState().setActiveFrameCategorySlug(match.categorySlug)
+    }
+  }, [searchParams, frames])
 
   // Scope the editor's body bg + theme class so landing/about/terms
   // aren't affected, AND so Radix portals (tooltips, dropdowns) — which

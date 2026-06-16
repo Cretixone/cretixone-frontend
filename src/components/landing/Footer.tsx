@@ -3,12 +3,16 @@ import { motion, type Variants } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
+// Footer product links open the products screen. "All Frames" goes to the
+// full listing; the rest carry a ?category= hint the products page reads to
+// pre-filter the grid (unknown categories simply fall back to all frames).
 const PRODUCT_LINKS = [
-  { label: 'Framed Prints', href: '#framed-prints' },
-  { label: 'Canvas Prints', href: '#canvas-prints' },
-  { label: 'Photo Prints', href: '#photo-prints' },
-  { label: 'Gifts', href: '#gifts' },
-  { label: 'Mirror Works', href: '#mirror-works' },
+  { label: 'All Frames', href: '/products' },
+  { label: 'Framed Prints', href: '/products?category=framed-prints' },
+  { label: 'Canvas Prints', href: '/products?category=canvas-prints' },
+  { label: 'Photo Prints', href: '/products?category=photo-prints' },
+  { label: 'Gifts', href: '/products?category=gifts' },
+  { label: 'Mirror Works', href: '/products?category=mirror-works' },
 ]
 
 const COMPANY_LINKS = [

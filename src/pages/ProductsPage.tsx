@@ -1,23 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   ChevronUp,
   ChevronDown,
   Home,
   ImagePlus,
-  SlidersHorizontal,
+  Filter,
 } from 'lucide-react'
 import Navbar from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useFetchFramesQuery } from '@/store/api/apiSlice'
+import { useEditorStore } from '@/store/editorStore'
 import type { ApiFrame } from '@/types/api'
 
 // ── Theme tokens (kept inline so the page reads against the brand palette) ──
-const RED = '#E5372A' // sale price
-const COUNT_BG = '#EEF1F6'
+const RED = '#F82226' // sale price
 const COUNT_FG = '#7C8AA5'
 
 // ── Static nav links for the gold pill bar (matches landing Navbar links) ──
@@ -159,7 +159,7 @@ export default function ProductsPage() {
     const prevBg = document.body.style.background
     const prevColor = document.body.style.color
     document.body.style.background = '#ffffff'
-    document.body.style.color = '#002365'
+    document.body.style.color = '#000000'
     return () => {
       document.body.style.background = prevBg
       document.body.style.color = prevColor
@@ -167,6 +167,18 @@ export default function ProductsPage() {
   }, [])
 
   const { data: frames, isLoading, isError } = useFetchFramesQuery()
+
+  // Footer "Products" links pass ?category=<slug>. Narrow the grid to that
+  // category; if the slug matches no frames (unknown/placeholder category)
+  // fall back to the full listing so the page always shows something.
+  const [searchParams] = useSearchParams()
+  const category = searchParams.get('category')
+  const baseFrames = useMemo(() => {
+    const all = frames ?? []
+    if (!category) return all
+    const inCategory = all.filter((f) => f.categorySlug === category)
+    return inCategory.length > 0 ? inCategory : all
+  }, [frames, category])
 
   // Selected filter checkboxes — keyed "groupKey::label". The frame API
   // carries no material/colour metadata, so these drive the UI state only.
@@ -179,14 +191,14 @@ export default function ProductsPage() {
     })
   const reset = () => setSelected(new Set())
 
-  // Apply the (functional) faceted filters to the API frames.
+  // Apply the (functional) faceted filters to the category-scoped frames.
   const filtered = useMemo(
-    () => filterFrames(frames ?? [], selected),
-    [frames, selected],
+    () => filterFrames(baseFrames, selected),
+    [baseFrames, selected],
   )
 
   return (
-    <div className="min-h-screen w-full bg-white font-sans text-foreground">
+    <div className="min-h-screen w-full bg-white font-sans text-[#000000]">
       {/* ── Header: top utility bar + gold pill nav ── */}
       <header className="relative z-30">
         <Navbar />
@@ -316,20 +328,20 @@ function FilterSidebar({
     <aside className="w-full shrink-0 lg:w-[260px]">
       {/* Filter header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-brand-gold">
-          <SlidersHorizontal className="h-4 w-4" />
+        <div className="flex items-center gap-2 text-[#002365]">
+          <Filter className="h-4 w-4" />
           <span className="text-base font-semibold">Filter</span>
         </div>
         <button
           type="button"
           onClick={onReset}
-          className="rounded-full bg-brand-gold/15 px-3 py-1 text-xs font-medium text-brand-gold transition hover:bg-brand-gold/25"
+          className="rounded-full bg-[#C08C40] px-3 py-1 text-xs font-medium text-white transition hover:bg-[#C08C40]/90"
         >
           Reset
         </button>
       </div>
 
-      <div className="mt-4 divide-y divide-black/[0.06]">
+      <div className="mt-4 space-y-3">
         {FILTER_GROUPS.map((group) => (
           <FilterGroupBlock
             key={group.key}
@@ -362,7 +374,7 @@ function FilterGroupBlock({
     limit != null && !expanded ? group.options.slice(0, limit) : group.options
 
   return (
-    <div className="py-4">
+    <div className="rounded-xl bg-[#F8F8F8] p-4">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -371,11 +383,13 @@ function FilterGroupBlock({
         <span className="text-[15px] font-semibold text-foreground">
           {group.title}
         </span>
-        {open ? (
-          <ChevronUp className="h-4 w-4 text-foreground/50" />
-        ) : (
-          <ChevronDown className="h-4 w-4 text-foreground/50" />
-        )}
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#E6E6E6]">
+          {open ? (
+            <ChevronUp className="h-3 w-3 text-foreground/50" />
+          ) : (
+            <ChevronDown className="h-3 w-3 text-foreground/50" />
+          )}
+        </span>
       </button>
 
       {open && (
@@ -412,10 +426,15 @@ function FilterGroupBlock({
                       </svg>
                     )}
                   </span>
-                  <span className="flex-1">{opt.label}</span>
+                  <span>{opt.label}</span>
                   <span
-                    className="rounded-full px-2 py-0.5 text-[11px] font-medium leading-none"
-                    style={{ background: COUNT_BG, color: COUNT_FG }}
+                    className="px-2 py-0.5 text-[11px] font-medium leading-none"
+                    style={{
+                      background: '#FFFFFF',
+                      color: COUNT_FG,
+                      border: '0.5px solid #ADADAD',
+                      borderRadius: '35px',
+                    }}
                   >
                     {opt.count}
                   </span>
@@ -479,34 +498,42 @@ function ProductGrid({ frames }: { frames: ApiFrame[] }) {
   }
   return (
     <div className="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 xl:grid-cols-4">
-      {frames.map((frame, i) => (
-        <ProductCard key={frame.id} frame={frame} highlighted={i === 1} />
+      {frames.map((frame) => (
+        <ProductCard key={frame.id} frame={frame} />
       ))}
     </div>
   )
 }
 
-function ProductCard({
-  frame,
-  highlighted,
-}: {
-  frame: ApiFrame
-  highlighted?: boolean
-}) {
+function ProductCard({ frame }: { frame: ApiFrame }) {
+  const navigate = useNavigate()
   const img = frame.portraitUrl || frame.imgUrl || frame.landscapeUrl
+
+  // Open this frame in the editor with it pre-selected. We set the editor
+  // store directly (the zustand store is a module singleton that survives
+  // the client-side route change) AND carry the id in the URL so a hard
+  // refresh / deep-link of /editor?frame=… can re-resolve the selection.
+  const openInEditor = () => {
+    const ed = useEditorStore.getState()
+    ed.setActiveSidebarTab('frames')
+    ed.setSelectedFrame(frame)
+    // Also activate the frame's category so the editor's frame panel opens
+    // on the right tab with the selected thumbnail visible.
+    if (frame.categorySlug) ed.setActiveFrameCategorySlug(frame.categorySlug)
+    // A freshly opened frame defaults to the Square ratio.
+    ed.setFrameAspectRatio('square')
+    navigate(`/editor?frame=${frame.id}`)
+  }
+
   return (
     <motion.div
+      onClick={openInEditor}
       whileHover={{ y: -3 }}
       transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-      className={cn(
-        'group cursor-pointer rounded-2xl p-3 transition-shadow',
-        highlighted
-          ? 'bg-white shadow-[0_18px_40px_-18px_rgba(10,31,77,0.25)] ring-1 ring-black/5'
-          : 'hover:bg-white hover:shadow-[0_18px_40px_-18px_rgba(10,31,77,0.18)]',
-      )}
+      className="group cursor-pointer rounded-2xl border-[0.5px] border-transparent p-3 transition-shadow hover:border-[#F1F1F1] hover:bg-white hover:shadow-[0_18px_40px_-18px_rgba(10,31,77,0.18)]"
     >
       {/* Frame image */}
-      <div className="flex aspect-[4/5] items-center justify-center overflow-hidden rounded-xl">
+      <div className="flex h-[203px] items-center justify-center overflow-hidden rounded-xl">
         {img ? (
           <img
             src={img}
@@ -545,7 +572,7 @@ function ProductGridSkeleton() {
     <div className="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 xl:grid-cols-4">
       {items.map((_, i) => (
         <div key={i} className="rounded-2xl p-3">
-          <div className="aspect-[4/5] animate-pulse rounded-xl bg-black/[0.06]" />
+          <div className="h-[203px] animate-pulse rounded-xl bg-black/[0.06]" />
           <div className="mt-3 h-3 w-4/5 animate-pulse rounded bg-black/[0.06]" />
           <div className="mt-2 h-2.5 w-3/5 animate-pulse rounded bg-black/[0.05]" />
           <div className="mt-3 h-3 w-1/3 animate-pulse rounded bg-black/[0.06]" />

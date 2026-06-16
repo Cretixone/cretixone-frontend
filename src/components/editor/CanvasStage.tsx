@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useCallback } from 'react'
+import { useEffect, useLayoutEffect, useRef, useCallback, useState } from 'react'
 import * as PIXI from 'pixi.js'
 import {
   useEditorStore,
@@ -267,6 +267,24 @@ export default function CanvasStage({
   // reads it to clamp the offset so the frame can't be dragged fully
   // off the canvas.
   const panBoundsRef = useRef({ maxX: 0, maxY: 0 })
+  // Maximum canvas zoom — recomputed each render so the frame can zoom in
+  // only until its limiting dimension fills the canvas, never beyond. The
+  // wheel handler reads this so zoom-in can't grow the frame past the canvas.
+  const maxZoomRef = useRef(1)
+  // Allowed picture drag range (designGroup-local units), recomputed each
+  // render from the picture's overflow past the opening. The drag handler
+  // clamps to this so the picture always covers the opening — you can only
+  // drag within the cropped overflow, and a dimension that fits exactly has
+  // no slack to drag. { marginX: ±X, minY..maxY }.
+  const artworkBoundsRef = useRef({ marginX: 0, minY: 0, maxY: 0 })
+
+  // HTML loader overlay shown while the selected frame's chosen-orientation
+  // PNG (texture + measured opening) is still loading. Covers the initial
+  // select coming from the products page, frame swaps, and ratio switches.
+  // `loadingRef` mirrors the state so render() (a stable useCallback that
+  // runs on every store change / resize) can skip redundant setState calls.
+  const [canvasLoading, setCanvasLoading] = useState(false)
+  const loadingRef = useRef(false)
 
   // ── Init ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -433,9 +451,14 @@ export default function CanvasStage({
       })
       app.stage.on('pointermove', (e: PIXI.FederatedPointerEvent) => {
         if (dragging) {
+          // Clamp to the picture's overflow so it can't be dragged off the
+          // opening (no empty space); a dimension with no overflow won't move.
+          const b = artworkBoundsRef.current
+          const nx = origX + e.globalX - startX
+          const ny = origY + e.globalY - startY
           useEditorStore.getState().setArtworkPosition(
-            origX + e.globalX - startX,
-            origY + e.globalY - startY,
+            Math.max(-b.marginX, Math.min(b.marginX, nx)),
+            Math.max(b.minY, Math.min(b.maxY, ny)),
           )
         } else if (panning) {
           const bounds = panBoundsRef.current
@@ -476,13 +499,17 @@ export default function CanvasStage({
           mouseY >= r.y && mouseY <= r.y + r.h
 
         if (cursorOverPicture) {
-          const next = Math.min(8, Math.max(0.1, s.artworkScale * factor))
+          // Picture zoom is clamped to [1, 8]: 1.0 is the cover-fit that fills
+          // the frame opening exactly, so zooming out can never shrink the
+          // picture below the opening and expose empty space inside the frame.
+          const next = Math.min(8, Math.max(1, s.artworkScale * factor))
           s.setArtworkScale(next)
         } else {
-          // Canvas zoom is clamped to [1, 3]: 1.0 = the frame's natural
-          // viewport-fit size (you can never shrink the frame below
-          // that), 3.0 = three times bigger for inspection.
-          const next = Math.min(3, Math.max(1, s.designZoom * factor))
+          // Canvas zoom: 1.0 = the frame's natural viewport-fit size (you can
+          // never shrink the frame below that). The upper bound is dynamic —
+          // the frame can only zoom in until it fills the canvas, never past
+          // its bounds (maxZoomRef, recomputed each render from frame/canvas).
+          const next = Math.min(maxZoomRef.current, Math.max(1, s.designZoom * factor))
           s.setDesignZoom(next)
         }
       }, { passive: false })
@@ -700,6 +727,20 @@ export default function CanvasStage({
       }
     }
 
+    // ── Loader overlay state ───────────────────────────────────────────────
+    // The frame is "ready" once BOTH its PNG texture and its alpha-measured
+    // opening are cached for the chosen orientation. Until then, drive the
+    // HTML loader overlay (frame select / swap / ratio switch). When no
+    // frame is selected there's nothing to wait on.
+    const readyUrl = frame ? pickFrameAssetUrl(frame, orientation) : ''
+    const frameReady =
+      !frame || (!!texCache.get(readyUrl) && !!getCachedFrameAsset(readyUrl))
+    const needLoading = !frameReady
+    if (loadingRef.current !== needLoading) {
+      loadingRef.current = needLoading
+      setCanvasLoading(needLoading)
+    }
+
     // Frame outer aspect = ALWAYS the source PNG's native aspect (so
     // moulding is never stretched). Prefer the PIXI texture dims when
     // available, since that's what actually gets drawn — using only the
@@ -759,21 +800,11 @@ export default function CanvasStage({
       frameY0 = posCenterY - outerH / 2
     } else {
       // Default viewport cap — fits frame to 55% W / 65% H of canvas.
-      let maxW = Math.max(W * 0.55, 280)
-      let maxH = Math.max(H * 0.65, 280)
-      // In Custom mode the cm Width × Height ALSO scale the displayed
-      // frame: bigger cm → bigger preview, until the dim crosses the
-      // reference size (CUSTOM_REF_CM) where the frame is at full
-      // viewport size. Small frames stay smaller; large frames are
-      // capped so the preview never escapes the canvas. The frame outer
-      // aspect stays at the source PNG's native ratio (no stretch).
-      if (isCustom) {
-        const CUSTOM_REF_CM = 60 // cm dim that fills the viewport box
-        const maxCm = Math.max(1, s.customWidthCm, s.customHeightCm)
-        const scale = Math.max(0.2, Math.min(1, maxCm / CUSTOM_REF_CM))
-        maxW *= scale
-        maxH *= scale
-      }
+      // Every ratio (including Custom) renders at this same viewport fit so
+      // switching ratio always lands at zoom 1 with no zoom-out: the cm
+      // dimensions only choose orientation + aspect, never the preview scale.
+      const maxW = Math.max(W * 0.55, 280)
+      const maxH = Math.max(H * 0.65, 280)
       const fitByW = maxW / aspectRatio <= maxH
       outerW = fitByW ? maxW : maxH * aspectRatio
       outerH = fitByW ? maxW / aspectRatio : maxH
@@ -1042,6 +1073,14 @@ export default function CanvasStage({
       maxY: Math.abs(cy - (outerH * zoom) / 2),
     }
 
+    // Cap canvas zoom to the canvas bounds: the frame may zoom in only until
+    // its limiting dimension fills the canvas (W or H), never larger. outerW/H
+    // are the un-zoomed frame size, so W/outerW and H/outerH are the zoom
+    // factors at which each dimension would exactly meet the canvas edge.
+    const fitZoomX = outerW > 0 ? W / outerW : 1
+    const fitZoomY = outerH > 0 ? H / outerH : 1
+    maxZoomRef.current = Math.max(1, Math.min(fitZoomX, fitZoomY))
+
     // ── 8. Artwork ──────────────────────────────────────────────────
     if (s.artworkImageUrl) {
       L.uploadOverlay.visible = false
@@ -1080,14 +1119,51 @@ export default function CanvasStage({
           bw = openW
           bh = openW / imgA
         }
-        sp.width = bw * s.artworkScale
-        sp.height = bh * s.artworkScale
-        sp.x = openX + openW / 2 + s.artworkX
+        const dispW = bw * s.artworkScale
+        const dispH = bh * s.artworkScale
+        sp.width = dispW
+        sp.height = dispH
+
+        // Constrain the picture so it ALWAYS covers the opening: the picture
+        // may only move within its overflow past the opening (the part the
+        // mask crops). A dimension that fits exactly has zero slack, so it
+        // can't be dragged there — no empty space ever shows inside the frame.
+        //   X: sprite is centre-anchored → ±half the horizontal overflow.
+        //   Y: sprite is top-anchored → from (openH - dispH) up to 0.
+        const marginX = Math.max(0, (dispW - openW) / 2)
+        const minY = Math.min(0, openH - dispH)
+        const maxY = 0
+        artworkBoundsRef.current = { marginX, minY, maxY }
+
+        const clampedX = Math.max(-marginX, Math.min(marginX, s.artworkX))
+        const clampedY = Math.max(minY, Math.min(maxY, s.artworkY))
+        sp.x = openX + openW / 2 + clampedX
         // sp.anchor.y = 0 → sp.y is the picture's top edge. artworkY = 0
         // therefore pins the top of the picture to the top of the opening;
         // any drag stores a positive Y to shift the picture down, negative
         // to shift it up.
-        sp.y = openY + s.artworkY
+        sp.y = openY + clampedY
+
+        // If a zoom-out / ratio change shrank the draggable range, fold the
+        // stored offset back in-bounds so the next drag starts correctly and
+        // the export matches. Deferred to avoid a re-entrant render mid-draw.
+        if (
+          Math.abs(clampedX - s.artworkX) > 0.5 ||
+          Math.abs(clampedY - s.artworkY) > 0.5
+        ) {
+          queueMicrotask(() => {
+            const st = useEditorStore.getState()
+            const b = artworkBoundsRef.current
+            const cx2 = Math.max(-b.marginX, Math.min(b.marginX, st.artworkX))
+            const cy2 = Math.max(b.minY, Math.min(b.maxY, st.artworkY))
+            if (
+              Math.abs(cx2 - st.artworkX) > 0.5 ||
+              Math.abs(cy2 - st.artworkY) > 0.5
+            ) {
+              st.setArtworkPosition(cx2, cy2)
+            }
+          })
+        }
       }
     } else {
       // Upload overlay
@@ -1309,6 +1385,54 @@ export default function CanvasStage({
         onDrop={(e) => { handleDrop(e); setTimeout(render, 300) }}
         onDragOver={handleDragOver}
       />
+
+      {/* Canvas loader — fades in over the stage while the frame's PNG +
+          measured opening load (initial select, frame swap, ratio switch). */}
+      <div
+        className={`pointer-events-none absolute inset-0 z-20 flex items-center justify-center transition-opacity duration-300 ${
+          canvasLoading ? 'opacity-100' : 'opacity-0'
+        }`}
+        style={{
+          background:
+            'radial-gradient(circle at center, color-mix(in srgb, var(--ed-canvas) 70%, transparent) 0%, color-mix(in srgb, var(--ed-canvas) 30%, transparent) 70%)',
+          backdropFilter: 'blur(2px)',
+        }}
+        aria-hidden={!canvasLoading}
+      >
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative h-14 w-14">
+            {/* soft glow */}
+            <div
+              className="absolute inset-0 rounded-full blur-md"
+              style={{
+                background:
+                  'radial-gradient(circle, color-mix(in srgb, var(--ed-accent) 45%, transparent) 0%, transparent 70%)',
+              }}
+            />
+            {/* static track */}
+            <div
+              className="absolute inset-0 rounded-full border-[3px]"
+              style={{ borderColor: 'var(--ed-border-strong)', opacity: 0.5 }}
+            />
+            {/* spinning arc */}
+            <div
+              className="absolute inset-0 animate-spin rounded-full border-[3px] border-transparent"
+              style={{
+                borderTopColor: 'var(--ed-accent)',
+                borderRightColor: 'var(--ed-accent)',
+                animationDuration: '0.7s',
+              }}
+            />
+          </div>
+          <p
+            className="text-xs font-medium tracking-wide"
+            style={{ color: 'var(--ed-fg-muted)' }}
+          >
+            Loading frame…
+          </p>
+        </div>
+      </div>
+
       <div className="absolute inset-x-0 bottom-5 flex justify-center pointer-events-none">
         <div className="bg-black/75 backdrop-blur-md border border-white/15 rounded-full px-4 py-1.5 text-xs font-medium text-white/95 shadow-lg">
           Scroll over picture = zoom picture · Scroll outside = zoom frame · Drag to reposition

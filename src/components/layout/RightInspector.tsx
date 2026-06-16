@@ -1,8 +1,17 @@
-import { ChevronLeft, ChevronRight, Lock, RectangleHorizontal, RectangleVertical, Sliders, Square as SquareIcon } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Lock,
+  RectangleHorizontal,
+  RectangleVertical,
+  Sliders,
+  Square as SquareIcon,
+} from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
   useEditorStore,
-  FRAME_ASPECT_RATIOS,
+  A4_LONG_CM,
+  A4_SHORT_CM,
   type FrameAspectRatio,
 } from '@/store/editorStore'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -58,6 +67,8 @@ function SectionCard({
   )
 }
 
+// ── Number field ────────────────────────────────────────────────────────────
+
 function NumberField({
   value, onChange, min = 1, step = 0.5,
 }: {
@@ -82,40 +93,28 @@ function NumberField({
   )
 }
 
-// ── Ratio picker ──────────────────────────────────────────────────────────
+// ── Ratio picker ────────────────────────────────────────────────────────────
+// Hidden radio inputs with styled labels. Each option maps straight to a
+// frameAspectRatio; the sub-label shows the A4 print size (Square is 1:1,
+// Custom takes manual cm). The renderer fits every ratio to the viewport, so
+// switching always lands at zoom 1 with no zoom-out.
 
-function RatioCard({
-  id, label, icon: Icon, selected, onChange,
-}: {
+const A4_LANDSCAPE = `A4 · ${A4_LONG_CM.toFixed(1)} × ${A4_SHORT_CM.toFixed(1)} cm`
+const A4_PORTRAIT = `A4 · ${A4_SHORT_CM.toFixed(1)} × ${A4_LONG_CM.toFixed(1)} cm`
+// Square print uses the A4 short edge for both sides.
+const SQUARE_SIZE = `${A4_SHORT_CM.toFixed(1)} × ${A4_SHORT_CM.toFixed(1)} cm`
+
+const RATIO_OPTIONS: Array<{
   id: FrameAspectRatio
   label: string
+  sub: string
   icon: LucideIcon
-  selected: boolean
-  onChange: (id: FrameAspectRatio) => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(id)}
-      aria-pressed={selected}
-      className={cn(
-        'flex flex-col items-center justify-center gap-1.5 rounded-lg py-3 transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ed-ring)]',
-      )}
-      style={{
-        background: selected ? 'var(--ed-accent-soft)' : 'var(--ed-panel)',
-        outline: selected
-          ? '1.5px solid var(--ed-accent)'
-          : '1px solid var(--ed-border-strong)',
-        outlineOffset: '-1px',
-        color: selected ? 'var(--ed-accent)' : 'var(--ed-fg-muted)',
-      }}
-    >
-      <Icon size={18} strokeWidth={1.6} />
-      <span className="text-[10px] font-medium">{label}</span>
-    </button>
-  )
-}
+}> = [
+  { id: 'landscape', label: 'Landscape', sub: A4_LANDSCAPE, icon: RectangleHorizontal },
+  { id: 'portrait', label: 'Portrait', sub: A4_PORTRAIT, icon: RectangleVertical },
+  { id: 'square', label: 'Square', sub: SQUARE_SIZE, icon: SquareIcon },
+  { id: 'custom', label: 'Custom', sub: 'Set size', icon: Sliders },
+]
 
 function CustomSizeInputs() {
   const customWidthCm = useEditorStore((s) => s.customWidthCm)
@@ -189,35 +188,50 @@ function RatioPanel() {
   return (
     <div className="space-y-3">
       <SectionCard title="Frame ratio">
-        <div className="grid grid-cols-2 gap-2">
-          <RatioCard
-            id="landscape"
-            label="Landscape"
-            icon={RectangleHorizontal}
-            selected={frameAspectRatio === 'landscape'}
-            onChange={setFrameAspectRatio}
-          />
-          <RatioCard
-            id="portrait"
-            label="Portrait"
-            icon={RectangleVertical}
-            selected={frameAspectRatio === 'portrait'}
-            onChange={setFrameAspectRatio}
-          />
-          <RatioCard
-            id="square"
-            label="Square 1:1"
-            icon={SquareIcon}
-            selected={frameAspectRatio === 'square'}
-            onChange={setFrameAspectRatio}
-          />
-          <RatioCard
-            id="custom"
-            label="Custom"
-            icon={Sliders}
-            selected={frameAspectRatio === 'custom'}
-            onChange={setFrameAspectRatio}
-          />
+        <div role="radiogroup" aria-label="Frame ratio" className="space-y-1.5">
+          {RATIO_OPTIONS.map((opt) => {
+            const selected = frameAspectRatio === opt.id
+            const Icon = opt.icon
+            return (
+              <label
+                key={opt.id}
+                className="flex cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 transition-colors focus-within:ring-2 focus-within:ring-[var(--ed-ring)]"
+                style={{
+                  background: selected ? 'var(--ed-accent-soft)' : 'var(--ed-panel)',
+                  outline: selected
+                    ? '1.5px solid var(--ed-accent)'
+                    : '1px solid var(--ed-border-strong)',
+                  outlineOffset: '-1px',
+                }}
+              >
+                <input
+                  type="radio"
+                  name="frame-ratio"
+                  value={opt.id}
+                  checked={selected}
+                  onChange={() => setFrameAspectRatio(opt.id)}
+                  className="sr-only"
+                />
+                <Icon
+                  size={16}
+                  strokeWidth={1.6}
+                  style={{ color: selected ? 'var(--ed-accent)' : 'var(--ed-fg-muted)' }}
+                />
+                <span
+                  className="flex-1 text-[12px] font-semibold"
+                  style={{ color: selected ? 'var(--ed-accent)' : 'var(--ed-fg)' }}
+                >
+                  {opt.label}
+                </span>
+                <span
+                  className="text-[11px] tabular-nums"
+                  style={{ color: 'var(--ed-fg-muted)' }}
+                >
+                  {opt.sub}
+                </span>
+              </label>
+            )
+          })}
         </div>
         {frameAspectRatio === 'custom' && <CustomSizeInputs />}
       </SectionCard>

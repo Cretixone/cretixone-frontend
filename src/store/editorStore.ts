@@ -40,6 +40,11 @@ export const getAspectRatioValue = (id: FrameAspectRatio): number => {
   return found?.ratio ?? 1
 }
 
+// A4 print dimensions (cm) — shown as the sub-label on the Landscape /
+// Portrait ratio options. Square is 1:1 and Custom takes manual cm.
+export const A4_LONG_CM = 29.7
+export const A4_SHORT_CM = 21.0
+
 // CSS pixel ↔ centimetre conversion at the standard web 96 DPI:
 //   1 in = 2.54 cm, 96 px = 1 in → 1 cm ≈ 37.7952756 px.
 export const PX_PER_CM = 96 / 2.54
@@ -155,7 +160,8 @@ export const useEditorStore = create<EditorState>((set) => ({
   activeEffectTab: 'Light effect',
   activeFrameCategorySlug: null,
 
-  frameAspectRatio: 'landscape',
+  // Default to Square when a frame opens.
+  frameAspectRatio: 'square',
   customWidthCm: 30,
   customHeightCm: 20,
   // Default OFF — users typing into Custom usually want two independent
@@ -236,7 +242,9 @@ export const useEditorStore = create<EditorState>((set) => ({
   setShadowBlur: (b) => set({ shadowBlur: b }),
   setShadowOpacity: (o) => set({ shadowOpacity: o }),
   setArtworkImageUrl: (url) => set({ artworkImageUrl: url, artworkX: 0, artworkY: 0, artworkScale: 1 }),
-  setArtworkScale: (s) => set({ artworkScale: s }),
+  // Never below 1 (cover-fit) so the picture always fills the frame opening —
+  // zooming out can't leave empty space inside the frame.
+  setArtworkScale: (s) => set({ artworkScale: Math.max(1, s) }),
   setArtworkPosition: (x, y) => set({ artworkX: x, artworkY: y }),
   // Clamp to [1, 3] at the store level so any caller (wheel handler,
   // future reset paths, restored persisted state) can never set the

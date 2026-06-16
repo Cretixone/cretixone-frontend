@@ -10,17 +10,24 @@ export function useImageUpload() {
       if (!file || !file.type.startsWith('image/')) return
       const url = URL.createObjectURL(file)
       setArtworkImageUrl(url)
-      // Auto-pick landscape/portrait from the uploaded image's natural
-      // aspect — wider-than-tall → landscape, otherwise portrait. The
-      // user can still override via the Ratio tab afterwards. We don't
-      // overwrite an active Custom selection (the user picked specific
-      // cm dimensions and probably wants those preserved).
+      // Auto-pick the frame ratio from the uploaded image's natural aspect so
+      // the frame adjusts to the image: near-square → Square, wider-than-tall
+      // → Landscape, otherwise Portrait. The user can still override via the
+      // Ratio tab afterwards. We don't overwrite an active Custom selection
+      // (the user picked specific cm dimensions and probably wants those
+      // preserved). The artwork rendering itself is unchanged.
       const probe = new Image()
       probe.onload = () => {
         if (!probe.naturalWidth || !probe.naturalHeight) return
         const current = useEditorStore.getState().frameAspectRatio
         if (current === 'custom') return
-        const next = probe.naturalWidth >= probe.naturalHeight ? 'landscape' : 'portrait'
+        const ratio = probe.naturalWidth / probe.naturalHeight
+        const next =
+          Math.abs(ratio - 1) <= 0.08
+            ? 'square'
+            : ratio > 1
+              ? 'landscape'
+              : 'portrait'
         if (current !== next) setFrameAspectRatio(next)
       }
       probe.src = url
