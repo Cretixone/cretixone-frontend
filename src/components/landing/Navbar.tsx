@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils'
 import { Link } from 'react-router-dom'
 
 const NAV_LINKS = [
-  { label: 'All Frames', href: '#frames' },
+  { label: 'All Frames', href: '/products' },
   { label: 'Custom Prints', href: '#prints' },
   { label: 'Stock Photo', href: '#stock' },
   { label: 'Custom Mirror', href: '#mirror' },

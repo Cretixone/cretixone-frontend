@@ -1,14 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ChevronDown, Home, Upload } from 'lucide-react'
-import Navbar from '@/components/landing/Navbar'
+import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { Button } from '@/components/ui/button'
 import { useEditorStore } from '@/store/editorStore'
 import { cn } from '@/lib/utils'
-
-// ── Theme tokens ────────────────────────────────────────────────────────────
-const RED = '#F82226'
 
 // ── Mock product data (specs aren't on the frame API yet — mirrors the Figma
 // spec). The gallery uses the bundled lifestyle slides; with 8 images it also
@@ -94,12 +91,13 @@ export default function ProductDetailPage() {
       <header className="relative z-30">
         <Navbar />
       </header>
+      <PillNav />
 
       <main className="mx-auto max-w-[1400px] px-5 pt-28 pb-16 md:px-8 md:pt-32 lg:px-10 lg:pt-40">
         {/* Breadcrumb */}
         <nav
           aria-label="Breadcrumb"
-          className="mt-6 flex items-center gap-2 text-sm text-foreground/70"
+          className="mb-10 flex items-center gap-2 text-sm text-foreground/70"
         >
           <Link to="/" className="inline-flex items-center hover:text-brand-navy">
             <Home className="h-4 w-4" />
@@ -325,12 +323,13 @@ function BuyPanel({
               type="button"
               onClick={() => onService(s.id)}
               aria-pressed={selected}
-              className="flex items-start gap-3 rounded-xl p-3.5 text-left transition"
+              className="flex items-center gap-3 rounded-lg px-3.5 text-left transition"
               style={{
-                background: selected ? 'rgba(0,35,101,0.04)' : '#fff',
+                height: '49px',
+                background: '#F6F6F6',
                 outline: selected
                   ? '1.5px solid #002365'
-                  : '1px solid rgba(0,0,0,0.10)',
+                  : '1.5px solid transparent',
                 outlineOffset: '-1px',
               }}
             >
@@ -340,10 +339,10 @@ function BuyPanel({
                 <img src={s.icon} alt="" className="h-5 w-auto" />
               </span>
               <span className="min-w-0">
-                <span className="block text-sm font-semibold text-foreground">
+                <span className="block text-[18px] font-medium leading-none text-foreground">
                   {s.title}
                 </span>
-                <span className="mt-0.5 block text-[12px] leading-snug text-foreground/55">
+                <span className="mt-1 block text-[11px] font-normal leading-none text-foreground/55">
                   {s.desc}
                 </span>
               </span>
@@ -362,7 +361,7 @@ function BuyPanel({
           <Button
             variant="outline"
             onClick={onUpload}
-            className="gap-2 border-brand-gold/60 bg-brand-gold/5 text-brand-gold hover:bg-brand-gold/10"
+            className="gap-2 border-brand-navy/40 bg-transparent text-brand-navy hover:bg-brand-navy/5"
           >
             <Upload className="h-4 w-4" />
             Upload a preview image
@@ -373,7 +372,7 @@ function BuyPanel({
       {/* Price + add to cart */}
       <div className="mt-7 flex flex-wrap items-center justify-between gap-4 border-t border-black/[0.07] pt-6">
         <div className="flex items-baseline gap-2.5">
-          <span className="text-2xl font-bold" style={{ color: RED }}>
+          <span className="text-2xl font-bold text-brand-navy">
             $156.06
           </span>
           <span className="text-sm text-foreground/40 line-through">
