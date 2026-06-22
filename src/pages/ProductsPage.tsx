@@ -13,7 +13,6 @@ import Footer from '@/components/landing/Footer'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useFetchFramesQuery } from '@/store/api/apiSlice'
-import { useEditorStore } from '@/store/editorStore'
 import type { ApiFrame } from '@/types/api'
 
 // ── Theme tokens (kept inline so the page reads against the brand palette) ──
@@ -509,25 +508,13 @@ function ProductCard({ frame }: { frame: ApiFrame }) {
   const navigate = useNavigate()
   const img = frame.portraitUrl || frame.imgUrl || frame.landscapeUrl
 
-  // Open this frame in the editor with it pre-selected. We set the editor
-  // store directly (the zustand store is a module singleton that survives
-  // the client-side route change) AND carry the id in the URL so a hard
-  // refresh / deep-link of /editor?frame=… can re-resolve the selection.
-  const openInEditor = () => {
-    const ed = useEditorStore.getState()
-    ed.setActiveSidebarTab('frames')
-    ed.setSelectedFrame(frame)
-    // Also activate the frame's category so the editor's frame panel opens
-    // on the right tab with the selected thumbnail visible.
-    if (frame.categorySlug) ed.setActiveFrameCategorySlug(frame.categorySlug)
-    // A freshly opened frame defaults to the Square ratio.
-    ed.setFrameAspectRatio('square')
-    navigate(`/editor?frame=${frame.id}`)
-  }
+  // Clicking a product opens its detail page (which in turn links into the
+  // editor via "Upload a preview image").
+  const openDetail = () => navigate(`/product/${frame.id}`)
 
   return (
     <motion.div
-      onClick={openInEditor}
+      onClick={openDetail}
       whileHover={{ y: -3 }}
       transition={{ type: 'spring', stiffness: 300, damping: 24 }}
       className="group cursor-pointer rounded-2xl border-[0.5px] border-transparent p-3 transition-shadow hover:border-[#F1F1F1] hover:bg-white hover:shadow-[0_18px_40px_-18px_rgba(10,31,77,0.18)]"

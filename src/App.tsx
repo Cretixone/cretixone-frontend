@@ -15,6 +15,9 @@ const LandingPage = lazy(() => import('@/pages/LandingPage'))
 const TermsPage = lazy(() => import('@/pages/TermsPage'))
 const AboutPage = lazy(() => import('@/pages/AboutPage'))
 const ProductsPage = lazy(() => import('@/pages/ProductsPage'))
+const ProductDetailPage = lazy(() => import('@/pages/ProductDetailPage'))
+const TeamPage = lazy(() => import('@/pages/TeamPage'))
+const TestimonialsPage = lazy(() => import('@/pages/TestimonialsPage'))
 
 function LoadingCanvas() {
   return (
@@ -67,7 +70,11 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/about" element={<AboutPage />} />
+        <Route path="/team" element={<TeamPage />} />
+        <Route path="/testimonials" element={<TestimonialsPage />} />
         <Route path="/products" element={<ProductsPage />} />
+        <Route path="/product" element={<ProductDetailPage />} />
+        <Route path="/product/:id" element={<ProductDetailPage />} />
         <Route path="/editor" element={<EditorApp />} />
         <Route path="/landing" element={<Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />

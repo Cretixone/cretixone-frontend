@@ -17,8 +17,8 @@ const PRODUCT_LINKS = [
 
 const COMPANY_LINKS = [
   { label: 'About', href: '/about' },
-  { label: 'Team', href: '#team' },
-  { label: 'Testimonials', href: '#testimonials' },
+  { label: 'Team', href: '/team' },
+  { label: 'Testimonials', href: '/testimonials' },
 ]
 
 const SOCIAL_LINKS = [
