@@ -34,6 +34,9 @@ const fadeUp: Variants = {
 }
 
 // ── Team data ────────────────────────────────────────────────────────────────
+// Default avatar until real headshots are added.
+const PLACEHOLDER_AVATAR = '/images/avatar-placeholder.svg'
+
 interface Member {
   name: string
   role: string
@@ -44,60 +47,53 @@ interface Member {
 
 const TEAM: Member[] = [
   {
-    name: 'Elena Moreau',
-    role: 'Creative Director',
-    bio: 'A visionary with a passion for aesthetics and storytelling. Elena shapes the visual language behind everything we do.',
-    img: 'https://randomuser.me/api/portraits/women/44.jpg',
-    initials: 'EM',
+    name: 'Ayesha Saboor',
+    role: 'Founder & Executive Chairperson',
+    bio: 'Founder and guiding vision behind Cretixone, shaping its purpose, values, and long-term direction.',
+    img: PLACEHOLDER_AVATAR,
+    initials: 'AS',
   },
   {
-    name: 'Tobias Schmidt',
-    role: 'Lead Developer',
-    bio: 'From backend architecture to pixel-perfect interfaces, Tobias ensures every detail works — and works beautifully.',
-    img: 'https://randomuser.me/api/portraits/men/32.jpg',
-    initials: 'TS',
+    name: 'Yousif Al Jabri',
+    role: 'CEO & Managing Director',
+    bio: "Leads the company's strategy and day-to-day operations, turning vision into execution.",
+    img: PLACEHOLDER_AVATAR,
+    initials: 'YJ',
   },
   {
-    name: 'Amara Chen',
-    role: 'Brand Designer',
-    bio: 'Amara brings elegance to design systems, blending form and function into every visual touchpoint.',
-    img: 'https://randomuser.me/api/portraits/women/68.jpg',
-    initials: 'AC',
+    name: 'Shantunu Chowdhury',
+    role: 'Chief Finance & Corporate Affairs Officer',
+    bio: 'Oversees finance and corporate affairs, keeping our growth sustainable and well governed.',
+    img: PLACEHOLDER_AVATAR,
+    initials: 'SC',
   },
   {
-    name: 'Julian Reyes',
-    role: 'Marketing Strategist',
-    bio: 'Julian crafts campaigns that connect. He knows how to make the right people care — and act.',
-    img: 'https://randomuser.me/api/portraits/men/45.jpg',
-    initials: 'JR',
+    name: 'Kavinda',
+    role: 'Graphic Designer / Design Consultant',
+    bio: 'Crafts the visual language of every piece, blending creativity with precise, considered design.',
+    img: PLACEHOLDER_AVATAR,
+    initials: 'KA',
   },
   {
-    name: 'Sofia Ivanova',
-    role: 'UX Researcher',
-    bio: 'With empathy at her core, Sofia translates user needs into insights that drive meaningful design decisions.',
-    img: 'https://randomuser.me/api/portraits/women/65.jpg',
-    initials: 'SI',
+    name: 'Faisal',
+    role: 'Lead Framer / Sales — Indoor',
+    bio: 'Leads indoor framing and sales, helping customers find the perfect frame for their art.',
+    img: PLACEHOLDER_AVATAR,
+    initials: 'FA',
   },
   {
-    name: 'Miles Carter',
-    role: 'Product Manager',
-    bio: 'Miles bridges vision and execution, aligning strategy, people, and purpose into one seamless roadmap.',
-    img: 'https://randomuser.me/api/portraits/men/52.jpg',
-    initials: 'MC',
+    name: 'Babar Khan',
+    role: 'Lead Framer / Workshop Manager',
+    bio: 'Runs the workshop and framing floor, ensuring every order is built beautifully and to last.',
+    img: PLACEHOLDER_AVATAR,
+    initials: 'BK',
   },
   {
-    name: 'Hana Masri',
-    role: 'Customer Experience Lead',
-    bio: 'Hana ensures every client interaction feels thoughtful, personal, and memorable — every time.',
-    img: 'https://randomuser.me/api/portraits/women/29.jpg',
-    initials: 'HM',
-  },
-  {
-    name: 'Leo Fernandes',
-    role: 'Innovation Architect',
-    bio: 'Leo explores future possibilities, turning new tech into opportunities for smarter, more human-centered solutions.',
-    img: 'https://randomuser.me/api/portraits/men/76.jpg',
-    initials: 'LF',
+    name: 'Ahsan Farooq',
+    role: 'Glass Specialist / Sales — Outdoor & Installer',
+    bio: 'Glass specialist and installer, handling outdoor sales and flawless on-site installation.',
+    img: PLACEHOLDER_AVATAR,
+    initials: 'AF',
   },
 ]
 
@@ -204,7 +200,7 @@ export default function TeamPage() {
       </section>
 
       {/* ── TEAM GRID ────────────────────────────────────────────────────── */}
-      <section className="relative mx-auto max-w-[1320px] px-5 pb-20 pt-16 md:px-8 md:pb-28 md:pt-24 lg:px-10">
+      <section className="relative mx-auto max-w-[1320px] px-5 pb-20 pt-16 md:px-8 md:pb-28 md:pt-20 lg:px-10">
         <motion.div
           className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3"
           variants={stagger}
@@ -337,13 +333,17 @@ function TeamCard({ member, index }: { member: Member; index: number }) {
         {/* Avatar — big & centered by default; shrinks to the top on hover */}
         <div className="absolute left-1/2 top-[96px] z-10 -translate-x-1/2 transition-[top] duration-500 ease-out group-hover:top-[20px]">
           <motion.div
-            animate={{ y: [0, -9, 0] }}
-            transition={{
-              duration: 4.5 + (index % 3) * 0.8,
-              repeat: Infinity,
-              ease: 'easeInOut',
-              delay: index * 0.3,
-            }}
+            animate={hover ? { y: 0 } : { y: [0, -9, 0] }}
+            transition={
+              hover
+                ? { duration: 0.3, ease: 'easeOut' }
+                : {
+                    duration: 4.5 + (index % 3) * 0.8,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                    delay: index * 0.3,
+                  }
+            }
           >
             <div className="relative h-[200px] w-[200px] transition-all duration-500 ease-out group-hover:h-[136px] group-hover:w-[136px]">
               <motion.div
@@ -360,11 +360,11 @@ function TeamCard({ member, index }: { member: Member; index: number }) {
                 animate={{ rotate: -360 }}
                 transition={{ duration: 16, repeat: Infinity, ease: 'linear' }}
               />
-              <div className="absolute inset-[5px] overflow-hidden rounded-full bg-white">
+              <div className="absolute inset-[8px] overflow-hidden rounded-full bg-white">
                 <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-brand-navy to-[#4169E2] text-2xl font-semibold tracking-wide text-white">
                   {member.initials}
                 </div>
-                {!imgError && (
+                {member.img && !imgError && (
                   <img
                     src={member.img}
                     alt={member.name}
