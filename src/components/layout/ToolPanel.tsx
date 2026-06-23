@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useEditorStore, OSS_PREFIX } from '@/store/editorStore'
 import {
   useFetchFramesQuery,
@@ -278,6 +279,8 @@ export default function ToolPanel() {
     activeFrameCategorySlug, setActiveFrameCategorySlug,
   } = useEditorStore()
 
+  const [searchParams] = useSearchParams()
+
   // ── API queries — lazy by active tab ──────────────────────────────────
   const framesQuery = useFetchFramesQuery(undefined, { skip: activeSidebarTab !== 'frames' })
   const frameCategoriesQuery = useFetchFrameCategoriesQuery(undefined, {
@@ -305,6 +308,17 @@ export default function ToolPanel() {
     if (!activeFrameCategorySlug) return all
     return all.filter((f) => f.categorySlug === activeFrameCategorySlug)
   }, [framesQuery.data, activeFrameCategorySlug])
+
+  // Auto-select the first frame of the active (first) category when nothing is
+  // selected yet — fresh editor open, a refresh, or an "Upload Photo" from the
+  // navbar. A ?frame= deep-link takes precedence (resolved in EditorApp), so
+  // we skip while that param is present.
+  useEffect(() => {
+    if (selectedFrame) return
+    if (searchParams.get('frame')) return
+    const first = filteredFrames[0] ?? (framesQuery.data ?? [])[0]
+    if (first) setSelectedFrame(first)
+  }, [selectedFrame, filteredFrames, framesQuery.data, searchParams, setSelectedFrame])
 
   const matCategories = paperQuery.data ?? []
   const activeMatCategory = matCategories.find((c) => c.englishName === activeMatTab)
