@@ -14,7 +14,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useCartStore, cartCount } from '@/store/cartStore'
+import { useUploadPhoto } from '@/hooks/useUploadPhoto'
 
 const NAV_LINKS = [
   { label: 'All Frames', href: '/products' },
@@ -56,6 +58,9 @@ function CretixoneLogo({ className }: CretixoneLogoProps) {
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const navigate = useNavigate()
+  const cartItemCount = useCartStore((s) => cartCount(s.items))
+  const onUploadPhoto = useUploadPhoto()
 
   return (
     <>
@@ -98,12 +103,15 @@ export default function Navbar() {
             <button
               type="button"
               aria-label="Cart"
+              onClick={() => navigate('/cart')}
               className="relative text-[#4169E2]"
             >
               <ShoppingCart className="h-7 w-7" />
-              <span className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-[#4169E2] px-1 text-[12px] font-semibold leading-none border border-[#B5C9F1] text-white">
-                2
-              </span>
+              {cartItemCount > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-[#4169E2] px-1 text-[12px] font-semibold leading-none border border-[#B5C9F1] text-white">
+                  {cartItemCount}
+                </span>
+              )}
             </button>
 
             {/* Mobile menu toggle — visible only below lg */}
@@ -143,7 +151,15 @@ export default function Navbar() {
                 </li>
               ))}
               <li className="mt-1.5">
-                <Button variant="navy" size="pill" className="w-full">
+                <Button
+                  variant="navy"
+                  size="pill"
+                  className="w-full"
+                  onClick={() => {
+                    setMobileOpen(false)
+                    onUploadPhoto()
+                  }}
+                >
                   <ImagePlus className="h-4 w-4" />
                   Upload Photo
                 </Button>
@@ -159,6 +175,7 @@ export default function Navbar() {
 export function PillNav() {
   const [pillTop, setPillTop] = useState(HEADER_H)
   const [stuck, setStuck] = useState(false)
+  const onUploadPhoto = useUploadPhoto()
 
   useEffect(() => {
     const onScroll = () => {
@@ -203,15 +220,11 @@ export function PillNav() {
           variant="navy"
           size="pill"
           className="ml-1 gap-2 shadow-sm"
-          onClick={() => {
-            const input = document.getElementById('upload-photo-input') as HTMLInputElement | null
-            input?.click()
-          }}
+          onClick={onUploadPhoto}
         >
           <ImagePlus className="h-4 w-4" />
           Upload Photo
         </Button>
-        <input id="upload-photo-input" type="file" accept="image/*" className="hidden" />
       </div>
     </motion.nav>
   )

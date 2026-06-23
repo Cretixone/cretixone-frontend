@@ -20,6 +20,9 @@ import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { formatOMR } from '@/lib/format'
+import { useCartStore } from '@/store/cartStore'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 // ── Field row ─────────────────────────────────────────────────────────────
 
@@ -326,6 +329,90 @@ function ShadowPanel() {
   )
 }
 
+// ── Checkout footer ─────────────────────────────────────────────────────────
+// Pinned to the bottom of the inspector (top-border separator). Computes the
+// frame price from the chosen size — Frame Price = pricePerCm × (w + h) × 2 —
+// and shows Checkout when the size fits the frame's [sizeFrom, sizeTo] range
+// (both width AND length within range), otherwise Request Inquiry.
+function CheckoutFooter() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const editId = searchParams.get('edit')
+  const addItem = useCartStore((s) => s.addItem)
+  const updateItem = useCartStore((s) => s.updateItem)
+  const selectedFrame = useEditorStore((s) => s.selectedFrame)
+  const frameAspectRatio = useEditorStore((s) => s.frameAspectRatio)
+  const customWidthCm = useEditorStore((s) => s.customWidthCm)
+  const customHeightCm = useEditorStore((s) => s.customHeightCm)
+
+  if (!selectedFrame) return null
+
+  const [w, h] =
+    frameAspectRatio === 'landscape'
+      ? [A4_LONG_CM, A4_SHORT_CM]
+      : frameAspectRatio === 'portrait'
+        ? [A4_SHORT_CM, A4_LONG_CM]
+        : frameAspectRatio === 'square'
+          ? [A4_SHORT_CM, A4_SHORT_CM]
+          : [customWidthCm, customHeightCm]
+
+  const price = selectedFrame.pricePerCm * (w + h) * 2
+  const { sizeFrom, sizeTo } = selectedFrame
+  const inRange =
+    sizeTo > 0 &&
+    w >= sizeFrom &&
+    w <= sizeTo &&
+    h >= sizeFrom &&
+    h <= sizeTo
+
+  return (
+    <div
+      className="border-t px-3 py-3"
+      style={{ borderColor: 'var(--ed-border)' }}
+    >
+      {inRange ? (
+        <button
+          type="button"
+          onClick={() => {
+            const content = {
+              frameId: selectedFrame.id,
+              name: selectedFrame.name || 'Custom Frame',
+              subtitle: 'Picture Frame',
+              thumbnail: selectedFrame.imgUrl,
+              widthCm: w,
+              heightCm: h,
+              pricePerItem: price,
+            }
+            // Coming from a cart "Edit" → update that line; otherwise add
+            // (which increments the qty if the same item is already in cart).
+            if (editId) updateItem(editId, content)
+            else addItem(content)
+            navigate('/cart')
+          }}
+          className="flex w-full items-center justify-between gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ed-ring)]"
+          style={{ background: 'var(--ed-accent)', color: 'var(--ed-accent-fg)' }}
+        >
+          <span>Checkout</span>
+          <span className="tabular-nums">{formatOMR(price)}</span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => navigate('/checkout?inquiry=1')}
+          className="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ed-ring)]"
+          style={{
+            border: '1.5px solid var(--ed-accent)',
+            color: 'var(--ed-accent)',
+            background: 'transparent',
+          }}
+        >
+          Request Inquiry
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ── Right Inspector ───────────────────────────────────────────────────────
 
 export default function RightInspector() {
@@ -422,6 +509,8 @@ export default function RightInspector() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <CheckoutFooter />
     </aside>
   )
 }

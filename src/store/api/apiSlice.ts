@@ -67,6 +67,9 @@ interface CretixFrameDto {
   landscapeUrl: string
   portraitUrl: string
   squareUrl: string | null
+  pricePerCm: number
+  sizeFrom: number
+  sizeTo: number
   sortOrder: number
 }
 
@@ -109,6 +112,7 @@ const resolveBackendUrl = (url: string | null | undefined): string => {
 
 const mapCretixFrame = (f: CretixFrameDto): ApiFrame => ({
   id: hashIdToNumber(f.id),
+  name: f.name,
   categoryId: f.categoryId,
   categorySlug: f.category?.slug ?? null,
   isVip: f.isVip,
@@ -117,6 +121,9 @@ const mapCretixFrame = (f: CretixFrameDto): ApiFrame => ({
   landscapeUrl: resolveBackendUrl(f.landscapeUrl),
   portraitUrl: resolveBackendUrl(f.portraitUrl),
   squareUrl: f.squareUrl ? resolveBackendUrl(f.squareUrl) : null,
+  pricePerCm: f.pricePerCm ?? 0,
+  sizeFrom: f.sizeFrom ?? 0,
+  sizeTo: f.sizeTo ?? 0,
 })
 
 // ─── RTK Query API ───────────────────────────────────────────────────────────

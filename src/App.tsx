@@ -18,6 +18,8 @@ const ProductsPage = lazy(() => import('@/pages/ProductsPage'))
 const ProductDetailPage = lazy(() => import('@/pages/ProductDetailPage'))
 const TeamPage = lazy(() => import('@/pages/TeamPage'))
 const TestimonialsPage = lazy(() => import('@/pages/TestimonialsPage'))
+const CheckoutPage = lazy(() => import('@/pages/CheckoutPage'))
+const CartPage = lazy(() => import('@/pages/CartPage'))
 
 function LoadingCanvas() {
   return (
@@ -72,6 +74,8 @@ export default function App() {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/team" element={<TeamPage />} />
         <Route path="/testimonials" element={<TestimonialsPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/cart" element={<CartPage />} />
         <Route path="/products" element={<ProductsPage />} />
         <Route path="/product" element={<ProductDetailPage />} />
         <Route path="/product/:id" element={<ProductDetailPage />} />

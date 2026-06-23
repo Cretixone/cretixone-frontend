@@ -14,6 +14,7 @@ export interface ApiResponse<T> {
 
 export interface ApiFrame {
   id: number                              // hashed-uuid number so it can coexist with frameit ids
+  name: string
   categoryId: string | null
   categorySlug: string | null
   isVip: boolean
@@ -22,6 +23,9 @@ export interface ApiFrame {
   landscapeUrl: string                    // full-frame landscape PNG
   portraitUrl: string                     // full-frame portrait PNG
   squareUrl: string | null                // optional 1:1 PNG (falls back to landscape)
+  pricePerCm: number                      // price per cm; Frame Price = pricePerCm × (w + h) × 2
+  sizeFrom: number                        // min manufacturable size (cm)
+  sizeTo: number                          // max manufacturable size (cm)
 }
 
 // ─── Scene (findScene — Interiors & Scenery) ─────────────────────────────────

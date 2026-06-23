@@ -13,6 +13,7 @@ import Footer from '@/components/landing/Footer'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useFetchFramesQuery } from '@/store/api/apiSlice'
+import { useUploadPhoto } from '@/hooks/useUploadPhoto'
 import type { ApiFrame } from '@/types/api'
 
 // ── Theme tokens (kept inline so the page reads against the brand palette) ──
@@ -260,6 +261,7 @@ export default function ProductsPage() {
 
 // ── Static gold pill nav (non-floating variant for inner pages) ────────────
 function PillNavStatic() {
+  const onUploadPhoto = useUploadPhoto()
   return (
     <div className="mx-auto -mt-1 hidden w-full max-w-[1400px] justify-center px-5 pb-2 md:px-10 lg:flex">
       <div className="flex w-full max-w-[820px] items-center justify-between gap-1 rounded-full bg-brand-gold p-1.5 pl-3 shadow-[0_10px_30px_-12px_rgba(192,140,64,0.6)]">
@@ -280,7 +282,7 @@ function PillNavStatic() {
             </li>
           ))}
         </ul>
-        <Button variant="navy" size="pill" className="gap-2 shadow-sm">
+        <Button variant="navy" size="pill" className="gap-2 shadow-sm" onClick={onUploadPhoto}>
           <ImagePlus className="h-4 w-4" />
           Upload Photo
         </Button>
