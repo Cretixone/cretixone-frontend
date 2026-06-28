@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { ApiFrame, ApiScene, ApiPaperItem, ApiEffectItem } from '@/types/api'
+import type { ApiFrame, ApiScene, ApiMatSize, ApiMatColor, ApiMdf, ApiEffectItem } from '@/types/api'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -57,11 +57,12 @@ export type EditorState = {
   selectedEffect: ApiEffectItem | null
   backgroundMode: BackgroundMode
 
-  // Mat — each tab controls a separate aspect (they combine together)
-  selectedMatSize: ApiPaperItem | null       // Size tab → controls mat border ratio
-  selectedMatColor: ApiPaperItem | null      // Color tab → solid color
-  selectedMatTexture: ApiPaperItem | null    // Texture tab → texture image
-  selectedMatBorder: ApiPaperItem | null     // Border tab → thin inner line
+  // Mat — admin-managed: a Size (border width + price) and a Color (solid hex)
+  selectedMatSize: ApiMatSize | null         // Size tab → border width (cm) + price
+  selectedMatColor: ApiMatColor | null       // Color tab → solid color
+
+  // MDF backing board — admin-managed; adds pricePerCm × (w × h) to the total
+  selectedMdf: ApiMdf | null
 
   // Sub-tabs
   activeMatTab: string
@@ -105,6 +106,8 @@ export type EditorState = {
   editorTheme: 'light' | 'dark'
   // Right inspector collapsed state.
   inspectorCollapsed: boolean
+  // Left tool panel (frames / mat / effects library) collapsed state.
+  toolPanelCollapsed: boolean
 
   // Canvas size
   canvasWidth: number
@@ -116,10 +119,9 @@ export type EditorState = {
   setSelectedScenery: (scene: ApiScene | null) => void
   setSelectedEffect: (item: ApiEffectItem | null) => void
   setBackgroundMode: (mode: BackgroundMode) => void
-  setSelectedMatSize: (item: ApiPaperItem | null) => void
-  setSelectedMatColor: (item: ApiPaperItem | null) => void
-  setSelectedMatTexture: (item: ApiPaperItem | null) => void
-  setSelectedMatBorder: (item: ApiPaperItem | null) => void
+  setSelectedMatSize: (item: ApiMatSize | null) => void
+  setSelectedMatColor: (item: ApiMatColor | null) => void
+  setSelectedMdf: (item: ApiMdf | null) => void
   setActiveMatTab: (tab: string) => void
   setActiveEffectTab: (tab: string) => void
   setActiveFrameCategorySlug: (slug: string | null) => void
@@ -142,6 +144,7 @@ export type EditorState = {
   setEditorTheme: (t: 'light' | 'dark') => void
   toggleEditorTheme: () => void
   setInspectorCollapsed: (c: boolean) => void
+  setToolPanelCollapsed: (c: boolean) => void
 }
 
 export const useEditorStore = create<EditorState>((set) => ({
@@ -153,8 +156,7 @@ export const useEditorStore = create<EditorState>((set) => ({
 
   selectedMatSize: null,
   selectedMatColor: null,
-  selectedMatTexture: null,
-  selectedMatBorder: null,
+  selectedMdf: null,
 
   activeMatTab: 'Size',
   activeEffectTab: 'Light effect',
@@ -186,6 +188,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   activeControlTab: 'Width',
   editorTheme: 'light',
   inspectorCollapsed: false,
+  toolPanelCollapsed: false,
 
   canvasWidth: 800,
   canvasHeight: 600,
@@ -210,11 +213,10 @@ export const useEditorStore = create<EditorState>((set) => ({
 
   setBackgroundMode: (mode) => set({ backgroundMode: mode }),
 
-  // Mat selections — each tab is independent
+  // Mat selections — Size and Color are independent
   setSelectedMatSize: (item) => set({ selectedMatSize: item }),
   setSelectedMatColor: (item) => set({ selectedMatColor: item }),
-  setSelectedMatTexture: (item) => set({ selectedMatTexture: item }),
-  setSelectedMatBorder: (item) => set({ selectedMatBorder: item }),
+  setSelectedMdf: (item) => set({ selectedMdf: item }),
 
   setActiveMatTab: (tab) => set({ activeMatTab: tab }),
   setActiveEffectTab: (tab) => set({ activeEffectTab: tab }),
@@ -259,4 +261,5 @@ export const useEditorStore = create<EditorState>((set) => ({
   setEditorTheme: (t) => set({ editorTheme: t }),
   toggleEditorTheme: () => set((s) => ({ editorTheme: s.editorTheme === 'light' ? 'dark' : 'light' })),
   setInspectorCollapsed: (c) => set({ inspectorCollapsed: c }),
+  setToolPanelCollapsed: (c) => set({ toolPanelCollapsed: c }),
 }))

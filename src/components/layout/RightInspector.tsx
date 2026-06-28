@@ -246,13 +246,14 @@ function StylePanel() {
   const selectedFrame = useEditorStore((s) => s.selectedFrame)
   const selectedMatSize = useEditorStore((s) => s.selectedMatSize)
   const selectedMatColor = useEditorStore((s) => s.selectedMatColor)
-  const selectedMatTexture = useEditorStore((s) => s.selectedMatTexture)
+  const selectedMdf = useEditorStore((s) => s.selectedMdf)
 
   const list = [
-    { label: 'Frame',    value: selectedFrame ? `#${selectedFrame.id}` : 'None' },
-    { label: 'Mat size', value: selectedMatSize ? '1 cm step' : 'None' },
-    { label: 'Mat color', value: selectedMatColor ? `#${selectedMatColor.color ?? ''}` : 'None' },
-    { label: 'Mat texture', value: selectedMatTexture ? 'Custom' : 'None' },
+    { label: 'Frame',    value: selectedFrame ? (selectedFrame.name || `#${selectedFrame.id}`) : 'None' },
+    { label: 'Mat size', value: selectedMatSize ? selectedMatSize.name : 'None' },
+    { label: 'Mat price', value: selectedMatSize && selectedMatSize.price > 0 ? formatOMR(selectedMatSize.price) : '—' },
+    { label: 'Mat color', value: selectedMatColor ? selectedMatColor.name : 'None' },
+    { label: 'MDF', value: selectedMdf ? selectedMdf.name : 'None' },
   ]
 
   return (
@@ -341,6 +342,9 @@ function CheckoutFooter() {
   const addItem = useCartStore((s) => s.addItem)
   const updateItem = useCartStore((s) => s.updateItem)
   const selectedFrame = useEditorStore((s) => s.selectedFrame)
+  const selectedMatSize = useEditorStore((s) => s.selectedMatSize)
+  const selectedMatColor = useEditorStore((s) => s.selectedMatColor)
+  const selectedMdf = useEditorStore((s) => s.selectedMdf)
   const frameAspectRatio = useEditorStore((s) => s.frameAspectRatio)
   const customWidthCm = useEditorStore((s) => s.customWidthCm)
   const customHeightCm = useEditorStore((s) => s.customHeightCm)
@@ -356,7 +360,12 @@ function CheckoutFooter() {
           ? [A4_SHORT_CM, A4_SHORT_CM]
           : [customWidthCm, customHeightCm]
 
-  const price = selectedFrame.pricePerCm * (w + h) * 2
+  const framePrice = selectedFrame.pricePerCm * (w + h) * 2
+  // Mat size adds a flat price (admin-managed); colour is free.
+  const matPrice = selectedMatSize?.price ?? 0
+  // MDF backing — price scales with the frame face: rate × width × length (cm).
+  const mdfPrice = selectedMdf ? selectedMdf.pricePerCm * w * h : 0
+  const price = framePrice + matPrice + mdfPrice
   const { sizeFrom, sizeTo } = selectedFrame
   const inRange =
     sizeTo > 0 &&
@@ -374,14 +383,28 @@ function CheckoutFooter() {
         <button
           type="button"
           onClick={() => {
+            const parts = [
+              selectedMatSize ? `Mat: ${selectedMatSize.name}` : null,
+              selectedMatColor ? selectedMatColor.name : null,
+              selectedMdf ? `MDF: ${selectedMdf.name}` : null,
+            ].filter(Boolean)
+            const subtitle = parts.length ? parts.join(' · ') : 'Picture Frame'
             const content = {
               frameId: selectedFrame.id,
               name: selectedFrame.name || 'Custom Frame',
-              subtitle: 'Picture Frame',
+              subtitle,
               thumbnail: selectedFrame.imgUrl,
               widthCm: w,
               heightCm: h,
               pricePerItem: price,
+              matSizeId: selectedMatSize?.id ?? null,
+              matSizeName: selectedMatSize?.name ?? null,
+              matPrice,
+              matColorId: selectedMatColor?.id ?? null,
+              matColorName: selectedMatColor?.name ?? null,
+              mdfId: selectedMdf?.id ?? null,
+              mdfName: selectedMdf?.name ?? null,
+              mdfPrice,
             }
             // Coming from a cart "Edit" → update that line; otherwise add
             // (which increments the qty if the same item is already in cart).

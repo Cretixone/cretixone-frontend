@@ -63,26 +63,43 @@ export interface ApiScene {
   sceneObject: unknown
 }
 
-// ─── Paper / Mat (findPaper) ─────────────────────────────────────────────────
+// ─── Mat (Cretixone backend — admin-managed) ─────────────────────────────────
+//
+// Mat sizes and colors are managed in the admin and served by our own backend
+// (/mats/sizes/public, /mats/colors/public). A mat SIZE is a border width in
+// cm plus a flat price added to the framed item; a mat COLOR is a solid hex.
 
-export interface ApiPaperItem {
-  id: number
-  type: number
-  isVip: boolean
-  ossUrl: string
-  color: string
-  leftRatio: number | null
-  topRatio: number | null
-  rightRatio: number | null
-  bottomRatio: number | null
-  rightId: number
+export interface ApiMatSize {
+  id: string
+  name: string
+  widthCm: number          // border width (cm) — drives the on-canvas thickness
+  price: number            // flat price (OMR) added once when selected
+  isActive: boolean
+  sortOrder: number
 }
 
-export interface ApiPaperCategory {
-  id: number
+export interface ApiMatColor {
+  id: string
   name: string
-  englishName: string
-  imgs: ApiPaperItem[]
+  color: string            // 6-digit hex, no leading "#"
+  isActive: boolean
+  sortOrder: number
+}
+
+// ─── MDF backing board (Cretixone backend — admin-managed) ───────────────────
+//
+// MDF price = pricePerCm × (frameWidthCm × frameLengthCm). The thickness (mm)
+// is a descriptive spec; imgUrl is the uploaded board photo (resolved to an
+// absolute URL on fetch).
+
+export interface ApiMdf {
+  id: string
+  name: string
+  thicknessMm: number      // board thickness (mm) — spec/label only
+  imgUrl: string           // board photo (resolved absolute URL)
+  pricePerCm: number       // price per cm² of frame face
+  isActive: boolean
+  sortOrder: number
 }
 
 // ─── Special Effects (findSpecialEffects) ────────────────────────────────────

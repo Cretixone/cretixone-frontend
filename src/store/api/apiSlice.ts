@@ -7,7 +7,9 @@ import type {
   ApiResponse,
   ApiFrame,
   ApiScene,
-  ApiPaperCategory,
+  ApiMatSize,
+  ApiMatColor,
+  ApiMdf,
   ApiEffectCategory,
 } from '@/types/api'
 
@@ -84,6 +86,16 @@ export interface CretixCategoryDto {
 interface CretixApiOk<T> {
   success: true
   data: T
+}
+
+interface CretixMdfDto {
+  id: string
+  name: string
+  thicknessMm: number
+  imageUrl: string | null
+  pricePerCm: number
+  isActive: boolean
+  sortOrder: number
 }
 
 // UUIDs need to coexist with frameit's numeric ids. We hash each UUID to a
@@ -174,14 +186,43 @@ export const apiSlice = createApi({
       transformResponse: (response: ApiResponse<ApiScene[]>) => response.data,
     }),
 
-    // ── Mat / Paper ────────────────────────────────────────────────────────
-    fetchPaper: builder.query<ApiPaperCategory[], void>({
+    // ── Mat sizes (Cretixone backend — admin-managed, priced) ──────────────
+    fetchMatSizes: builder.query<ApiMatSize[], void>({
       query: () => ({
-        url: '/findPaper',
-        method: 'POST',
-        data: {},
+        url: '/mats/sizes/public',
+        method: 'GET',
+        client: 'cretix',
       }),
-      transformResponse: (response: ApiResponse<ApiPaperCategory[]>) => response.data,
+      transformResponse: (response: CretixApiOk<ApiMatSize[]>) => response.data,
+    }),
+
+    // ── Mat colors (Cretixone backend — admin-managed) ─────────────────────
+    fetchMatColors: builder.query<ApiMatColor[], void>({
+      query: () => ({
+        url: '/mats/colors/public',
+        method: 'GET',
+        client: 'cretix',
+      }),
+      transformResponse: (response: CretixApiOk<ApiMatColor[]>) => response.data,
+    }),
+
+    // ── MDF backing boards (Cretixone backend — admin-managed, priced) ─────
+    fetchMdf: builder.query<ApiMdf[], void>({
+      query: () => ({
+        url: '/mdf/public',
+        method: 'GET',
+        client: 'cretix',
+      }),
+      transformResponse: (response: CretixApiOk<CretixMdfDto[]>) =>
+        response.data.map((m) => ({
+          id: m.id,
+          name: m.name,
+          thicknessMm: m.thicknessMm,
+          imgUrl: resolveBackendUrl(m.imageUrl),
+          pricePerCm: m.pricePerCm ?? 0,
+          isActive: m.isActive,
+          sortOrder: m.sortOrder,
+        })),
     }),
 
     // ── Special Effects ────────────────────────────────────────────────────
@@ -201,6 +242,8 @@ export const {
   useFetchFrameCategoriesQuery,
   useFetchInteriorsQuery,
   useFetchSceneryQuery,
-  useFetchPaperQuery,
+  useFetchMatSizesQuery,
+  useFetchMatColorsQuery,
+  useFetchMdfQuery,
   useFetchEffectsQuery,
 } = apiSlice

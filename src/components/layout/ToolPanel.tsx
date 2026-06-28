@@ -6,13 +6,17 @@ import {
   useFetchFrameCategoriesQuery,
   useFetchInteriorsQuery,
   useFetchSceneryQuery,
-  useFetchPaperQuery,
+  useFetchMatSizesQuery,
+  useFetchMatColorsQuery,
+  useFetchMdfQuery,
   useFetchEffectsQuery,
 } from '@/store/api/apiSlice'
-import type { ApiFrame, ApiScene, ApiPaperItem, ApiEffectItem } from '@/types/api'
-import { Crop } from 'lucide-react'
+import type { ApiFrame, ApiScene, ApiMatColor, ApiMdf, ApiEffectItem } from '@/types/api'
+import { formatOMR } from '@/lib/format'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -167,35 +171,56 @@ function SceneThumb({ item, selected, onClick }: {
   )
 }
 
-function MatThumb({ item, selected, onClick }: {
-  item: ApiPaperItem; selected: boolean; onClick: () => void
+function MatColorThumb({ item, selected, onClick }: {
+  item: ApiMatColor; selected: boolean; onClick: () => void
 }) {
-  const hasTexture = !!item.ossUrl
-  const imgUrl = hasTexture
-    ? (item.ossUrl.startsWith('http') ? item.ossUrl : OSS_PREFIX + item.ossUrl)
-    : undefined
-  const bgStyle = hasTexture
-    ? { backgroundImage: `url(${imgUrl})`, backgroundSize: 'cover' as const }
-    : { backgroundColor: item.color ? `#${item.color}` : 'var(--ed-canvas)' }
-
   return (
     <button
       onClick={onClick}
+      title={item.name}
+      aria-label={item.name}
       className="relative h-9 w-9 overflow-hidden rounded-md transition-transform hover:scale-105"
       style={{
-        ...bgStyle,
+        backgroundColor: `#${item.color}`,
         outline: selected
           ? '2px solid var(--ed-accent)'
           : '1px solid var(--ed-border)',
         outlineOffset: selected ? '0px' : '-1px',
       }}
     >
-      <div className="absolute inset-[3px] rounded-sm bg-white/95" />
-      {item.isVip && (
-        <div className="absolute right-0 top-0 rounded-sm bg-[var(--ed-accent)] px-0.5 text-[6px] font-bold leading-none text-white">
-          P
-        </div>
-      )}
+      <div className="absolute inset-[3px] rounded-sm" style={{ background: `#${item.color}` }} />
+    </button>
+  )
+}
+
+function MdfThumb({ item, selected, onClick }: {
+  item: ApiMdf; selected: boolean; onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center gap-1 rounded-lg p-1.5 transition-transform hover:scale-[1.02]"
+      style={{
+        background: 'var(--ed-canvas)',
+        outline: selected ? '2px solid var(--ed-accent)' : '1px solid var(--ed-border)',
+        outlineOffset: selected ? '0px' : '-1px',
+      }}
+    >
+      <div className="aspect-square w-full overflow-hidden rounded-md" style={{ background: 'var(--ed-hover)' }}>
+        {item.imgUrl ? (
+          <img src={item.imgUrl} alt={item.name} className="h-full w-full object-cover" loading="lazy" draggable={false} />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-[9px]" style={{ color: 'var(--ed-fg-subtle)' }}>
+            No photo
+          </div>
+        )}
+      </div>
+      <span
+        className="text-[10px] font-medium leading-tight text-center"
+        style={{ color: selected ? 'var(--ed-accent)' : 'var(--ed-fg-muted)' }}
+      >
+        {item.name}
+      </span>
     </button>
   )
 }
@@ -271,12 +296,12 @@ export default function ToolPanel() {
     selectedScenery, setSelectedScenery,
     selectedMatSize, setSelectedMatSize,
     selectedMatColor, setSelectedMatColor,
-    selectedMatTexture, setSelectedMatTexture,
-    selectedMatBorder, setSelectedMatBorder,
+    selectedMdf, setSelectedMdf,
     activeMatTab, setActiveMatTab,
     selectedEffect, setSelectedEffect,
     activeEffectTab, setActiveEffectTab,
     activeFrameCategorySlug, setActiveFrameCategorySlug,
+    toolPanelCollapsed, setToolPanelCollapsed,
   } = useEditorStore()
 
   const [searchParams] = useSearchParams()
@@ -288,7 +313,9 @@ export default function ToolPanel() {
   })
   const interiorsQuery = useFetchInteriorsQuery(undefined, { skip: activeSidebarTab !== 'interiors' })
   const sceneryQuery = useFetchSceneryQuery(undefined, { skip: activeSidebarTab !== 'scenery' })
-  const paperQuery = useFetchPaperQuery(undefined, { skip: activeSidebarTab !== 'mat' })
+  const matSizesQuery = useFetchMatSizesQuery(undefined, { skip: activeSidebarTab !== 'mat' })
+  const matColorsQuery = useFetchMatColorsQuery(undefined, { skip: activeSidebarTab !== 'mat' })
+  const mdfQuery = useFetchMdfQuery(undefined, { skip: activeSidebarTab !== 'mdf' })
   const effectsQuery = useFetchEffectsQuery(undefined, { skip: activeSidebarTab !== 'effect' })
 
   const frameCategories = frameCategoriesQuery.data ?? []
@@ -333,13 +360,58 @@ export default function ToolPanel() {
     setActiveFrameCategorySlug,
   ])
 
-  const matCategories = paperQuery.data ?? []
-  const activeMatCategory = matCategories.find((c) => c.englishName === activeMatTab)
-  const matItems = activeMatCategory?.imgs ?? []
+  const matSizes = matSizesQuery.data ?? []
+  const matColors = matColorsQuery.data ?? []
+  // Only two tabs remain after Texture / Border were removed.
+  const MAT_TABS = ['Size', 'Color']
+  const matLoading = matSizesQuery.isLoading || matColorsQuery.isLoading
+  const matError = matSizesQuery.isError || matColorsQuery.isError
+
+  const mdfItems = mdfQuery.data ?? []
 
   const effectCategories = effectsQuery.data ?? []
   const activeEffectCategory = effectCategories.find((c) => c.englishName === activeEffectTab)
   const effectItems = activeEffectCategory?.list ?? []
+
+  // Friendly title for the panel header — mirrors the active tool.
+  const PANEL_TITLES: Record<string, string> = {
+    frames: 'Frames',
+    interiors: 'Interiors',
+    scenery: 'Scenery',
+    mat: 'Mat',
+    mdf: 'MDF',
+    effect: 'Effects',
+  }
+  const panelTitle = PANEL_TITLES[activeSidebarTab] ?? 'Library'
+
+  // Collapsed → a thin rail with an expand button (mirrors the right Inspector).
+  if (toolPanelCollapsed) {
+    return (
+      <div
+        className="flex w-7 flex-shrink-0 flex-col items-center justify-start border-r py-3"
+        style={{
+          background: 'var(--ed-panel)',
+          borderColor: 'var(--ed-border)',
+        }}
+      >
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setToolPanelCollapsed(false)}
+              aria-label="Expand panel"
+              className="flex h-7 w-7 items-center justify-center rounded-md transition-colors"
+              style={{ color: 'var(--ed-fg-muted)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--ed-hover)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+            >
+              <ChevronRight size={14} strokeWidth={1.8} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">Expand</TooltipContent>
+        </Tooltip>
+      </div>
+    )
+  }
 
   return (
     <aside
@@ -349,6 +421,34 @@ export default function ToolPanel() {
         borderColor: 'var(--ed-border)',
       }}
     >
+      {/* ── Collapse header ── */}
+      <div
+        className="flex items-center justify-between border-b px-3 py-2.5"
+        style={{ borderColor: 'var(--ed-border)' }}
+      >
+        <p
+          className="text-[10px] font-semibold uppercase tracking-[0.12em]"
+          style={{ color: 'var(--ed-fg-subtle)' }}
+        >
+          {panelTitle}
+        </p>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setToolPanelCollapsed(true)}
+              aria-label="Collapse panel"
+              className="flex h-6 w-6 items-center justify-center rounded-md transition-colors"
+              style={{ color: 'var(--ed-fg-muted)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--ed-hover)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+            >
+              <ChevronLeft size={13} strokeWidth={1.8} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">Collapse</TooltipContent>
+        </Tooltip>
+      </div>
+
       {/* ── Frames ── */}
       {activeSidebarTab === 'frames' && (
         <>
@@ -459,22 +559,53 @@ export default function ToolPanel() {
       {/* ── Mat ── */}
       {activeSidebarTab === 'mat' && (
         <>
-          <PanelHeader title="Mat" hint="Size sets thickness · Color/Texture sets look" />
+          <PanelHeader title="Mat" hint="Size sets thickness + price · Color sets the look" />
           <Separator />
-          {!paperQuery.isLoading && (paperQuery.data?.length ?? 0) > 0 && (
-            <PillTabs
-              items={(paperQuery.data ?? []).map((c) => ({ id: c.englishName, label: c.englishName }))}
-              value={activeMatTab}
-              onChange={(id) => setActiveMatTab(id)}
-            />
-          )}
+          <PillTabs
+            items={MAT_TABS.map((t) => ({ id: t, label: t }))}
+            value={MAT_TABS.includes(activeMatTab) ? activeMatTab : 'Size'}
+            onChange={(id) => setActiveMatTab(id)}
+          />
           <ScrollArea className="flex-1">
             <div className="px-3 py-3">
-              {paperQuery.isLoading ? (
-                <SkeletonGrid count={8} cols={4} />
-              ) : paperQuery.isError ? (
+              {matLoading ? (
+                <SkeletonGrid count={6} cols={2} />
+              ) : matError ? (
                 <p className="py-4 text-center text-xs text-red-500">Failed to load mat options</p>
-              ) : activeMatTab === 'Size' ? (
+              ) : activeMatTab === 'Color' ? (
+                matColors.length === 0 ? (
+                  <p className="py-10 text-center text-xs" style={{ color: 'var(--ed-fg-subtle)' }}>
+                    No mat colors yet.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setSelectedMatColor(null)}
+                      className="flex h-9 w-9 items-center justify-center rounded-md text-[9px] font-medium"
+                      style={{
+                        color: !selectedMatColor ? 'var(--ed-accent)' : 'var(--ed-fg-muted)',
+                        outline: !selectedMatColor
+                          ? '2px solid var(--ed-accent)'
+                          : '1px dashed var(--ed-border-strong)',
+                      }}
+                    >
+                      None
+                    </button>
+                    {matColors.map((item) => (
+                      <MatColorThumb
+                        key={item.id}
+                        item={item}
+                        selected={selectedMatColor?.id === item.id}
+                        onClick={() => setSelectedMatColor(item)}
+                      />
+                    ))}
+                  </div>
+                )
+              ) : matSizes.length === 0 ? (
+                <p className="py-10 text-center text-xs" style={{ color: 'var(--ed-fg-subtle)' }}>
+                  No mat sizes yet.
+                </p>
+              ) : (
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setSelectedMatSize(null)}
@@ -491,10 +622,11 @@ export default function ToolPanel() {
                     <span className="text-lg leading-none">∅</span>
                     <span>None</span>
                   </button>
-                  {matItems.map((item, idx) => {
-                    const cmLabel = `${idx + 1} cm`
-                    const inset = 8 + idx * 4
+                  {matSizes.map((item) => {
                     const sel = selectedMatSize?.id === item.id
+                    // Preview inset scales with the mat width (capped so the
+                    // white window stays visible on the 48px tile).
+                    const inset = Math.min(20, 6 + item.widthCm * 1.6)
                     return (
                       <button
                         key={item.id}
@@ -515,69 +647,64 @@ export default function ToolPanel() {
                           />
                         </div>
                         <span
-                          className="text-[10px] font-medium"
+                          className="text-[10px] font-medium leading-tight text-center"
                           style={{ color: sel ? 'var(--ed-accent)' : 'var(--ed-fg-muted)' }}
                         >
-                          {cmLabel}
+                          {item.name}
                         </span>
+                        {item.price > 0 && (
+                          <span className="text-[9px] tabular-nums" style={{ color: 'var(--ed-fg-subtle)' }}>
+                            +{formatOMR(item.price)}
+                          </span>
+                        )}
                       </button>
                     )
                   })}
                 </div>
-              ) : activeMatTab === 'Border' ? (
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setSelectedMatBorder(null)}
-                    className="flex h-9 w-9 items-center justify-center rounded-md text-[9px] font-medium"
-                    style={{
-                      color: !selectedMatBorder ? 'var(--ed-accent)' : 'var(--ed-fg-muted)',
-                      outline: !selectedMatBorder
-                        ? '2px solid var(--ed-accent)'
-                        : '1px dashed var(--ed-border-strong)',
-                    }}
-                  >
-                    None
-                  </button>
-                  {matItems.map((item) => (
-                    <MatThumb
-                      key={item.id}
-                      item={item}
-                      selected={selectedMatBorder?.id === item.id}
-                      onClick={() => setSelectedMatBorder(item)}
-                    />
-                  ))}
-                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </>
+      )}
+
+      {/* ── MDF ── */}
+      {activeSidebarTab === 'mdf' && (
+        <>
+          <PanelHeader title="MDF backing" hint="Price scales with the frame size — added to the total" />
+          <Separator />
+          <ScrollArea className="flex-1">
+            <div className="px-3 py-3">
+              {mdfQuery.isLoading ? (
+                <SkeletonGrid count={4} cols={2} />
+              ) : mdfQuery.isError ? (
+                <p className="py-4 text-center text-xs text-red-500">Failed to load MDF options</p>
+              ) : mdfItems.length === 0 ? (
+                <p className="py-10 text-center text-xs" style={{ color: 'var(--ed-fg-subtle)' }}>
+                  No MDF options yet.
+                </p>
               ) : (
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button
-                    onClick={() => {
-                      if (activeMatTab === 'Color') setSelectedMatColor(null)
-                      else setSelectedMatTexture(null)
-                    }}
-                    className="flex h-9 w-9 items-center justify-center rounded-md text-[9px] font-medium"
+                    onClick={() => setSelectedMdf(null)}
+                    className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg text-[10px] font-medium transition-colors"
                     style={{
-                      color: (activeMatTab === 'Color' ? !selectedMatColor : !selectedMatTexture)
-                        ? 'var(--ed-accent)' : 'var(--ed-fg-muted)',
-                      outline: (activeMatTab === 'Color' ? !selectedMatColor : !selectedMatTexture)
+                      background: 'var(--ed-canvas)',
+                      color: !selectedMdf ? 'var(--ed-accent)' : 'var(--ed-fg-muted)',
+                      outline: !selectedMdf
                         ? '2px solid var(--ed-accent)'
                         : '1px dashed var(--ed-border-strong)',
+                      outlineOffset: !selectedMdf ? '0px' : '-1px',
                     }}
                   >
-                    None
+                    <span className="text-lg leading-none">∅</span>
+                    <span>None</span>
                   </button>
-                  {matItems.map((item) => (
-                    <MatThumb
+                  {mdfItems.map((item) => (
+                    <MdfThumb
                       key={item.id}
                       item={item}
-                      selected={
-                        activeMatTab === 'Color'
-                          ? selectedMatColor?.id === item.id
-                          : selectedMatTexture?.id === item.id
-                      }
-                      onClick={() => {
-                        if (activeMatTab === 'Color') setSelectedMatColor(item)
-                        else setSelectedMatTexture(item)
-                      }}
+                      selected={selectedMdf?.id === item.id}
+                      onClick={() => setSelectedMdf(selectedMdf?.id === item.id ? null : item)}
                     />
                   ))}
                 </div>
@@ -623,25 +750,6 @@ export default function ToolPanel() {
               )}
             </div>
           </ScrollArea>
-        </>
-      )}
-
-      {/* ── Crop placeholder ── */}
-      {activeSidebarTab === 'crop' && (
-        <>
-          <PanelHeader title="Crop" hint="Coming soon" />
-          <Separator />
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-            <div
-              className="flex h-14 w-14 items-center justify-center rounded-full"
-              style={{ background: 'var(--ed-hover)' }}
-            >
-              <Crop size={22} style={{ color: 'var(--ed-fg-subtle)' }} />
-            </div>
-            <p className="text-xs" style={{ color: 'var(--ed-fg-muted)' }}>
-              Crop tools land in the next release.
-            </p>
-          </div>
         </>
       )}
     </aside>

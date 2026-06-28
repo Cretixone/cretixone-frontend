@@ -4,6 +4,8 @@ import {
   useEditorStore,
   OSS_PREFIX,
   getAspectRatioValue,
+  A4_LONG_CM,
+  A4_SHORT_CM,
 } from '@/store/editorStore'
 import type { ApiFrame, ApiScene, ApiEffectItem } from '@/types/api'
 import { useCanvasSize } from '@/hooks/useCanvasSize'
@@ -142,29 +144,6 @@ function drawSolidMatStrips(
   // Bevel shadow
   g.rect(matX + border, matY + border, matW - border * 2, 3).fill({ color: 0x000000, alpha: 0.12 })
   g.rect(matX + border, matY + border, 3, matH - border * 2).fill({ color: 0x000000, alpha: 0.12 })
-}
-
-function rebuildTextureMat(
-  container: PIXI.Container,
-  texture: PIXI.Texture,
-  matX: number, matY: number, matW: number, matH: number,
-  border: number
-) {
-  container.removeChildren()
-  if (border <= 0) return
-  const ts = new PIXI.TilingSprite({
-    texture,
-    width: Math.max(1, matW),
-    height: Math.max(1, matH),
-    tileScale: new PIXI.Point(matW / texture.width, matH / texture.height),
-  })
-  ts.x = matX
-  ts.y = matY
-  container.addChild(ts)
-  const bev = new PIXI.Graphics()
-  bev.rect(matX + border, matY + border, matW - border * 2, 3).fill({ color: 0x000000, alpha: 0.18 })
-  bev.rect(matX + border, matY + border, 3, matH - border * 2).fill({ color: 0x000000, alpha: 0.18 })
-  container.addChild(bev)
 }
 
 // ─── Layer state ──────────────────────────────────────────────────────────────
@@ -549,8 +528,6 @@ export default function CanvasStage({
     const scenery: ApiScene | null = s.selectedScenery
     const matSizeItem = s.selectedMatSize
     const matColorItem = s.selectedMatColor
-    const matTextureItem = s.selectedMatTexture
-    const matBorderItem = s.selectedMatBorder
     const effect: ApiEffectItem | null = s.selectedEffect
     const bgMode = s.backgroundMode
 
@@ -831,9 +808,30 @@ export default function CanvasStage({
       contentH = outerH * 0.6
     }
 
-    // Mat border from selected mat size ratio (0 when none → no gap)
-    const matRatio = matSizeItem?.leftRatio ?? 0
-    const matBorder = Math.round(Math.min(contentW, contentH) * matRatio)
+    // Mat border from the selected mat size's width in cm. The opening
+    // (contentW × contentH px) represents the frame's real size in cm — the
+    // same basis the price calc uses — so px-per-cm = contentW / wCm. The
+    // border is drawn at the physical width (matWidthCm × px-per-cm) and is
+    // capped so a large mat can never swallow the whole opening.
+    const matWidthCm = matSizeItem?.widthCm ?? 0
+    // Frame width (cm) for the active ratio — the same basis the price calc
+    // uses. contentW maps to this width, so px-per-cm = contentW / matWCm.
+    const matWCm =
+      s.frameAspectRatio === 'landscape'
+        ? A4_LONG_CM
+        : s.frameAspectRatio === 'portrait'
+          ? A4_SHORT_CM
+          : s.frameAspectRatio === 'square'
+            ? A4_SHORT_CM
+            : s.customWidthCm
+    const pxPerCm = matWCm > 0 ? contentW / matWCm : 0
+    const matBorder =
+      matWidthCm > 0
+        ? Math.min(
+            Math.round(matWidthCm * pxPerCm),
+            Math.floor(Math.min(contentW, contentH) * 0.45),
+          )
+        : 0
 
     const matX = contentX
     const matY = contentY
@@ -944,105 +942,26 @@ export default function CanvasStage({
     // White canvas backing — fills only the content area inside the frame border
     L.matSolidG.rect(contentX, contentY, contentW, contentH).fill({ color: 0xffffff })
 
+    // Mat appearance colour — the selected mat colour, or a default off-white
+    // once a mat size is chosen so the mat reads clearly against the picture.
+    const matColor = matColorItem?.color || ''
+
     // Square mode introduces a side gap between the (smaller) picture
     // rect and the (wider) available area inside the opening. Fill the
-    // whole contentRect with the mat appearance so that gap reads as
-    // mat instead of as the white backing. The picture (drawn later)
-    // covers openX/Y/W/H on top.
-    const matTexUrlForSquare = matTextureItem?.ossUrl ? resolveUrl(matTextureItem.ossUrl) : ''
-    const matColorHexForSquare = matColorItem?.color || ''
+    // whole contentRect with the mat colour so that gap reads as mat
+    // instead of as the white backing. The picture (drawn later) covers
+    // openX/Y/W/H on top.
     if (hasPictureMatGap) {
-      if (matTexUrlForSquare) {
-        const cached = texCache.get(matTexUrlForSquare)
-        const placeTexture = (tex: PIXI.Texture) => {
-          L.matTexCont.removeChildren()
-          const ts = new PIXI.TilingSprite({
-            texture: tex,
-            width: Math.max(1, contentW),
-            height: Math.max(1, contentH),
-            tileScale: new PIXI.Point(contentW / tex.width, contentH / tex.height),
-          })
-          ts.x = contentX
-          ts.y = contentY
-          L.matTexCont.addChild(ts)
-        }
-        if (cached) placeTexture(cached)
-        else loadTexture(matTexUrlForSquare).then(tex => {
-          if (!tex || !layersRef.current) return
-          placeTexture(tex)
-        })
-      } else {
-        const matFill = matColorHexForSquare ? hexToNum(matColorHexForSquare) : 0xf8f8f8
-        L.matSolidG.rect(contentX, contentY, contentW, contentH).fill({ color: matFill })
-      }
+      const matFill = matColor ? hexToNum(matColor) : 0xf8f8f8
+      L.matSolidG.rect(contentX, contentY, contentW, contentH).fill({ color: matFill })
     }
 
     // Mat strips (drawn on top of white backing, below artwork)
     if (matBorder > 0) {
-      // Texture tab overrides color tab for mat appearance
-      const texUrl = matTextureItem?.ossUrl ? resolveUrl(matTextureItem.ossUrl) : ''
-      const matColor = matColorItem?.color || ''
-
-      if (texUrl) {
-        const cached = texCache.get(texUrl)
-        if (cached) {
-          rebuildTextureMat(L.matTexCont, cached, matX, matY, matTotalW, matTotalH, matBorder)
-        } else {
-          loadTexture(texUrl).then(tex => {
-            const L2 = layersRef.current
-            if (!L2 || !tex) return
-            rebuildTextureMat(L2.matTexCont, tex, matX, matY, matTotalW, matTotalH, matBorder)
-          })
-        }
-      } else if (matColor) {
-        drawSolidMatStrips(L.matSolidG, matX, matY, matTotalW, matTotalH, matBorder, matColor)
-      } else {
-        // Size selected but no color/texture yet — default off-white mat
-        drawSolidMatStrips(L.matSolidG, matX, matY, matTotalW, matTotalH, matBorder, 'f8f8f8')
-      }
-
-      // Mat inner border line (Border tab)
-      if (matBorderItem?.ossUrl) {
-        const borderLineUrl = resolveUrl(matBorderItem.ossUrl)
-        const borderW = 2 // thin inner line
-        const cached = texCache.get(borderLineUrl)
-        const drawBorderLine = (tex: PIXI.Texture) => {
-          const bCont = new PIXI.Container()
-          // Top line
-          const top = new PIXI.TilingSprite({ texture: tex, width: openW, height: borderW })
-          top.x = openX; top.y = openY - borderW
-          bCont.addChild(top)
-          // Bottom line
-          const bot = new PIXI.TilingSprite({ texture: tex, width: openW, height: borderW })
-          bot.x = openX; bot.y = openY + openH
-          bCont.addChild(bot)
-          // Left line
-          const left = new PIXI.TilingSprite({ texture: tex, width: borderW, height: openH + borderW * 2 })
-          left.x = openX - borderW; left.y = openY - borderW
-          bCont.addChild(left)
-          // Right line
-          const right = new PIXI.TilingSprite({ texture: tex, width: borderW, height: openH + borderW * 2 })
-          right.x = openX + openW; right.y = openY - borderW
-          bCont.addChild(right)
-          L.matTexCont.addChild(bCont)
-        }
-        if (cached) {
-          drawBorderLine(cached)
-        } else {
-          loadTexture(borderLineUrl).then(tex => {
-            if (!tex || !layersRef.current) return
-            drawBorderLine(tex)
-          })
-        }
-      } else if (matBorderItem?.color) {
-        // Solid color border line
-        const bw = 2
-        const c = hexToNum(matBorderItem.color)
-        L.matSolidG.rect(openX - bw, openY - bw, openW + bw * 2, bw).fill({ color: c })
-        L.matSolidG.rect(openX - bw, openY + openH, openW + bw * 2, bw).fill({ color: c })
-        L.matSolidG.rect(openX - bw, openY, bw, openH).fill({ color: c })
-        L.matSolidG.rect(openX + openW, openY, bw, openH).fill({ color: c })
-      }
+      drawSolidMatStrips(
+        L.matSolidG, matX, matY, matTotalW, matTotalH, matBorder,
+        matColor || 'f8f8f8',
+      )
     }
 
     // ── 7. Artwork mask ──────────────────────────────────────────────
@@ -1274,17 +1193,18 @@ export default function CanvasStage({
     render()
   }, [frameOverride, render])
 
-  // ── Inspector collapse / expand → flush PIXI buffer before paint ─────────
+  // ── Panel collapse / expand → flush PIXI buffer before paint ─────────────
   // The canvas element has CSS width/height: 100% so it always fills its
-  // container. When the right inspector collapses, the flex layout
-  // immediately gives that space to the canvas main area. Without this
-  // synchronous resize, the browser would paint the OLD drawing buffer
-  // pixels stretched into the NEW (wider) CSS box for at least one frame,
-  // producing a visible anisotropic stretch. useLayoutEffect runs after
-  // React's DOM commit but BEFORE the next browser paint — we resize the
-  // renderer + redraw in that gap so the first paint already shows the
-  // correctly-sized buffer.
+  // container. When EITHER side panel collapses (right inspector or left
+  // tool panel), the flex layout immediately gives that space to the canvas
+  // main area. Without this synchronous resize, the browser would paint the
+  // OLD drawing buffer pixels stretched into the NEW (wider) CSS box for at
+  // least one frame, and PIXI's stale screen width would re-centre the frame
+  // off to one side — leaving an empty band where the panel used to be.
+  // useLayoutEffect runs after React's DOM commit but BEFORE the next browser
+  // paint, so resizing + redrawing here lands a correctly-sized first paint.
   const inspectorCollapsed = useEditorStore((s) => s.inspectorCollapsed)
+  const toolPanelCollapsed = useEditorStore((s) => s.toolPanelCollapsed)
   useLayoutEffect(() => {
     const app = appRef.current
     if (!app) return
@@ -1294,7 +1214,7 @@ export default function CanvasStage({
       /* renderer torn down */
     }
     render()
-  }, [inspectorCollapsed, render])
+  }, [inspectorCollapsed, toolPanelCollapsed, render])
 
   // Live theme → PIXI renderer background.
   useEffect(() => {

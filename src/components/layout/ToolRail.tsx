@@ -1,4 +1,4 @@
-import { Crop, LayoutGrid, Home, Mountain, Square, Sparkles } from 'lucide-react'
+import { LayoutGrid, Home, Mountain, Square, Layers3, Sparkles } from 'lucide-react'
 import { useEditorStore } from '@/store/editorStore'
 import {
   Tooltip,
@@ -8,17 +8,18 @@ import {
 import { cn } from '@/lib/utils'
 
 const TOOLS = [
-  { id: 'crop',      label: 'Crop',      icon: Crop },
   { id: 'frames',    label: 'Frames',    icon: LayoutGrid },
   { id: 'interiors', label: 'Interiors', icon: Home },
   { id: 'scenery',   label: 'Scenery',   icon: Mountain },
   { id: 'mat',       label: 'Mat',       icon: Square },
+  { id: 'mdf',       label: 'MDF',       icon: Layers3 },
   { id: 'effect',    label: 'Effects',   icon: Sparkles },
 ] as const
 
 export default function ToolRail() {
   const activeSidebarTab = useEditorStore((s) => s.activeSidebarTab)
   const setActiveSidebarTab = useEditorStore((s) => s.setActiveSidebarTab)
+  const setToolPanelCollapsed = useEditorStore((s) => s.setToolPanelCollapsed)
 
   return (
     <nav
@@ -35,7 +36,7 @@ export default function ToolRail() {
           <Tooltip key={id}>
             <TooltipTrigger asChild>
               <button
-                onClick={() => setActiveSidebarTab(id)}
+                onClick={() => { setActiveSidebarTab(id); setToolPanelCollapsed(false) }}
                 aria-label={label}
                 aria-pressed={active}
                 className={cn(
