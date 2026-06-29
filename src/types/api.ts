@@ -26,6 +26,20 @@ export interface ApiFrame {
   pricePerCm: number                      // price per cm; Frame Price = pricePerCm × (w + h) × 2
   sizeFrom: number                        // min manufacturable size (cm)
   sizeTo: number                          // max manufacturable size (cm)
+  description: string | null              // product description (whitespace preserved)
+  gallery: string[]                       // extra product images (resolved URLs)
+  specifications: Record<string, string>  // spec sheet { label: value }
+}
+
+// ─── Frame size preset (Cretixone backend — admin-managed) ───────────────────
+
+export interface ApiFrameSize {
+  id: string
+  name: string
+  widthCm: number
+  lengthCm: number
+  isActive: boolean
+  sortOrder: number
 }
 
 // ─── Scene (findScene — Interiors & Scenery) ─────────────────────────────────

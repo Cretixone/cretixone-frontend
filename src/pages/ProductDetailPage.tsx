@@ -1,24 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ChevronDown, Home, Upload } from 'lucide-react'
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { Button } from '@/components/ui/button'
 import { useEditorStore } from '@/store/editorStore'
+import { useFetchFramesQuery, useFetchFrameSizesQuery } from '@/store/api/apiSlice'
 import { cn } from '@/lib/utils'
 
-// ── Mock product data (specs aren't on the frame API yet — mirrors the Figma
-// spec). The gallery uses the bundled lifestyle slides; with 8 images it also
-// exercises the "many thumbnails" scrolling case. ──────────────────────────
-const GALLERY = [
+// Fallback gallery (bundled lifestyle slides) used only when a frame has no
+// thumbnail/full-frame assets to show.
+const FALLBACK_GALLERY = [
   '/images/webp/slide-1.webp',
   '/images/webp/slide-2.webp',
   '/images/webp/slide-3.webp',
-  '/images/webp/slide-4.webp',
-  '/images/webp/slide-5.webp',
-  '/images/webp/slide-6.webp',
-  '/images/webp/slide-7.webp',
-  '/images/webp/slide-8.webp',
 ]
 
 const SERVICES = [
@@ -36,27 +31,33 @@ const SERVICES = [
   },
 ] as const
 
-const SIZES = ['8"x10"', '11"x14"', '16"x20"', '18"x24"', '24"x36"', '30"x40"']
-
-const SPECS: Array<[string, string]> = [
-  ['Color', 'Black'],
-  ['Color Family', 'Neutral'],
-  ['Decor Style', 'Modern'],
-  ['Featured', 'Featured'],
-  ['Finish', 'Satin'],
-  ['Frame Type', 'Floating'],
-  ['Frame Width', '5/16"'],
-  ['Image / Art Sizes', 'Custom Sizes'],
-  ['Material', 'Wood'],
-  ['Rabbet Depth', '¾"'],
-  ['Substrates', 'Canvas'],
-  ['SKU', 'CF1'],
-  ['Max Size', 'Available up to 80".'],
-]
-
 export default function ProductDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+
+  // Resolve the real frame from the public list (the URL id is the hashed id).
+  const { data: frames } = useFetchFramesQuery()
+  const { data: frameSizes } = useFetchFrameSizesQuery()
+  const frame = useMemo(
+    () => (frames ?? []).find((f) => String(f.id) === id),
+    [frames, id],
+  )
+
+  // Gallery: ONLY the admin-uploaded gallery images (never the frame's own
+  // thumbnail/landscape/portrait/square asset PNGs). Falls back to the bundled
+  // lifestyle slides only when no gallery images exist, so the layout holds.
+  const gallery = useMemo(() => {
+    const own = Array.from(new Set((frame?.gallery ?? []).filter(Boolean)))
+    return own.length ? own : FALLBACK_GALLERY
+  }, [frame])
+
+  // Size presets from the admin (shown in the "More sizes" dropdown by default).
+  const sizes = useMemo(
+    () => (frameSizes ?? []).map((s) => `${s.name} · ${s.widthCm}×${s.lengthCm} cm`),
+    [frameSizes],
+  )
+
+  const specEntries = frame ? Object.entries(frame.specifications ?? {}) : []
 
   // Match the landing/products body theme (white bg, black text).
   useEffect(() => {
@@ -71,8 +72,13 @@ export default function ProductDetailPage() {
   }, [])
 
   const [service, setService] = useState<string>(SERVICES[0].id)
-  const [size, setSize] = useState<string>(SIZES[0])
+  const [size, setSize] = useState<string>('')
   const [added, setAdded] = useState(false)
+
+  // Default the selected size to the first preset once they load.
+  useEffect(() => {
+    if (!size && sizes.length) setSize(sizes[0])
+  }, [sizes, size])
 
   // "Upload a preview image" opens the editor (with this frame, when we have
   // an id) so the user can drop their artwork into the frame. The frame panel
@@ -110,8 +116,11 @@ export default function ProductDetailPage() {
 
         {/* Gallery + buy panel */}
         <div className="mt-5 flex flex-col gap-8 lg:flex-row lg:gap-12">
-          <Gallery images={GALLERY} className="lg:w-[56%]" />
+          <Gallery images={gallery} className="lg:w-[56%]" />
           <BuyPanel
+            title={frame?.name ?? 'Picture Frame'}
+            subtitle={frame?.categorySlug ? frame.categorySlug.replace(/-/g, ' ') : 'Custom picture frame'}
+            sizes={sizes}
             service={service}
             onService={setService}
             size={size}
@@ -124,49 +133,34 @@ export default function ProductDetailPage() {
         </div>
 
         {/* Description */}
-        <section className="mt-12 max-w-4xl">
-          <h2 className="text-xl font-semibold text-brand-navy">
-            Product Description
-          </h2>
-          <div className="mt-3 space-y-3 text-sm leading-relaxed text-foreground/75">
-            <p>
-              This satin black frame brings a distinctive gallery-ready
-              presentation to your art for a truly timeless look. Made of
-              natural wood by Artisans in America, this floater frame features a
-              deep rabbet for up to 3/4&quot; canvas that suspends and separates
-              your art from the moulding.
+        {frame?.description?.trim() && (
+          <section className="mt-12 max-w-4xl">
+            <h2 className="text-xl font-semibold text-brand-navy">Product Description</h2>
+            {/* whitespace-pre-wrap preserves the line breaks + spacing the admin typed */}
+            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground/75">
+              {frame.description}
             </p>
-            <p>
-              Includes brackets and screws for attaching canvas to moulding,
-              plus wire and heavy-duty D-rings for easy hanging.
-            </p>
-            <p>
-              Tip: Stretched canvas can warp slightly, so measure dimensions at
-              the corners for accurate sizing.
-            </p>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* Specifications */}
-        <section className="mt-10 max-w-4xl">
-          <h2 className="text-xl font-semibold text-brand-navy">
-            Product Details
-          </h2>
-          <h3 className="mt-4 text-sm font-semibold text-foreground">
-            Specifications
-          </h3>
-          <dl className="mt-3 grid grid-cols-1 gap-x-10 gap-y-0 sm:grid-cols-2">
-            {SPECS.map(([label, value]) => (
-              <div
-                key={label}
-                className="flex items-center justify-between gap-4 border-b border-black/[0.06] py-2.5 text-sm"
-              >
-                <dt className="font-semibold text-foreground">{label}:</dt>
-                <dd className="text-right text-foreground/70">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
+        {specEntries.length > 0 && (
+          <section className="mt-10 max-w-4xl">
+            <h2 className="text-xl font-semibold text-brand-navy">Product Details</h2>
+            <h3 className="mt-4 text-sm font-semibold text-foreground">Specifications</h3>
+            <dl className="mt-3 grid grid-cols-1 gap-x-10 gap-y-0 sm:grid-cols-2">
+              {specEntries.map(([label, value]) => (
+                <div
+                  key={label}
+                  className="flex items-center justify-between gap-4 border-b border-black/[0.06] py-2.5 text-sm"
+                >
+                  <dt className="font-semibold text-foreground">{label}:</dt>
+                  <dd className="text-right text-foreground/70">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        )}
       </main>
 
       <Footer />
@@ -222,7 +216,7 @@ function Gallery({
                   alt=""
                   loading="lazy"
                   draggable={false}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain"
                 />
               </button>
             )
@@ -262,7 +256,7 @@ function ZoomImage({ src, alt }: { src: string; alt: string }) {
         src={src}
         alt={alt}
         draggable={false}
-        className="h-full w-full object-cover transition-transform duration-200 ease-out will-change-transform"
+        className="h-full w-full object-contain transition-transform duration-200 ease-out will-change-transform"
         style={{
           transform: zoom ? 'scale(2.2)' : 'scale(1)',
           transformOrigin: origin,
@@ -283,6 +277,9 @@ function ZoomImage({ src, alt }: { src: string; alt: string }) {
 
 // ── Buy panel ───────────────────────────────────────────────────────────────
 function BuyPanel({
+  title,
+  subtitle,
+  sizes,
   service,
   onService,
   size,
@@ -292,6 +289,9 @@ function BuyPanel({
   onUpload,
   className,
 }: {
+  title: string
+  subtitle: string
+  sizes: string[]
   service: string
   onService: (id: string) => void
   size: string
@@ -304,10 +304,10 @@ function BuyPanel({
   return (
     <div className={cn('min-w-0', className)}>
       <h1 className="text-2xl font-semibold tracking-tight text-brand-navy md:text-[28px]">
-        John - Satin Black
+        {title}
       </h1>
-      <p className="mt-1.5 text-sm text-foreground/60">
-        Modern Black Canvas Floater Frame
+      <p className="mt-1.5 text-sm capitalize text-foreground/60">
+        {subtitle}
       </p>
 
       {/* Service */}
@@ -355,7 +355,11 @@ function BuyPanel({
       <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-foreground">Frame Size</p>
-          <SizePicker sizes={SIZES} value={size} onChange={onSize} />
+          {sizes.length > 0 ? (
+            <SizePicker sizes={sizes} value={size} onChange={onSize} />
+          ) : (
+            <p className="mt-2 text-sm text-foreground/55">Custom sizes set in the editor</p>
+          )}
         </div>
         {service === 'print-frame' && (
           <Button

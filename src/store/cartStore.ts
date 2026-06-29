@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
+import { secureStorage } from '@/lib/secure-storage'
 
 // A single cart line. Each "Checkout" from the editor adds a new line
 // (sizes/options can differ), so identical frames stay as separate lines —
@@ -89,7 +90,11 @@ export const useCartStore = create<CartState>()(
         })),
       clear: () => set({ items: [] }),
     }),
-    { name: 'cretixone-cart' },
+    {
+      name: 'cretixone-cart',
+      // Encrypted at rest like all persisted app data.
+      storage: createJSONStorage(() => secureStorage),
+    },
   ),
 )
 

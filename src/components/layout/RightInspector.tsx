@@ -22,6 +22,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 import { formatOMR } from '@/lib/format'
 import { useCartStore } from '@/store/cartStore'
+import { useFetchFrameSizesQuery } from '@/store/api/apiSlice'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 // ── Field row ─────────────────────────────────────────────────────────────
@@ -184,12 +185,56 @@ function CustomSizeInputs() {
   )
 }
 
+// Admin-managed size presets — picking one switches to Custom and applies the
+// preset's width × length (cm).
+function SizePresetCard() {
+  const { data: sizes } = useFetchFrameSizesQuery()
+  const frameAspectRatio = useEditorStore((s) => s.frameAspectRatio)
+  const customWidthCm = useEditorStore((s) => s.customWidthCm)
+  const customHeightCm = useEditorStore((s) => s.customHeightCm)
+  const setCustomWidthCm = useEditorStore((s) => s.setCustomWidthCm)
+  const setCustomHeightCm = useEditorStore((s) => s.setCustomHeightCm)
+  const setFrameAspectRatio = useEditorStore((s) => s.setFrameAspectRatio)
+
+  if (!sizes || sizes.length === 0) return null
+
+  const selectedId =
+    frameAspectRatio === 'custom'
+      ? sizes.find((s) => s.widthCm === customWidthCm && s.lengthCm === customHeightCm)?.id ?? ''
+      : ''
+
+  return (
+    <SectionCard title="Size preset">
+      <select
+        value={selectedId}
+        onChange={(e) => {
+          const s = sizes.find((x) => x.id === e.target.value)
+          if (!s) return
+          setFrameAspectRatio('custom')
+          setCustomWidthCm(s.widthCm)
+          setCustomHeightCm(s.lengthCm)
+        }}
+        className="h-9 w-full rounded-md border bg-[var(--ed-panel)] px-2 text-[12px] focus:outline-none focus:ring-2"
+        style={{ borderColor: 'var(--ed-border-strong)', color: 'var(--ed-fg)' }}
+      >
+        <option value="">Choose a size…</option>
+        {sizes.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.name} · {s.widthCm}×{s.lengthCm} cm
+          </option>
+        ))}
+      </select>
+    </SectionCard>
+  )
+}
+
 function RatioPanel() {
   const frameAspectRatio = useEditorStore((s) => s.frameAspectRatio)
   const setFrameAspectRatio = useEditorStore((s) => s.setFrameAspectRatio)
 
   return (
     <div className="space-y-3">
+      <SizePresetCard />
       <SectionCard title="Frame ratio">
         <div role="radiogroup" aria-label="Frame ratio" className="space-y-1.5">
           {RATIO_OPTIONS.map((opt) => {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ChevronRight, Home, Minus, Plus, Trash2, X } from 'lucide-react'
+import { ChevronRight, Home, Loader2, Minus, Plus, Trash2, X } from 'lucide-react'
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,10 @@ import {
   type CartItem,
 } from '@/store/cartStore'
 import { formatOMR } from '@/lib/format'
+import { useAuthStore } from '@/store/authStore'
+import { useAuthUiStore } from '@/store/authUiStore'
+import { ordersApi, type CreateOrderPayload } from '@/api/orders.api'
+import { OrderSuccess } from '@/components/OrderSuccess'
 
 export default function CartPage() {
   const navigate = useNavigate()
@@ -20,8 +24,12 @@ export default function CartPage() {
   const removeItem = useCartStore((s) => s.removeItem)
   const clear = useCartStore((s) => s.clear)
 
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const user = useAuthStore((s) => s.user)
+  const openAuth = useAuthUiStore((s) => s.openAuth)
+
   const [checkoutOpen, setCheckoutOpen] = useState(false)
-  const [placed, setPlaced] = useState(false)
+  const [success, setSuccess] = useState<{ orderNumber: string; total: number } | null>(null)
 
   useEffect(() => {
     const prevBg = document.body.style.background
@@ -40,12 +48,50 @@ export default function CartPage() {
   const total = subtotal + shipping
   const count = cartCount(items)
 
-  const onPlaceOrder = () => {
-    // Cart is client-side for now; DB persistence lands once guest-vs-login
-    // is settled. Confirm + clear so the flow is coherent.
+  // Checkout is gated: a logged-out user is sent to the auth dialog first
+  // (returning to /cart after login); a logged-in user opens the details modal.
+  const onCheckoutClick = () => {
+    if (!isAuthenticated) {
+      openAuth('login', '/cart')
+      return
+    }
+    setCheckoutOpen(true)
+  }
+
+  // Creates the order on the backend, then shows the success animation.
+  const placeOrder = async (details: {
+    fullName: string
+    email: string
+    phone: string
+    address: string
+    zip: string
+  }) => {
+    const payload: CreateOrderPayload = {
+      items: items.map((i) => ({
+        frameId: i.frameId,
+        name: i.name,
+        subtitle: i.subtitle,
+        thumbnail: i.thumbnail,
+        widthCm: i.widthCm,
+        heightCm: i.heightCm,
+        pricePerItem: i.pricePerItem,
+        qty: i.qty,
+        matSizeName: i.matSizeName ?? null,
+        matColorName: i.matColorName ?? null,
+        mdfName: i.mdfName ?? null,
+      })),
+      customerName: details.fullName,
+      customerEmail: details.email,
+      customerPhone: details.phone || undefined,
+      address: details.address,
+      zipcode: details.zip,
+      shipping,
+      currency: 'OMR',
+    }
+    const order = await ordersApi.create(payload)
     clear()
     setCheckoutOpen(false)
-    setPlaced(true)
+    setSuccess({ orderNumber: order.orderNumber, total: order.total })
     window.scrollTo(0, 0)
   }
 
@@ -78,9 +124,7 @@ export default function CartPage() {
           </span>
         </div>
 
-        {placed ? (
-          <OrderPlaced onContinue={() => navigate('/products')} />
-        ) : items.length === 0 ? (
+        {items.length === 0 ? (
           <EmptyCart onBrowse={() => navigate('/products')} />
         ) : (
           <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px] lg:gap-10">
@@ -155,10 +199,10 @@ export default function CartPage() {
 
                 <Button
                   variant="gold"
-                  onClick={() => setCheckoutOpen(true)}
+                  onClick={onCheckoutClick}
                   className="mt-5 w-full"
                 >
-                  Go to checkout
+                  {isAuthenticated ? 'Go to checkout' : 'Log in to checkout'}
                 </Button>
               </div>
 
@@ -174,7 +218,26 @@ export default function CartPage() {
       <Footer />
 
       {checkoutOpen && (
-        <CheckoutModal onClose={() => setCheckoutOpen(false)} onSubmit={onPlaceOrder} />
+        <CheckoutModal
+          onClose={() => setCheckoutOpen(false)}
+          onSubmit={placeOrder}
+          prefill={{
+            fullName: user ? `${user.firstName} ${user.lastName}`.trim() : '',
+            email: user?.email ?? '',
+            phone: user?.phone ?? '',
+            address: user?.address ?? '',
+            zip: user?.zipcode ?? '',
+          }}
+        />
+      )}
+
+      {success && (
+        <OrderSuccess
+          orderNumber={success.orderNumber}
+          total={success.total}
+          onViewOrders={() => navigate('/dashboard/orders')}
+          onContinue={() => navigate('/products')}
+        />
       )}
     </div>
   )
@@ -302,37 +365,31 @@ function EmptyCart({ onBrowse }: { onBrowse: () => void }) {
   )
 }
 
-function OrderPlaced({ onContinue }: { onContinue: () => void }) {
-  return (
-    <div className="mt-12 flex flex-col items-center justify-center rounded-2xl border border-black/[0.07] py-20 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-gold/15 text-2xl text-brand-gold">
-        ✓
-      </div>
-      <p className="mt-4 text-lg font-semibold text-brand-navy">Thank you!</p>
-      <p className="mt-1 max-w-md text-sm text-foreground/60">
-        We&apos;ve received your details and will be in touch shortly to confirm your order.
-      </p>
-      <Button variant="gold" onClick={onContinue} className="mt-6">
-        Continue shopping
-      </Button>
-    </div>
-  )
+// ── Checkout details popup ───────────────────────────────────────────────────
+interface CheckoutDetails {
+  fullName: string
+  email: string
+  phone: string
+  address: string
+  zip: string
 }
 
-// ── Checkout details popup ───────────────────────────────────────────────────
 function CheckoutModal({
   onClose,
   onSubmit,
+  prefill,
 }: {
   onClose: () => void
-  onSubmit: () => void
+  onSubmit: (details: CheckoutDetails) => Promise<void>
+  prefill: CheckoutDetails
 }) {
-  const [fullName, setFullName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-  const [address, setAddress] = useState('')
-  const [zip, setZip] = useState('')
+  const [fullName, setFullName] = useState(prefill.fullName)
+  const [email, setEmail] = useState(prefill.email)
+  const [phone, setPhone] = useState(prefill.phone)
+  const [address, setAddress] = useState(prefill.address)
+  const [zip, setZip] = useState(prefill.zip)
   const [touched, setTouched] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   const valid = fullName.trim() && emailOk && address.trim() && zip.trim()
@@ -340,11 +397,19 @@ function CheckoutModal({
   const inputCls =
     'h-10 w-full rounded-lg border border-black/15 px-3 text-sm text-foreground focus:border-brand-gold focus:outline-none focus:ring-2 focus:ring-brand-gold/30'
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setTouched(true)
-    if (!valid) return
-    onSubmit()
+    if (!valid || submitting) return
+    setSubmitting(true)
+    try {
+      await onSubmit({ fullName, email, phone, address, zip })
+    } catch {
+      // Error toast is shown globally by the axios interceptor; keep the
+      // modal open so the user can retry.
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   useEffect(() => {
@@ -433,10 +498,11 @@ function CheckoutModal({
             </Field>
 
             <div className="flex gap-3 pt-2">
-              <Button type="button" variant="outline" onClick={onClose} className="flex-1 border-black/15 bg-transparent text-foreground hover:bg-black/5">
+              <Button type="button" variant="outline" onClick={onClose} disabled={submitting} className="flex-1 border-black/15 bg-transparent text-foreground hover:bg-black/5">
                 Cancel
               </Button>
-              <Button type="submit" variant="navy" className="flex-1">
+              <Button type="submit" variant="navy" disabled={submitting} className="flex-1">
+                {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 Place order
               </Button>
             </div>

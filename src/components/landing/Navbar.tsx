@@ -10,13 +10,86 @@ import {
   X,
   ShoppingCart,
   Languages,
+  User as UserIcon,
+  Package,
+  LogOut,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCartStore, cartCount } from '@/store/cartStore'
+import { useAuthStore } from '@/store/authStore'
+import { useAuthUiStore } from '@/store/authUiStore'
+import { authApi } from '@/api/auth.api'
 import { useUploadPhoto } from '@/hooks/useUploadPhoto'
+
+function AccountButton() {
+  const navigate = useNavigate()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const user = useAuthStore((s) => s.user)
+  const clear = useAuthStore((s) => s.clear)
+  const openAuth = useAuthUiStore((s) => s.openAuth)
+
+  if (!isAuthenticated) {
+    return (
+      <button
+        type="button"
+        aria-label="Log in"
+        onClick={() => openAuth('login')}
+        className="flex h-7 w-7 items-center justify-center rounded-full border border-[#B5C9F1] bg-[#4169E2] text-white"
+      >
+        <UserIcon className="h-4 w-4" />
+      </button>
+    )
+  }
+
+  const initials = `${user?.firstName?.[0] ?? ''}${user?.lastName?.[0] ?? ''}`.toUpperCase() || 'U'
+  const logout = async () => {
+    await authApi.logout()
+    clear()
+    navigate('/')
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Account menu"
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-[#B5C9F1] bg-[#4169E2] text-[11px] font-bold text-white"
+        >
+          {initials}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52">
+        <DropdownMenuLabel>
+          <div className="truncate">{user?.firstName} {user?.lastName}</div>
+          <div className="truncate text-[11px] font-normal text-foreground/50">{user?.email}</div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => navigate('/dashboard/profile')}>
+          <UserIcon className="mr-2 h-4 w-4" /> My account
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/dashboard/orders')}>
+          <Package className="mr-2 h-4 w-4" /> My orders
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={logout} className="text-red-500 focus:text-red-600">
+          <LogOut className="mr-2 h-4 w-4" /> Log out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
 
 const NAV_LINKS = [
   { label: 'All Frames', href: '/products' },
@@ -113,6 +186,9 @@ export default function Navbar() {
                 </span>
               )}
             </button>
+
+            {/* Account */}
+            <AccountButton />
 
             {/* Mobile menu toggle — visible only below lg */}
             <button

@@ -349,3 +349,14 @@
 .color-gray {
   color: #3D3D3D;
 }
+/* react-phone-number-input — make the inner control blend into our box */
+.phone-field .PhoneInputInput {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: inherit;
+  height: 100%;
+}
+.phone-field .PhoneInputCountrySelect { color: #002365; }
+.phone-field .PhoneInputCountryIcon { box-shadow: none; }

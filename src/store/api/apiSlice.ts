@@ -6,6 +6,7 @@ import cretixAxios from './cretixAxios'
 import type {
   ApiResponse,
   ApiFrame,
+  ApiFrameSize,
   ApiScene,
   ApiMatSize,
   ApiMatColor,
@@ -73,6 +74,18 @@ interface CretixFrameDto {
   sizeFrom: number
   sizeTo: number
   sortOrder: number
+  description: string | null
+  gallery: string[]
+  specifications: Record<string, string>
+}
+
+interface CretixFrameSizeDto {
+  id: string
+  name: string
+  widthCm: number
+  lengthCm: number
+  isActive: boolean
+  sortOrder: number
 }
 
 export interface CretixCategoryDto {
@@ -136,6 +149,9 @@ const mapCretixFrame = (f: CretixFrameDto): ApiFrame => ({
   pricePerCm: f.pricePerCm ?? 0,
   sizeFrom: f.sizeFrom ?? 0,
   sizeTo: f.sizeTo ?? 0,
+  description: f.description ?? null,
+  gallery: (f.gallery ?? []).map((g) => resolveBackendUrl(g)),
+  specifications: f.specifications ?? {},
 })
 
 // ─── RTK Query API ───────────────────────────────────────────────────────────
@@ -164,6 +180,16 @@ export const apiSlice = createApi({
         client: 'cretix',
       }),
       transformResponse: (response: CretixApiOk<CretixCategoryDto[]>) => response.data,
+    }),
+
+    // ── Frame sizes (Cretixone backend — admin-managed presets) ────────────
+    fetchFrameSizes: builder.query<ApiFrameSize[], void>({
+      query: () => ({
+        url: '/frame-sizes/public',
+        method: 'GET',
+        client: 'cretix',
+      }),
+      transformResponse: (response: CretixApiOk<CretixFrameSizeDto[]>) => response.data,
     }),
 
     // ── Interiors (type 50) ────────────────────────────────────────────────
@@ -240,6 +266,7 @@ export const apiSlice = createApi({
 export const {
   useFetchFramesQuery,
   useFetchFrameCategoriesQuery,
+  useFetchFrameSizesQuery,
   useFetchInteriorsQuery,
   useFetchSceneryQuery,
   useFetchMatSizesQuery,

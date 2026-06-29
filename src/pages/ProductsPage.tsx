@@ -14,7 +14,10 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useFetchFramesQuery } from '@/store/api/apiSlice'
 import { useUploadPhoto } from '@/hooks/useUploadPhoto'
+import { Pagination } from '@/components/ui/pagination'
 import type { ApiFrame } from '@/types/api'
+
+const PAGE_SIZE = 12
 
 // ── Theme tokens (kept inline so the page reads against the brand palette) ──
 const RED = '#F82226' // sale price
@@ -197,6 +200,16 @@ export default function ProductsPage() {
     [baseFrames, selected],
   )
 
+  // Client-side pagination over the filtered grid.
+  const [page, setPage] = useState(1)
+  useEffect(() => setPage(1), [selected, category])
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const current = Math.min(page, pageCount)
+  const paged = useMemo(
+    () => filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE),
+    [filtered, current],
+  )
+
   return (
     <div className="min-h-screen w-full bg-white font-sans text-[#000000]">
       {/* ── Header: top utility bar + gold pill nav ── */}
@@ -248,7 +261,18 @@ export default function ProductsPage() {
             ) : isLoading ? (
               <ProductGridSkeleton />
             ) : (
-              <ProductGrid frames={filtered} />
+              <>
+                <ProductGrid frames={paged} />
+                <Pagination
+                  page={current}
+                  pageCount={pageCount}
+                  onPage={(p) => {
+                    setPage(p)
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
+                  className="mt-10"
+                />
+              </>
             )}
           </section>
         </div>

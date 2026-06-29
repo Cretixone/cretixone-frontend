@@ -1,16 +1,24 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import Topbar from '@/components/layout/Topbar'
 import ToolRail from '@/components/layout/ToolRail'
 import ToolPanel from '@/components/layout/ToolPanel'
 import RightInspector from '@/components/layout/RightInspector'
 import StatusBar from '@/components/layout/StatusBar'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { AuthDialog } from '@/components/auth/AuthDialog'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { useEditorStore } from '@/store/editorStore'
+import { useAuthStore } from '@/store/authStore'
+import { authApi } from '@/api/auth.api'
 import { useFetchFramesQuery } from '@/store/api/apiSlice'
 import { fetchAccessToken } from '@/store/api/axiosInstance'
 
 const CanvasStage = lazy(() => import('@/components/editor/CanvasStage'))
+const DashboardLayout = lazy(() => import('@/pages/dashboard/DashboardLayout'))
+const ProfilePage = lazy(() => import('@/pages/dashboard/ProfilePage'))
+const OrdersPage = lazy(() => import('@/pages/dashboard/OrdersPage'))
 const LandingPage = lazy(() => import('@/pages/LandingPage'))
 const TermsPage = lazy(() => import('@/pages/TermsPage'))
 const AboutPage = lazy(() => import('@/pages/AboutPage'))
@@ -65,6 +73,16 @@ function ScrollToTop() {
 }
 
 export default function App() {
+  // Auth bootstrap: if we have a persisted token, refresh the user profile once
+  // on load (the axios interceptor silently refreshes / clears on failure).
+  const accessToken = useAuthStore((s) => s.accessToken)
+  const setUser = useAuthStore((s) => s.setUser)
+  useEffect(() => {
+    if (!accessToken) return
+    authApi.getMe().then(setUser).catch(() => { /* handled by interceptor */ })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
     <Suspense fallback={<FullPageLoader />}>
       <ScrollToTop />
@@ -80,9 +98,25 @@ export default function App() {
         <Route path="/product" element={<ProductDetailPage />} />
         <Route path="/product/:id" element={<ProductDetailPage />} />
         <Route path="/editor" element={<EditorApp />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/dashboard/profile" replace />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="orders" element={<OrdersPage />} />
+        </Route>
         <Route path="/landing" element={<Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
+      {/* Global auth dialog + toasts (mounted once, available app-wide). */}
+      <AuthDialog />
+      <Toaster position="top-center" richColors closeButton />
     </Suspense>
   )
 }
