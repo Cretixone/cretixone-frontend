@@ -1,20 +1,24 @@
+import { useEffect, useRef, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
   Lock,
-  RectangleHorizontal,
-  RectangleVertical,
   Sliders,
-  Square as SquareIcon,
 } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
 import {
   useEditorStore,
   A4_LONG_CM,
   A4_SHORT_CM,
-  type FrameAspectRatio,
 } from '@/store/editorStore'
+import type { ApiFrameSize } from '@/types/api'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
@@ -97,28 +101,32 @@ function NumberField({
   )
 }
 
-// ── Ratio picker ────────────────────────────────────────────────────────────
-// Hidden radio inputs with styled labels. Each option maps straight to a
-// frameAspectRatio; the sub-label shows the A4 print size (Square is 1:1,
-// Custom takes manual cm). The renderer fits every ratio to the viewport, so
-// switching always lands at zoom 1 with no zoom-out.
-
-const A4_LANDSCAPE = `A4 · ${A4_LONG_CM.toFixed(1)} × ${A4_SHORT_CM.toFixed(1)} cm`
-const A4_PORTRAIT = `A4 · ${A4_SHORT_CM.toFixed(1)} × ${A4_LONG_CM.toFixed(1)} cm`
-// Square print uses the A4 short edge for both sides.
-const SQUARE_SIZE = `${A4_SHORT_CM.toFixed(1)} × ${A4_SHORT_CM.toFixed(1)} cm`
-
-const RATIO_OPTIONS: Array<{
-  id: FrameAspectRatio
-  label: string
-  sub: string
-  icon: LucideIcon
-}> = [
-  { id: 'landscape', label: 'Landscape', sub: A4_LANDSCAPE, icon: RectangleHorizontal },
-  { id: 'portrait', label: 'Portrait', sub: A4_PORTRAIT, icon: RectangleVertical },
-  { id: 'square', label: 'Square', sub: SQUARE_SIZE, icon: SquareIcon },
-  { id: 'custom', label: 'Custom', sub: 'Set size', icon: Sliders },
-]
+// Picks the best size preset for an uploaded image's orientation — exact
+// orientation match first, then the most extreme aspect in that direction.
+function pickByOrientation(
+  sizes: ApiFrameSize[],
+  orient: 'square' | 'landscape' | 'portrait',
+): ApiFrameSize | undefined {
+  if (!sizes.length) return undefined
+  if (orient === 'square') {
+    return (
+      sizes.find((s) => s.widthCm === s.lengthCm) ??
+      [...sizes].sort(
+        (a, b) => Math.abs(a.widthCm - a.lengthCm) - Math.abs(b.widthCm - b.lengthCm),
+      )[0]
+    )
+  }
+  if (orient === 'landscape') {
+    return (
+      sizes.find((s) => s.widthCm > s.lengthCm) ??
+      [...sizes].sort((a, b) => b.widthCm / b.lengthCm - a.widthCm / a.lengthCm)[0]
+    )
+  }
+  return (
+    sizes.find((s) => s.lengthCm > s.widthCm) ??
+    [...sizes].sort((a, b) => b.lengthCm / b.widthCm - a.lengthCm / a.widthCm)[0]
+  )
+}
 
 function CustomSizeInputs() {
   const customWidthCm = useEditorStore((s) => s.customWidthCm)
@@ -185,106 +193,112 @@ function CustomSizeInputs() {
   )
 }
 
-// Admin-managed size presets — picking one switches to Custom and applies the
-// preset's width × length (cm).
+// Admin-managed size presets. Selecting one applies its width × length (cm);
+// the "Custom size" button reveals manual cm inputs. Defaults to the first
+// size, and auto-selects an orientation-matching size when an image is added.
 function SizePresetCard() {
   const { data: sizes } = useFetchFrameSizesQuery()
-  const frameAspectRatio = useEditorStore((s) => s.frameAspectRatio)
   const customWidthCm = useEditorStore((s) => s.customWidthCm)
   const customHeightCm = useEditorStore((s) => s.customHeightCm)
   const setCustomWidthCm = useEditorStore((s) => s.setCustomWidthCm)
   const setCustomHeightCm = useEditorStore((s) => s.setCustomHeightCm)
   const setFrameAspectRatio = useEditorStore((s) => s.setFrameAspectRatio)
+  const artworkImageUrl = useEditorStore((s) => s.artworkImageUrl)
+
+  const [showCustom, setShowCustom] = useState(false)
+  const didDefault = useRef(false)
+  const lastImg = useRef<string | null>(null)
+
+  // Apply a preset → Custom mode with the preset's exact cm dimensions.
+  const apply = (s: ApiFrameSize) => {
+    setFrameAspectRatio('custom')
+    setCustomWidthCm(s.widthCm)
+    setCustomHeightCm(s.lengthCm)
+  }
+
+  // The preset whose dimensions match the live size (empty when manually edited).
+  const selectedId =
+    sizes?.find((s) => s.widthCm === customWidthCm && s.lengthCm === customHeightCm)?.id ?? ''
+
+  // Default to the first size on first load (when there's no image to match).
+  useEffect(() => {
+    if (didDefault.current || !sizes?.length) return
+    didDefault.current = true
+    if (artworkImageUrl) return // the image effect below handles it
+    if (selectedId) return // already matches a preset
+    apply(sizes[0])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sizes])
+
+  // Auto-select an orientation-matching size whenever a new image is added —
+  // mirrors how the old Landscape/Portrait/Square auto-switch worked on upload.
+  useEffect(() => {
+    if (!sizes?.length || !artworkImageUrl) return
+    if (lastImg.current === artworkImageUrl) return
+    lastImg.current = artworkImageUrl
+    const probe = new Image()
+    probe.onload = () => {
+      if (!probe.naturalWidth || !probe.naturalHeight) return
+      const r = probe.naturalWidth / probe.naturalHeight
+      const orient = Math.abs(r - 1) <= 0.08 ? 'square' : r > 1 ? 'landscape' : 'portrait'
+      const pick = pickByOrientation(sizes, orient)
+      if (pick) {
+        apply(pick)
+        setShowCustom(false)
+      }
+    }
+    probe.src = artworkImageUrl
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sizes, artworkImageUrl])
 
   if (!sizes || sizes.length === 0) return null
 
-  const selectedId =
-    frameAspectRatio === 'custom'
-      ? sizes.find((s) => s.widthCm === customWidthCm && s.lengthCm === customHeightCm)?.id ?? ''
-      : ''
-
   return (
-    <SectionCard title="Size preset">
-      <select
-        value={selectedId}
-        onChange={(e) => {
-          const s = sizes.find((x) => x.id === e.target.value)
-          if (!s) return
-          setFrameAspectRatio('custom')
-          setCustomWidthCm(s.widthCm)
-          setCustomHeightCm(s.lengthCm)
-        }}
-        className="h-9 w-full rounded-md border bg-[var(--ed-panel)] px-2 text-[12px] focus:outline-none focus:ring-2"
-        style={{ borderColor: 'var(--ed-border-strong)', color: 'var(--ed-fg)' }}
-      >
-        <option value="">Choose a size…</option>
-        {sizes.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.name} · {s.widthCm}×{s.lengthCm} cm
-          </option>
-        ))}
-      </select>
-    </SectionCard>
+    <div className="space-y-3">
+      <SectionCard title="Size">
+        <Select
+          value={selectedId}
+          onValueChange={(id) => {
+            const s = sizes.find((x) => x.id === id)
+            if (s) {
+              apply(s)
+              setShowCustom(false)
+            }
+          }}
+        >
+          <SelectTrigger aria-label="Frame size">
+            <SelectValue placeholder="Choose a size…" />
+          </SelectTrigger>
+          <SelectContent>
+            {sizes.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.name} · {s.widthCm}×{s.lengthCm} cm
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <button
+          type="button"
+          onClick={() => setShowCustom((v) => !v)}
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 text-[11px] font-medium transition-colors"
+          style={{
+            borderColor: 'var(--ed-border-strong)',
+            color: showCustom || !selectedId ? 'var(--ed-accent)' : 'var(--ed-fg-muted)',
+            background: showCustom || !selectedId ? 'var(--ed-accent-soft)' : 'transparent',
+          }}
+        >
+          <Sliders size={13} strokeWidth={1.8} /> Custom size
+        </button>
+
+        {(showCustom || !selectedId) && <CustomSizeInputs />}
+      </SectionCard>
+    </div>
   )
 }
 
 function RatioPanel() {
-  const frameAspectRatio = useEditorStore((s) => s.frameAspectRatio)
-  const setFrameAspectRatio = useEditorStore((s) => s.setFrameAspectRatio)
-
-  return (
-    <div className="space-y-3">
-      <SizePresetCard />
-      <SectionCard title="Frame ratio">
-        <div role="radiogroup" aria-label="Frame ratio" className="space-y-1.5">
-          {RATIO_OPTIONS.map((opt) => {
-            const selected = frameAspectRatio === opt.id
-            const Icon = opt.icon
-            return (
-              <label
-                key={opt.id}
-                className="flex cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 transition-colors focus-within:ring-2 focus-within:ring-[var(--ed-ring)]"
-                style={{
-                  background: selected ? 'var(--ed-accent-soft)' : 'var(--ed-panel)',
-                  outline: selected
-                    ? '1.5px solid var(--ed-accent)'
-                    : '1px solid var(--ed-border-strong)',
-                  outlineOffset: '-1px',
-                }}
-              >
-                <input
-                  type="radio"
-                  name="frame-ratio"
-                  value={opt.id}
-                  checked={selected}
-                  onChange={() => setFrameAspectRatio(opt.id)}
-                  className="sr-only"
-                />
-                <Icon
-                  size={16}
-                  strokeWidth={1.6}
-                  style={{ color: selected ? 'var(--ed-accent)' : 'var(--ed-fg-muted)' }}
-                />
-                <span
-                  className="flex-1 text-[12px] font-semibold"
-                  style={{ color: selected ? 'var(--ed-accent)' : 'var(--ed-fg)' }}
-                >
-                  {opt.label}
-                </span>
-                <span
-                  className="text-[11px] tabular-nums"
-                  style={{ color: 'var(--ed-fg-muted)' }}
-                >
-                  {opt.sub}
-                </span>
-              </label>
-            )
-          })}
-        </div>
-        {frameAspectRatio === 'custom' && <CustomSizeInputs />}
-      </SectionCard>
-    </div>
-  )
+  return <SizePresetCard />
 }
 
 function StylePanel() {
@@ -562,7 +576,7 @@ export default function RightInspector() {
       <div className="flex-1 overflow-y-auto px-3 pb-4 pt-3">
         <Tabs value={tab} onValueChange={setActiveControlTab}>
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="Ratio">Ratio</TabsTrigger>
+            <TabsTrigger value="Ratio">Size</TabsTrigger>
             <TabsTrigger value="Style">Style</TabsTrigger>
             <TabsTrigger value="Shadow">Shadow</TabsTrigger>
           </TabsList>
