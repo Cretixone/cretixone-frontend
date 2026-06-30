@@ -6,6 +6,8 @@ import Footer from '@/components/landing/Footer'
 import { Button } from '@/components/ui/button'
 import { useEditorStore } from '@/store/editorStore'
 import { useFetchFramesQuery, useFetchFrameSizesQuery } from '@/store/api/apiSlice'
+import { useCartStore } from '@/store/cartStore'
+import { formatOMR } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 // Fallback gallery (bundled lifestyle slides) used only when a frame has no
@@ -43,12 +45,15 @@ export default function ProductDetailPage() {
     [frames, id],
   )
 
-  // Gallery: ONLY the admin-uploaded gallery images (never the frame's own
-  // thumbnail/landscape/portrait/square asset PNGs). Falls back to the bundled
-  // lifestyle slides only when no gallery images exist, so the layout holds.
+  // Gallery rule:
+  //  • gallery has images → show them (thumbnail strip + 1st as the main image)
+  //  • gallery empty       → show the frame's thumbnail as the single image
+  //    (the strip is hidden by <Gallery> when there's only one image)
   const gallery = useMemo(() => {
     const own = Array.from(new Set((frame?.gallery ?? []).filter(Boolean)))
-    return own.length ? own : FALLBACK_GALLERY
+    if (own.length) return own
+    if (frame?.imgUrl) return [frame.imgUrl]
+    return FALLBACK_GALLERY
   }, [frame])
 
   // Size presets from the admin (shown in the "More sizes" dropdown by default).
@@ -74,11 +79,37 @@ export default function ProductDetailPage() {
   const [service, setService] = useState<string>(SERVICES[0].id)
   const [size, setSize] = useState<string>('')
   const [added, setAdded] = useState(false)
+  const addItem = useCartStore((s) => s.addItem)
 
   // Default the selected size to the first preset once they load.
   useEffect(() => {
     if (!size && sizes.length) setSize(sizes[0])
   }, [sizes, size])
+
+  // Resolve the chosen size preset → real price.
+  // Frame Price = pricePerCm × (width + length) × 2 (same formula as the editor).
+  const selectedFrameSize = useMemo(
+    () => (frameSizes ?? []).find((s) => `${s.name} · ${s.widthCm}×${s.lengthCm} cm` === size),
+    [frameSizes, size],
+  )
+  const price =
+    frame && selectedFrameSize
+      ? frame.pricePerCm * (selectedFrameSize.widthCm + selectedFrameSize.lengthCm) * 2
+      : 0
+
+  const onAddToCart = () => {
+    if (!frame || !selectedFrameSize || price <= 0) return
+    addItem({
+      frameId: frame.id,
+      name: frame.name,
+      subtitle: selectedFrameSize.name,
+      thumbnail: frame.imgUrl,
+      widthCm: selectedFrameSize.widthCm,
+      heightCm: selectedFrameSize.lengthCm,
+      pricePerItem: price,
+    })
+    setAdded(true)
+  }
 
   // "Upload a preview image" opens the editor (with this frame, when we have
   // an id) so the user can drop their artwork into the frame. The frame panel
@@ -121,12 +152,13 @@ export default function ProductDetailPage() {
             title={frame?.name ?? 'Picture Frame'}
             subtitle={frame?.categorySlug ? frame.categorySlug.replace(/-/g, ' ') : 'Custom picture frame'}
             sizes={sizes}
+            price={price}
             service={service}
             onService={setService}
             size={size}
             onSize={setSize}
             added={added}
-            onAddToCart={() => setAdded(true)}
+            onAddToCart={onAddToCart}
             onUpload={openEditor}
             className="lg:flex-1"
           />
@@ -182,46 +214,48 @@ function Gallery({
   return (
     <div className={cn('min-w-0', className)}>
       <div className="flex flex-col-reverse gap-3 sm:flex-row">
-        {/* Thumbnails — horizontal scroll on mobile, vertical scroll column on
-            ≥sm. Both scroll so any number of images stays contained. */}
-        <div
-          className={cn(
-            'flex shrink-0 gap-2.5 overflow-x-auto pb-1',
-            'sm:max-h-[480px] sm:w-[84px] sm:flex-col sm:overflow-x-hidden sm:overflow-y-auto sm:pb-0 sm:pr-1',
-            '[scrollbar-width:thin]',
-          )}
-        >
-          {images.map((img, i) => {
-            const selected = i === active
-            return (
-              <button
-                key={img}
-                type="button"
-                onClick={() => setActive(i)}
-                aria-label={`View image ${i + 1}`}
-                aria-pressed={selected}
-                className={cn(
-                  'relative h-[64px] w-[64px] shrink-0 overflow-hidden rounded-lg transition sm:h-[78px] sm:w-full',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50',
-                )}
-                style={{
-                  outline: selected
-                    ? '2px solid #002365'
-                    : '1px solid rgba(0,0,0,0.10)',
-                  outlineOffset: '-1px',
-                }}
-              >
-                <img
-                  src={img}
-                  alt=""
-                  loading="lazy"
-                  draggable={false}
-                  className="h-full w-full object-contain"
-                />
-              </button>
-            )
-          })}
-        </div>
+        {/* Thumbnails — shown only when there's more than one image. Horizontal
+            scroll on mobile, vertical scroll column on ≥sm. */}
+        {images.length > 1 && (
+          <div
+            className={cn(
+              'flex shrink-0 gap-2.5 overflow-x-auto pb-1',
+              'sm:max-h-[480px] sm:w-[84px] sm:flex-col sm:overflow-x-hidden sm:overflow-y-auto sm:pb-0 sm:pr-1',
+              '[scrollbar-width:thin]',
+            )}
+          >
+            {images.map((img, i) => {
+              const selected = i === active
+              return (
+                <button
+                  key={img}
+                  type="button"
+                  onClick={() => setActive(i)}
+                  aria-label={`View image ${i + 1}`}
+                  aria-pressed={selected}
+                  className={cn(
+                    'relative h-[64px] w-[64px] shrink-0 overflow-hidden rounded-lg transition sm:h-[78px] sm:w-full',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50',
+                  )}
+                  style={{
+                    outline: selected
+                      ? '2px solid #002365'
+                      : '1px solid rgba(0,0,0,0.10)',
+                    outlineOffset: '-1px',
+                  }}
+                >
+                  <img
+                    src={img}
+                    alt=""
+                    loading="lazy"
+                    draggable={false}
+                    className="h-full w-full object-contain"
+                  />
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         {/* Main image with cursor-tracking hover zoom */}
         <div className="relative min-w-0 flex-1">
@@ -280,6 +314,7 @@ function BuyPanel({
   title,
   subtitle,
   sizes,
+  price,
   service,
   onService,
   size,
@@ -292,6 +327,7 @@ function BuyPanel({
   title: string
   subtitle: string
   sizes: string[]
+  price: number
   service: string
   onService: (id: string) => void
   size: string
@@ -376,17 +412,15 @@ function BuyPanel({
       {/* Price + add to cart */}
       <div className="mt-7 flex flex-wrap items-center justify-between gap-4 border-t border-black/[0.07] pt-6">
         <div className="flex items-baseline gap-2.5">
-          <span className="text-2xl font-bold text-brand-navy">
-            $156.06
-          </span>
-          <span className="text-sm text-foreground/40 line-through">
-            $222.94
+          <span className="text-2xl font-bold text-brand-navy tabular-nums">
+            {price > 0 ? formatOMR(price) : '—'}
           </span>
         </div>
         <Button
           variant="navy"
           size="lg"
           onClick={onAddToCart}
+          disabled={price <= 0}
           className="min-w-[140px] rounded-lg"
         >
           {added ? 'Added to cart ✓' : 'Add to cart'}

@@ -3,36 +3,17 @@ import { useEditorStore } from '@/store/editorStore'
 
 export function useImageUpload() {
   const setArtworkImageUrl = useEditorStore((s) => s.setArtworkImageUrl)
-  const setFrameAspectRatio = useEditorStore((s) => s.setFrameAspectRatio)
 
   const handleFile = useCallback(
     (file: File) => {
       if (!file || !file.type.startsWith('image/')) return
       const url = URL.createObjectURL(file)
+      // Setting the artwork URL drives the inspector's Size-preset auto-select,
+      // which picks the frame size matching the image's orientation (landscape /
+      // portrait / square). See SizePresetCard in RightInspector.
       setArtworkImageUrl(url)
-      // Auto-pick the frame ratio from the uploaded image's natural aspect so
-      // the frame adjusts to the image: near-square → Square, wider-than-tall
-      // → Landscape, otherwise Portrait. The user can still override via the
-      // Ratio tab afterwards. We don't overwrite an active Custom selection
-      // (the user picked specific cm dimensions and probably wants those
-      // preserved). The artwork rendering itself is unchanged.
-      const probe = new Image()
-      probe.onload = () => {
-        if (!probe.naturalWidth || !probe.naturalHeight) return
-        const current = useEditorStore.getState().frameAspectRatio
-        if (current === 'custom') return
-        const ratio = probe.naturalWidth / probe.naturalHeight
-        const next =
-          Math.abs(ratio - 1) <= 0.08
-            ? 'square'
-            : ratio > 1
-              ? 'landscape'
-              : 'portrait'
-        if (current !== next) setFrameAspectRatio(next)
-      }
-      probe.src = url
     },
-    [setArtworkImageUrl, setFrameAspectRatio]
+    [setArtworkImageUrl]
   )
 
   const openFilePicker = useCallback(() => {

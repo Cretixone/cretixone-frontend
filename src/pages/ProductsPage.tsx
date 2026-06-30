@@ -15,12 +15,12 @@ import { cn } from '@/lib/utils'
 import { useFetchFramesQuery } from '@/store/api/apiSlice'
 import { useUploadPhoto } from '@/hooks/useUploadPhoto'
 import { Pagination } from '@/components/ui/pagination'
+import { formatOMR } from '@/lib/format'
 import type { ApiFrame } from '@/types/api'
 
 const PAGE_SIZE = 12
 
 // ── Theme tokens (kept inline so the page reads against the brand palette) ──
-const RED = '#F82226' // sale price
 const COUNT_FG = '#7C8AA5'
 
 // ── Static nav links for the gold pill bar (matches landing Navbar links) ──
@@ -534,6 +534,16 @@ function ProductCard({ frame }: { frame: ApiFrame }) {
   const navigate = useNavigate()
   const img = frame.portraitUrl || frame.imgUrl || frame.landscapeUrl
 
+  // A "from" price derived from the frame's own pricing — a square at the
+  // minimum manufacturable size: pricePerCm × (sizeFrom + sizeFrom) × 2.
+  const fromPrice =
+    frame.pricePerCm > 0 && frame.sizeFrom > 0
+      ? frame.pricePerCm * (frame.sizeFrom + frame.sizeFrom) * 2
+      : 0
+  const subtitle = frame.categorySlug
+    ? frame.categorySlug.replace(/-/g, ' ')
+    : 'Picture frame'
+
   // Clicking a product opens its detail page (which in turn links into the
   // editor via "Upload a preview image").
   const openDetail = () => navigate(`/product/${frame.id}`)
@@ -562,18 +572,20 @@ function ProductCard({ frame }: { frame: ApiFrame }) {
 
       {/* Meta */}
       <div className="mt-3">
-        <h3 className="text-sm font-semibold leading-snug text-foreground">
-          Sofia - Satin, Distressed Black &amp; Silver
+        <h3 className="truncate text-sm font-semibold leading-snug text-foreground">
+          {frame.name}
         </h3>
-        <p className="mt-1 text-[11px] leading-tight text-foreground/50">
-          Silver Leaf Cube Wood Picture Frame
+        <p className="mt-1 truncate text-[11px] capitalize leading-tight text-foreground/50">
+          {subtitle}
         </p>
-        <div className="mt-2 flex items-center gap-2">
-          <span className="text-sm font-bold" style={{ color: RED }}>
-            $38.44
-          </span>
-          <span className="text-xs text-foreground/40 line-through">$54.92</span>
-        </div>
+        {fromPrice > 0 && (
+          <div className="mt-2 flex items-baseline gap-1.5">
+            <span className="text-[11px] text-foreground/45">from</span>
+            <span className="text-sm font-bold tabular-nums text-brand-navy">
+              {formatOMR(fromPrice)}
+            </span>
+          </div>
+        )}
       </div>
     </motion.div>
   )
