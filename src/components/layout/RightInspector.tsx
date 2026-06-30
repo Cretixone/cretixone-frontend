@@ -438,6 +438,25 @@ function CheckoutFooter() {
       className="border-t px-3 py-3"
       style={{ borderColor: 'var(--ed-border)' }}
     >
+      {/* Price breakdown — frame, mat and MDF contributions */}
+      <div className="mb-2.5 space-y-1">
+        <div className="flex items-center justify-between text-[11px]">
+          <span style={{ color: 'var(--ed-fg-muted)' }}>Frame</span>
+          <span className="tabular-nums" style={{ color: 'var(--ed-fg)' }}>{formatOMR(framePrice)}</span>
+        </div>
+        {matPrice > 0 && (
+          <div className="flex items-center justify-between text-[11px]">
+            <span style={{ color: 'var(--ed-fg-muted)' }}>Mat</span>
+            <span className="tabular-nums" style={{ color: 'var(--ed-fg)' }}>{formatOMR(matPrice)}</span>
+          </div>
+        )}
+        {selectedMdf && (
+          <div className="flex items-center justify-between text-[11px]">
+            <span style={{ color: 'var(--ed-fg-muted)' }}>MDF</span>
+            <span className="tabular-nums" style={{ color: 'var(--ed-fg)' }}>{formatOMR(mdfPrice)}</span>
+          </div>
+        )}
+      </div>
       {inRange ? (
         <button
           type="button"
@@ -474,7 +493,7 @@ function CheckoutFooter() {
           className="flex w-full items-center justify-between gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ed-ring)]"
           style={{ background: 'var(--ed-accent)', color: 'var(--ed-accent-fg)' }}
         >
-          <span>Checkout</span>
+          <span>Add to cart</span>
           <span className="tabular-nums">{formatOMR(price)}</span>
         </button>
       ) : (

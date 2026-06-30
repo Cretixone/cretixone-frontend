@@ -70,20 +70,20 @@ function AccountButton() {
           {initials}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52">
+      <DropdownMenuContent align="end" className="w-52 bg-background border-0">
         <DropdownMenuLabel>
           <div className="truncate">{user?.firstName} {user?.lastName}</div>
-          <div className="truncate text-[11px] font-normal text-foreground/50">{user?.email}</div>
+          <div className="truncate text-[11px] font-normal lowercase text-foreground/50">{user?.email}</div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate('/dashboard/profile')}>
+        <DropdownMenuSeparator className="border-t" />
+        <DropdownMenuItem className="bg-background hover:text-brand-gold" onClick={() => navigate('/dashboard/profile')}>
           <UserIcon className="mr-2 h-4 w-4" /> My account
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate('/dashboard/orders')}>
+        <DropdownMenuItem className="bg-background hover:text-brand-gold" onClick={() => navigate('/dashboard/orders')}>
           <Package className="mr-2 h-4 w-4" /> My orders
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={logout} className="text-red-500 focus:text-red-600">
+        <DropdownMenuSeparator className="border-t" />
+        <DropdownMenuItem onClick={logout} className="text-red-500">
           <LogOut className="mr-2 h-4 w-4" /> Log out
         </DropdownMenuItem>
       </DropdownMenuContent>

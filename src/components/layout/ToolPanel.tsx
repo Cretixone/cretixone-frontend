@@ -91,52 +91,53 @@ function FrameThumb({ item, selected, onClick }: {
   item: ApiFrame; selected: boolean; onClick: () => void
 }) {
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'relative aspect-square overflow-hidden rounded-lg transition-transform',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ed-ring)]',
-        selected ? 'scale-105' : 'hover:scale-[1.02]',
-        item.isVip && !selected && 'opacity-80',
-      )}
-      style={{
-        background: 'var(--ed-canvas)',
-        outline: selected
-          ? '2px solid var(--ed-accent)'
-          : '1px solid var(--ed-border)',
-        outlineOffset: selected ? '0px' : '-1px',
-      }}
-    >
-      <img
-        src={item.imgUrl}
-        alt={`Frame ${item.id}`}
-        className="h-full w-full object-contain p-1"
-        draggable={false}
-        loading="lazy"
-      />
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div
-          className="h-[55%] w-[55%] rounded-sm shadow-inner"
-          style={{ background: 'rgba(255,255,255,0.85)' }}
+    <div className="flex flex-col">
+      <button
+        onClick={onClick}
+        className={cn(
+          'relative aspect-square overflow-hidden rounded-lg transition-transform',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ed-ring)]',
+          selected ? 'scale-105' : 'hover:scale-[1.02]',
+          item.isVip && !selected && 'opacity-80',
+        )}
+        style={{
+          background: 'var(--ed-canvas)',
+          outline: selected
+            ? '2px solid var(--ed-accent)'
+            : '1px solid var(--ed-border)',
+          outlineOffset: selected ? '0px' : '-1px',
+        }}
+      >
+        <img
+          src={item.imgUrl}
+          alt={`Frame ${item.id}`}
+          className="h-full w-full object-contain p-1"
+          draggable={false}
+          loading="lazy"
         />
-      </div>
-      {item.isVip && (
-        <div
-          className="absolute right-1 top-1 rounded-sm px-1 py-0.5 text-[7px] font-bold leading-none"
-          style={{ background: 'var(--ed-accent)', color: 'var(--ed-accent-fg)' }}
-        >
-          PRO
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div
+            className="h-[55%] w-[55%] rounded-sm shadow-inner"
+            style={{ background: 'rgba(255,255,255,0.85)' }}
+          />
         </div>
-      )}
-      {item.isNew && !item.isVip && (
-        <div
-          className="absolute left-1 top-1 rounded-sm px-1 py-0.5 text-[7px] font-bold leading-none"
-          style={{ background: 'var(--ed-fg)', color: 'var(--ed-panel)' }}
-        >
-          NEW
-        </div>
-      )}
-    </button>
+        {item.isNew && (
+          <div
+            className="absolute left-1 top-1 rounded-sm px-1 py-0.5 text-[7px] font-bold leading-none"
+            style={{ background: 'var(--ed-fg)', color: 'var(--ed-panel)' }}
+          >
+            NEW
+          </div>
+        )}
+      </button>
+      {/* Per-cm price under each frame */}
+      <span
+        className="mt-1.5 text-center text-[11px] font-semibold leading-tight tabular-nums"
+        style={{ color: selected ? 'var(--ed-accent)' : 'var(--ed-fg)' }}
+      >
+        {item.pricePerCm > 0 ? `${formatOMR(item.pricePerCm)}/cm` : '—'}
+      </span>
+    </div>
   )
 }
 

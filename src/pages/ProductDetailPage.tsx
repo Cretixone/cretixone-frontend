@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronDown, Home, Upload } from 'lucide-react'
+import { ChevronDown, Home, Maximize2, Upload } from 'lucide-react'
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { Button } from '@/components/ui/button'
+import { Lightbox } from '@/components/Lightbox'
 import { useEditorStore } from '@/store/editorStore'
 import { useFetchFramesQuery, useFetchFrameSizesQuery } from '@/store/api/apiSlice'
-import { useCartStore } from '@/store/cartStore'
 import { formatOMR } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -78,8 +78,6 @@ export default function ProductDetailPage() {
 
   const [service, setService] = useState<string>(SERVICES[0].id)
   const [size, setSize] = useState<string>('')
-  const [added, setAdded] = useState(false)
-  const addItem = useCartStore((s) => s.addItem)
 
   // Default the selected size to the first preset once they load.
   useEffect(() => {
@@ -96,20 +94,6 @@ export default function ProductDetailPage() {
     frame && selectedFrameSize
       ? frame.pricePerCm * (selectedFrameSize.widthCm + selectedFrameSize.lengthCm) * 2
       : 0
-
-  const onAddToCart = () => {
-    if (!frame || !selectedFrameSize || price <= 0) return
-    addItem({
-      frameId: frame.id,
-      name: frame.name,
-      subtitle: selectedFrameSize.name,
-      thumbnail: frame.imgUrl,
-      widthCm: selectedFrameSize.widthCm,
-      heightCm: selectedFrameSize.lengthCm,
-      pricePerItem: price,
-    })
-    setAdded(true)
-  }
 
   // "Upload a preview image" opens the editor (with this frame, when we have
   // an id) so the user can drop their artwork into the frame. The frame panel
@@ -157,8 +141,6 @@ export default function ProductDetailPage() {
             onService={setService}
             size={size}
             onSize={setSize}
-            added={added}
-            onAddToCart={onAddToCart}
             onUpload={openEditor}
             className="lg:flex-1"
           />
@@ -200,7 +182,7 @@ export default function ProductDetailPage() {
   )
 }
 
-// ── Gallery: thumbnails + hover-zoom main image ─────────────────────────────
+// ── Gallery: thumbnails + main image with fullscreen lightbox ──────────────
 function Gallery({
   images,
   className,
@@ -209,6 +191,7 @@ function Gallery({
   className?: string
 }) {
   const [active, setActive] = useState(0)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
   const src = images[active] ?? images[0]
 
   return (
@@ -257,54 +240,34 @@ function Gallery({
           </div>
         )}
 
-        {/* Main image with cursor-tracking hover zoom */}
+        {/* Main image — static (no hover zoom); expand icon opens the lightbox */}
         <div className="relative min-w-0 flex-1">
-          <ZoomImage src={src} alt="Product preview" />
+          <div className="group relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-[#EDE6D6] sm:aspect-auto sm:h-[420px] lg:h-[480px]">
+            <img
+              src={src}
+              alt="Product preview"
+              draggable={false}
+              className="h-full w-full object-contain"
+            />
+            <button
+              type="button"
+              onClick={() => setLightboxOpen(true)}
+              aria-label="View fullscreen"
+              className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white opacity-80 backdrop-blur-sm transition hover:bg-black/70 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  )
-}
 
-function ZoomImage({ src, alt }: { src: string; alt: string }) {
-  const [zoom, setZoom] = useState(false)
-  // transform-origin follows the cursor; only `transform` is transitioned, so
-  // the scale eases in/out while panning stays instant (origin isn't animated).
-  const [origin, setOrigin] = useState('50% 50%')
-
-  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const r = e.currentTarget.getBoundingClientRect()
-    const x = ((e.clientX - r.left) / r.width) * 100
-    const y = ((e.clientY - r.top) / r.height) * 100
-    setOrigin(`${x}% ${y}%`)
-  }
-
-  return (
-    <div
-      className="group relative aspect-[4/3] w-full cursor-zoom-in overflow-hidden rounded-2xl bg-[#EDE6D6] sm:aspect-auto sm:h-[420px] lg:h-[480px]"
-      onMouseEnter={() => setZoom(true)}
-      onMouseLeave={() => setZoom(false)}
-      onMouseMove={onMove}
-    >
-      <img
-        src={src}
-        alt={alt}
-        draggable={false}
-        className="h-full w-full object-contain transition-transform duration-200 ease-out will-change-transform"
-        style={{
-          transform: zoom ? 'scale(2.2)' : 'scale(1)',
-          transformOrigin: origin,
-        }}
+      <Lightbox
+        images={images}
+        index={active}
+        open={lightboxOpen}
+        onIndex={setActive}
+        onClose={() => setLightboxOpen(false)}
       />
-      {/* Hover hint — fades out once zooming */}
-      <div
-        className={cn(
-          'pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/65 px-3 py-1 text-[11px] font-medium text-white/95 backdrop-blur-sm transition-opacity',
-          zoom ? 'opacity-0' : 'opacity-100',
-        )}
-      >
-        Hover to zoom · move to pan
-      </div>
     </div>
   )
 }
@@ -319,8 +282,6 @@ function BuyPanel({
   onService,
   size,
   onSize,
-  added,
-  onAddToCart,
   onUpload,
   className,
 }: {
@@ -332,8 +293,6 @@ function BuyPanel({
   onService: (id: string) => void
   size: string
   onSize: (s: string) => void
-  added: boolean
-  onAddToCart: () => void
   onUpload: () => void
   className?: string
 }) {
@@ -419,11 +378,10 @@ function BuyPanel({
         <Button
           variant="navy"
           size="lg"
-          onClick={onAddToCart}
-          disabled={price <= 0}
+          onClick={onUpload}
           className="min-w-[140px] rounded-lg"
         >
-          {added ? 'Added to cart ✓' : 'Add to cart'}
+          Preview in editor
         </Button>
       </div>
     </div>
