@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Lightbox } from '@/components/Lightbox'
 import { useEditorStore } from '@/store/editorStore'
 import { useFetchFrameByIdQuery, useFetchFrameSizesQuery } from '@/store/api/apiSlice'
-import { formatOMR } from '@/lib/format'
+import { formatOMR, formatOMRRate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 // Fallback gallery (bundled lifestyle slides) used only when a frame has no
@@ -89,16 +89,18 @@ export default function ProductDetailPage() {
     () => (frameSizes ?? []).find((s) => `${s.name} · ${s.widthCm}×${s.lengthCm} cm` === size),
     [frameSizes, size],
   )
-  // Price needs a per-cm rate on the frame. Prefer the chosen size; if none is
-  // selected yet (or no presets exist) fall back to the frame's own min size so
-  // a price still shows whenever the frame is priced.
-  const price = (() => {
-    if (!frame || frame.pricePerCm <= 0) return 0
+  // Price label:
+  //  • a size preset is chosen → the total for that size (pricePerCm × perimeter)
+  //  • no preset selectable (e.g. none exist yet) → the per-cm rate, so a
+  //    meaningful price always shows instead of a misleading 1 cm minimum
+  //  • frame isn't priced → em dash
+  const priceLabel = (() => {
+    if (!frame || frame.pricePerCm <= 0) return '—'
     if (selectedFrameSize) {
-      return frame.pricePerCm * (selectedFrameSize.widthCm + selectedFrameSize.lengthCm) * 2
+      const total = frame.pricePerCm * (selectedFrameSize.widthCm + selectedFrameSize.lengthCm) * 2
+      return formatOMR(total)
     }
-    if (frame.sizeFrom > 0) return frame.pricePerCm * (frame.sizeFrom + frame.sizeFrom) * 2
-    return 0
+    return `${formatOMRRate(frame.pricePerCm)} / cm`
   })()
 
   // "Upload a preview image" opens the editor (with this frame, when we have
@@ -142,7 +144,7 @@ export default function ProductDetailPage() {
             title={frame?.name ?? 'Picture Frame'}
             subtitle={frame?.categorySlug ? frame.categorySlug.replace(/-/g, ' ') : 'Custom picture frame'}
             sizes={sizes}
-            price={price}
+            priceLabel={priceLabel}
             service={service}
             onService={setService}
             size={size}
@@ -283,7 +285,7 @@ function BuyPanel({
   title,
   subtitle,
   sizes,
-  price,
+  priceLabel,
   service,
   onService,
   size,
@@ -294,7 +296,7 @@ function BuyPanel({
   title: string
   subtitle: string
   sizes: string[]
-  price: number
+  priceLabel: string
   service: string
   onService: (id: string) => void
   size: string
@@ -378,7 +380,7 @@ function BuyPanel({
       <div className="mt-7 flex flex-wrap items-center justify-between gap-4 border-t border-black/[0.07] pt-6">
         <div className="flex items-baseline gap-2.5">
           <span className="text-2xl font-bold text-brand-navy tabular-nums">
-            {price > 0 ? formatOMR(price) : '—'}
+            {priceLabel}
           </span>
         </div>
         <Button
