@@ -12,10 +12,10 @@ import Navbar from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { useFetchFramesPageQuery } from '@/store/api/apiSlice'
+import { useFetchFramesPageQuery, useFetchFrameSizesQuery } from '@/store/api/apiSlice'
 import { useUploadPhoto } from '@/hooks/useUploadPhoto'
 import { Pagination } from '@/components/ui/pagination'
-import { formatOMR } from '@/lib/format'
+import { formatOMR, formatOMRRate } from '@/lib/format'
 import type { ApiFrame } from '@/types/api'
 
 const PAGE_SIZE = 12
@@ -189,6 +189,15 @@ export default function ProductsPage() {
   // Facet checkboxes narrow the fetched page (decorative until real facets land).
   const paged = useMemo(() => filterFrames(data?.items ?? [], selected), [data, selected])
 
+  // Cheapest real size preset drives each card's "from" price — the same
+  // presets the detail page prices by, so the two pages agree (instead of the
+  // card pricing a theoretical 1 cm frame). 0 when no presets exist yet.
+  const { data: frameSizes } = useFetchFrameSizesQuery()
+  const minPerimeter = useMemo(() => {
+    const perims = (frameSizes ?? []).map((s) => (s.widthCm + s.lengthCm) * 2)
+    return perims.length ? Math.min(...perims) : 0
+  }, [frameSizes])
+
   return (
     <div className="min-h-screen w-full bg-white font-sans text-[#000000]">
       {/* ── Header: top utility bar + gold pill nav ── */}
@@ -241,7 +250,7 @@ export default function ProductsPage() {
               <ProductGridSkeleton />
             ) : (
               <>
-                <ProductGrid frames={paged} />
+                <ProductGrid frames={paged} minPerimeter={minPerimeter} />
                 <Pagination
                   page={current}
                   pageCount={pageCount}
@@ -492,7 +501,7 @@ function ResultsBar({ count, loading }: { count: number; loading: boolean }) {
 }
 
 // ── Product grid ───────────────────────────────────────────────────────────
-function ProductGrid({ frames }: { frames: ApiFrame[] }) {
+function ProductGrid({ frames, minPerimeter }: { frames: ApiFrame[]; minPerimeter: number }) {
   if (frames.length === 0) {
     return (
       <div className="flex h-64 items-center justify-center rounded-xl border border-black/5 bg-black/[0.02] text-sm text-foreground/60">
@@ -503,23 +512,27 @@ function ProductGrid({ frames }: { frames: ApiFrame[] }) {
   return (
     <div className="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 xl:grid-cols-4">
       {frames.map((frame) => (
-        <ProductCard key={frame.id} frame={frame} />
+        <ProductCard key={frame.id} frame={frame} minPerimeter={minPerimeter} />
       ))}
     </div>
   )
 }
 
-function ProductCard({ frame }: { frame: ApiFrame }) {
+function ProductCard({ frame, minPerimeter }: { frame: ApiFrame; minPerimeter: number }) {
   const navigate = useNavigate()
   // Show the square thumbnail first (imgUrl = thumbnailUrl), then fall back.
   const img = frame.imgUrl || frame.portraitUrl || frame.landscapeUrl
 
-  // A "from" price derived from the frame's own pricing — a square at the
-  // minimum manufacturable size: pricePerCm × (sizeFrom + sizeFrom) × 2.
-  const fromPrice =
-    frame.pricePerCm > 0 && frame.sizeFrom > 0
-      ? frame.pricePerCm * (frame.sizeFrom + frame.sizeFrom) * 2
-      : 0
+  // "from" price = the cheapest real size preset × the frame's rate (matches the
+  // detail page). If no presets exist yet, show the per-cm rate instead of a
+  // misleading 1 cm minimum. `null` when the frame carries no price.
+  const priced = frame.pricePerCm > 0
+  const hasRealSize = priced && minPerimeter > 0
+  const priceLabel = !priced
+    ? null
+    : hasRealSize
+      ? formatOMR(frame.pricePerCm * minPerimeter)
+      : `${formatOMRRate(frame.pricePerCm)} / cm`
   const subtitle = frame.categorySlug
     ? frame.categorySlug.replace(/-/g, ' ')
     : 'Picture frame'
@@ -558,11 +571,11 @@ function ProductCard({ frame }: { frame: ApiFrame }) {
         <p className="mt-1 truncate text-[11px] capitalize leading-tight text-foreground/50">
           {subtitle}
         </p>
-        {fromPrice > 0 && (
+        {priceLabel && (
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-[11px] text-foreground/45">from</span>
+            {hasRealSize && <span className="text-[11px] text-foreground/45">from</span>}
             <span className="text-sm font-bold tabular-nums text-brand-navy">
-              {formatOMR(fromPrice)}
+              {priceLabel}
             </span>
           </div>
         )}
