@@ -6,7 +6,7 @@ import Footer from '@/components/landing/Footer'
 import { Button } from '@/components/ui/button'
 import { Lightbox } from '@/components/Lightbox'
 import { useEditorStore } from '@/store/editorStore'
-import { useFetchFramesQuery, useFetchFrameSizesQuery } from '@/store/api/apiSlice'
+import { useFetchFrameByIdQuery, useFetchFrameSizesQuery } from '@/store/api/apiSlice'
 import { formatOMR } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -37,13 +37,9 @@ export default function ProductDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
 
-  // Resolve the real frame from the public list (the URL id is the hashed id).
-  const { data: frames } = useFetchFramesQuery()
+  // Fetch just this frame by its hashed URL id (single API call, no full list).
+  const { data: frame } = useFetchFrameByIdQuery(id ? Number(id) : 0, { skip: !id })
   const { data: frameSizes } = useFetchFrameSizesQuery()
-  const frame = useMemo(
-    () => (frames ?? []).find((f) => String(f.id) === id),
-    [frames, id],
-  )
 
   // Gallery rule:
   //  • gallery has images → show them (thumbnail strip + 1st as the main image)
@@ -62,7 +58,10 @@ export default function ProductDetailPage() {
     [frameSizes],
   )
 
-  const specEntries = frame ? Object.entries(frame.specifications ?? {}) : []
+  // Spec sheet (Rabbet Depth removed per product decision).
+  const specEntries = frame
+    ? Object.entries(frame.specifications ?? {}).filter(([label]) => label !== 'Rabbet Depth')
+    : []
 
   // Match the landing/products body theme (white bg, black text).
   useEffect(() => {
@@ -90,10 +89,17 @@ export default function ProductDetailPage() {
     () => (frameSizes ?? []).find((s) => `${s.name} · ${s.widthCm}×${s.lengthCm} cm` === size),
     [frameSizes, size],
   )
-  const price =
-    frame && selectedFrameSize
-      ? frame.pricePerCm * (selectedFrameSize.widthCm + selectedFrameSize.lengthCm) * 2
-      : 0
+  // Price needs a per-cm rate on the frame. Prefer the chosen size; if none is
+  // selected yet (or no presets exist) fall back to the frame's own min size so
+  // a price still shows whenever the frame is priced.
+  const price = (() => {
+    if (!frame || frame.pricePerCm <= 0) return 0
+    if (selectedFrameSize) {
+      return frame.pricePerCm * (selectedFrameSize.widthCm + selectedFrameSize.lengthCm) * 2
+    }
+    if (frame.sizeFrom > 0) return frame.pricePerCm * (frame.sizeFrom + frame.sizeFrom) * 2
+    return 0
+  })()
 
   // "Upload a preview image" opens the editor (with this frame, when we have
   // an id) so the user can drop their artwork into the frame. The frame panel

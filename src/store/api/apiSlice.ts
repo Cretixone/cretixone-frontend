@@ -172,6 +172,38 @@ export const apiSlice = createApi({
         response.data.map(mapCretixFrame),
     }),
 
+    // ── Paginated active frames (storefront products grid) ─────────────────
+    fetchFramesPage: builder.query<
+      { items: ApiFrame[]; total: number; page: number; pageCount: number },
+      { page: number; limit: number; category?: string }
+    >({
+      query: ({ page, limit, category }) => ({
+        url: `/frames/public?page=${page}&limit=${limit}${category ? `&category=${encodeURIComponent(category)}` : ''}`,
+        method: 'GET',
+        client: 'cretix',
+      }),
+      transformResponse: (
+        response: CretixApiOk<CretixFrameDto[]> & {
+          meta?: { page: number; limit: number; total: number; pageCount: number }
+        },
+      ) => ({
+        items: response.data.map(mapCretixFrame),
+        total: response.meta?.total ?? response.data.length,
+        page: response.meta?.page ?? 1,
+        pageCount: response.meta?.pageCount ?? 1,
+      }),
+    }),
+
+    // ── Single frame by hashed id (product detail — avoids fetching all) ────
+    fetchFrameById: builder.query<ApiFrame, number>({
+      query: (id) => ({
+        url: `/frames/public/${id}`,
+        method: 'GET',
+        client: 'cretix',
+      }),
+      transformResponse: (response: CretixApiOk<CretixFrameDto>) => mapCretixFrame(response.data),
+    }),
+
     // ── Frame categories (Cretixone backend) ───────────────────────────────
     fetchFrameCategories: builder.query<CretixCategoryDto[], void>({
       query: () => ({
@@ -265,6 +297,8 @@ export const apiSlice = createApi({
 
 export const {
   useFetchFramesQuery,
+  useFetchFramesPageQuery,
+  useFetchFrameByIdQuery,
   useFetchFrameCategoriesQuery,
   useFetchFrameSizesQuery,
   useFetchInteriorsQuery,

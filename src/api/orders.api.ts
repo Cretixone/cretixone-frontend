@@ -6,6 +6,19 @@ interface Ok<T> {
   message?: string
 }
 
+export interface PageMeta {
+  page: number
+  limit: number
+  total: number
+  pageCount: number
+}
+
+interface Paged<T> {
+  success: true
+  data: T[]
+  meta?: PageMeta
+}
+
 export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
 
 export interface OrderItem {
@@ -57,10 +70,11 @@ export const ordersApi = {
     return res.data.data
   },
 
-  async mine() {
-    const res = await cretixAxios.get<Ok<Order[]>>('/orders/mine', {
-      ...({ silent: true } as object),
-    })
-    return res.data.data
+  async mine(params: { page: number; limit: number }) {
+    const res = await cretixAxios.get<Paged<Order>>(
+      `/orders/mine?page=${params.page}&limit=${params.limit}`,
+      { ...({ silent: true } as object) },
+    )
+    return { items: res.data.data, meta: res.data.meta }
   },
 }

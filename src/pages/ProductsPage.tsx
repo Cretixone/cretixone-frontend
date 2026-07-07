@@ -12,7 +12,7 @@ import Navbar from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { useFetchFramesQuery } from '@/store/api/apiSlice'
+import { useFetchFramesPageQuery } from '@/store/api/apiSlice'
 import { useUploadPhoto } from '@/hooks/useUploadPhoto'
 import { Pagination } from '@/components/ui/pagination'
 import { formatOMR } from '@/lib/format'
@@ -97,15 +97,6 @@ const FILTER_GROUPS: FilterGroup[] = [
     ],
   },
   {
-    key: 'rabbet',
-    title: 'Rabbet Depth',
-    options: [
-      { label: 'Medium: ½" - ¾"', count: 2 },
-      { label: 'Rustic: ¾" - 1½"', count: 9 },
-      { label: 'Traditional: Over 1½"', count: 1 },
-    ],
-  },
-  {
     key: 'width',
     title: 'Frame With',
     options: [{ label: 'Narrow: Less than 1½"', count: 6 }],
@@ -169,22 +160,12 @@ export default function ProductsPage() {
     }
   }, [])
 
-  const { data: frames, isLoading, isError } = useFetchFramesQuery()
-
-  // Footer "Products" links pass ?category=<slug>. Narrow the grid to that
-  // category; if the slug matches no frames (unknown/placeholder category)
-  // fall back to the full listing so the page always shows something.
+  // Footer "Products" links pass ?category=<slug>. Server paginates by category.
   const [searchParams] = useSearchParams()
   const category = searchParams.get('category')
-  const baseFrames = useMemo(() => {
-    const all = frames ?? []
-    if (!category) return all
-    const inCategory = all.filter((f) => f.categorySlug === category)
-    return inCategory.length > 0 ? inCategory : all
-  }, [frames, category])
 
-  // Selected filter checkboxes — keyed "groupKey::label". The frame API
-  // carries no material/colour metadata, so these drive the UI state only.
+  // Selected filter checkboxes — keyed "groupKey::label". The frame API carries
+  // no material/colour metadata yet, so these only narrow the current page.
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -194,21 +175,19 @@ export default function ProductsPage() {
     })
   const reset = () => setSelected(new Set())
 
-  // Apply the (functional) faceted filters to the category-scoped frames.
-  const filtered = useMemo(
-    () => filterFrames(baseFrames, selected),
-    [baseFrames, selected],
-  )
-
-  // Client-side pagination over the filtered grid.
+  // Server-side pagination (DB LIMIT/OFFSET). Reset to page 1 on category change.
   const [page, setPage] = useState(1)
-  useEffect(() => setPage(1), [selected, category])
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const current = Math.min(page, pageCount)
-  const paged = useMemo(
-    () => filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE),
-    [filtered, current],
-  )
+  useEffect(() => setPage(1), [category])
+  const { data, isLoading, isError } = useFetchFramesPageQuery({
+    page,
+    limit: PAGE_SIZE,
+    category: category ?? undefined,
+  })
+  const total = data?.total ?? 0
+  const pageCount = data?.pageCount ?? 1
+  const current = data?.page ?? page
+  // Facet checkboxes narrow the fetched page (decorative until real facets land).
+  const paged = useMemo(() => filterFrames(data?.items ?? [], selected), [data, selected])
 
   return (
     <div className="min-h-screen w-full bg-white font-sans text-[#000000]">
@@ -252,7 +231,7 @@ export default function ProductsPage() {
           <FilterSidebar selected={selected} onToggle={toggle} onReset={reset} />
 
           <section className="min-w-0 flex-1">
-            <ResultsBar count={filtered.length} loading={isLoading} />
+            <ResultsBar count={total} loading={isLoading} />
 
             {isError ? (
               <div className="flex h-64 items-center justify-center rounded-xl border border-black/5 bg-black/[0.02] text-sm text-foreground/60">
@@ -532,7 +511,8 @@ function ProductGrid({ frames }: { frames: ApiFrame[] }) {
 
 function ProductCard({ frame }: { frame: ApiFrame }) {
   const navigate = useNavigate()
-  const img = frame.portraitUrl || frame.imgUrl || frame.landscapeUrl
+  // Show the square thumbnail first (imgUrl = thumbnailUrl), then fall back.
+  const img = frame.imgUrl || frame.portraitUrl || frame.landscapeUrl
 
   // A "from" price derived from the frame's own pricing — a square at the
   // minimum manufacturable size: pricePerCm × (sizeFrom + sizeFrom) × 2.

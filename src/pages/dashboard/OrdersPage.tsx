@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Loader2, Package } from 'lucide-react'
-import { ordersApi, type Order, type OrderStatus } from '@/api/orders.api'
+import { ordersApi, type Order, type OrderStatus, type PageMeta } from '@/api/orders.api'
 import { formatOMR } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { Pagination } from '@/components/ui/pagination'
@@ -29,20 +29,20 @@ const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[] | null>(null)
+  const [data, setData] = useState<{ items: Order[]; meta?: PageMeta } | null>(null)
   const [error, setError] = useState(false)
   const [page, setPage] = useState(1)
 
   useEffect(() => {
     let alive = true
     ordersApi
-      .mine()
-      .then((data) => alive && setOrders(data))
+      .mine({ page, limit: PAGE_SIZE })
+      .then((d) => alive && setData(d))
       .catch(() => alive && setError(true))
     return () => { alive = false }
-  }, [])
+  }, [page])
 
-  if (orders === null && !error) {
+  if (data === null && !error) {
     return (
       <div className="flex items-center justify-center rounded-2xl border border-black/[0.07] bg-white py-24">
         <Loader2 className="h-5 w-5 animate-spin text-brand-navy/60" />
@@ -58,7 +58,8 @@ export default function OrdersPage() {
     )
   }
 
-  if (!orders || orders.length === 0) {
+  const total = data?.meta?.total ?? 0
+  if (total === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-black/[0.07] bg-white py-20 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-gold/15 text-brand-gold">
@@ -73,9 +74,9 @@ export default function OrdersPage() {
     )
   }
 
-  const pageCount = Math.max(1, Math.ceil(orders.length / PAGE_SIZE))
-  const current = Math.min(page, pageCount)
-  const paged = orders.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE)
+  const paged = data?.items ?? []
+  const pageCount = data?.meta?.pageCount ?? 1
+  const current = data?.meta?.page ?? page
 
   return (
     <div className="space-y-4">
