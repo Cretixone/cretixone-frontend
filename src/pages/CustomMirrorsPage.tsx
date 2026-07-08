@@ -15,9 +15,6 @@ const fadeUp: Variants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: 'easeOut' } },
 }
 
-// ── Mirror categories ─────────────────────────────────────────────────────────
-// NOTE: these `img` paths are placeholders using existing interior photos.
-// Drop real mirror photos in /public/images and update the paths to match.
 const CATEGORIES = [
   { title: 'Wall Mirrors', img: '/images/mirors/miror-1.png' },
   { title: 'Decorative Mirrors', img: '/images/mirors/miror-2.png' },
@@ -27,9 +24,6 @@ const CATEGORIES = [
   { title: 'Framed Mirrors', img: '/images/mirors/miror-5.png' },
 ]
 
-// Collage images for the "Crafted with Precision" section (placeholders — swap
-// for real mirror shots). Left column stacks the first two; the third fills the
-// taller right column.
 const COLLAGE = {
   topLeft: '/images/craft-miror.png',
   bottomLeft: '/images/craft-light-miror.png',

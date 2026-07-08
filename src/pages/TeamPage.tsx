@@ -290,7 +290,7 @@ function TeamCard({ member }: { member: Member }) {
 }
 
 // ── Mesh-gradient background (animated blur, fixed-ish to the top) ─────────────
-function MeshBackground() {
+export function MeshBackground() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
       {/* drifting colour blob */}
