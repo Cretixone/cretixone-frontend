@@ -95,7 +95,7 @@ const NAV_LINKS = [
   { label: 'All Frames', href: '/products' },
   { label: 'Custom Prints', href: '#prints' },
   { label: 'Stock Photo', href: '#stock' },
-  { label: 'Custom Mirror', href: '#mirror' },
+  { label: 'Custom Mirror', href: '/custom-mirrors' },
   { label: 'Gifts', href: '#gifts' },
   { label: 'About', href: '/about' },
 ]

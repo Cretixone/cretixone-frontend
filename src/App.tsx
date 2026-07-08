@@ -26,6 +26,7 @@ const ProductsPage = lazy(() => import('@/pages/ProductsPage'))
 const ProductDetailPage = lazy(() => import('@/pages/ProductDetailPage'))
 const TeamPage = lazy(() => import('@/pages/TeamPage'))
 const TestimonialsPage = lazy(() => import('@/pages/TestimonialsPage'))
+const CustomMirrorsPage = lazy(() => import('@/pages/CustomMirrorsPage'))
 const CheckoutPage = lazy(() => import('@/pages/CheckoutPage'))
 const CartPage = lazy(() => import('@/pages/CartPage'))
 
@@ -92,6 +93,7 @@ export default function App() {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/team" element={<TeamPage />} />
         <Route path="/testimonials" element={<TestimonialsPage />} />
+        <Route path="/custom-mirrors" element={<CustomMirrorsPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/products" element={<ProductsPage />} />

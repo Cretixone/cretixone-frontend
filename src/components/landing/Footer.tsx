@@ -13,6 +13,7 @@ const PRODUCT_LINKS = [
   { label: 'Photo Prints', href: '/products?category=photo-prints' },
   { label: 'Gifts', href: '/products?category=gifts' },
   { label: 'Mirror Works', href: '/products?category=mirror-works' },
+  { label: 'Custom Mirrors', href: '/custom-mirrors' },
 ]
 
 const COMPANY_LINKS = [

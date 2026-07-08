@@ -5,15 +5,12 @@ import {
   ChevronUp,
   ChevronDown,
   Home,
-  ImagePlus,
   Filter,
 } from 'lucide-react'
-import Navbar from '@/components/landing/Navbar'
+import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useFetchFramesPageQuery, useFetchFrameSizesQuery } from '@/store/api/apiSlice'
-import { useUploadPhoto } from '@/hooks/useUploadPhoto'
 import { Pagination } from '@/components/ui/pagination'
 import { formatOMR, formatOMRRate } from '@/lib/format'
 import type { ApiFrame } from '@/types/api'
@@ -22,16 +19,6 @@ const PAGE_SIZE = 12
 
 // ── Theme tokens (kept inline so the page reads against the brand palette) ──
 const COUNT_FG = '#7C8AA5'
-
-// ── Static nav links for the gold pill bar (matches landing Navbar links) ──
-const NAV_LINKS = [
-  { label: 'All Frames', href: '/products', active: true },
-  { label: 'Custom Prints', href: '#prints' },
-  { label: 'Stock Photo', href: '#stock' },
-  { label: 'Custom Mirror', href: '#mirror' },
-  { label: 'Gifts', href: '#gifts' },
-  { label: 'About', href: '/about' },
-]
 
 // ── Banner strip imagery (reuse the bundled lifestyle slides) ──────────────
 const BANNER_IMAGES = [
@@ -200,13 +187,13 @@ export default function ProductsPage() {
 
   return (
     <div className="min-h-screen w-full bg-white font-sans text-[#000000]">
-      {/* ── Header: top utility bar + gold pill nav ── */}
+      {/* ── Header: top utility bar + floating gold pill nav ── */}
       <header className="relative z-30">
         <Navbar />
-        <PillNavStatic />
       </header>
+      <PillNav />
 
-      <main className="mx-auto max-w-[1400px] px-5 pb-4 md:px-10">
+      <main className="mx-auto max-w-[1400px] px-5 pb-4 pt-20 md:px-10 md:pt-24">
         <BannerStrip />
 
         {/* Breadcrumb */}
@@ -267,38 +254,6 @@ export default function ProductsPage() {
       </main>
 
       <Footer />
-    </div>
-  )
-}
-
-// ── Static gold pill nav (non-floating variant for inner pages) ────────────
-function PillNavStatic() {
-  const onUploadPhoto = useUploadPhoto()
-  return (
-    <div className="mx-auto -mt-1 hidden w-full max-w-[1400px] justify-center px-5 pb-2 md:px-10 lg:flex">
-      <div className="flex w-full max-w-[820px] items-center justify-between gap-1 rounded-full bg-brand-gold p-1.5 pl-3 shadow-[0_10px_30px_-12px_rgba(192,140,64,0.6)]">
-        <ul className="flex items-center gap-1">
-          {NAV_LINKS.map((l) => (
-            <li key={l.label}>
-              <Link
-                to={l.href}
-                className={cn(
-                  'rounded-full px-4 py-2 text-sm font-medium transition',
-                  l.active
-                    ? 'bg-white/20 text-white'
-                    : 'text-white/90 hover:bg-white/15',
-                )}
-              >
-                {l.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-        <Button variant="navy" size="pill" className="gap-2 shadow-sm" onClick={onUploadPhoto}>
-          <ImagePlus className="h-4 w-4" />
-          Upload Photo
-        </Button>
-      </div>
     </div>
   )
 }
