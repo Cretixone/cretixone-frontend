@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ChevronDown, Download, ImagePlus, Moon, Redo2, Sun, Undo2 } from 'lucide-react'
 import { useEditorStore } from '@/store/editorStore'
 import { useImageUpload } from '@/hooks/useImageUpload'
@@ -74,20 +74,9 @@ export default function Topbar() {
           <ArrowLeft size={16} strokeWidth={1.8} />
         </IconButton>
 
-        <div className="mx-1 flex items-center gap-2">
-          <div
-            className="flex h-7 w-7 items-center justify-center rounded-md"
-            style={{ background: 'var(--ed-accent)' }}
-          >
-            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="2.4">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <rect x="7" y="7" width="10" height="10" rx="1" />
-            </svg>
-          </div>
-          <span className="hidden text-sm font-semibold tracking-tight sm:inline" style={{ color: 'var(--ed-fg)' }}>
-            FrameIt
-          </span>
-        </div>
+        <Link to="/" aria-label="Cretixone home" className="mx-1 flex items-center">
+          <img src="/images/svg/logo.svg" alt="Cretixone" className="h-6 w-auto" />
+        </Link>
 
         <div className="ml-2 hidden h-4 w-px md:block" style={{ background: 'var(--ed-border)' }} />
 

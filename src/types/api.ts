@@ -24,6 +24,7 @@ export interface ApiFrame {
   portraitUrl: string                     // full-frame portrait PNG
   squareUrl: string | null                // optional 1:1 PNG (falls back to landscape)
   pricePerCm: number                      // price per cm; Frame Price = pricePerCm × (w + h) × 2
+  oldPricePerCm: number                   // display-only "was" rate (struck-through); never used in calculations
   sizeFrom: number                        // min manufacturable size (cm)
   sizeTo: number                          // max manufacturable size (cm)
   description: string | null              // product description (whitespace preserved)

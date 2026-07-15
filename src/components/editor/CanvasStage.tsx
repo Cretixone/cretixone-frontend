@@ -153,6 +153,8 @@ interface Layers {
   bgContainer: PIXI.Container
   bgSprite: PIXI.Sprite | null
   bgGraphics: PIXI.Graphics
+  // Faint brand watermark shown behind the design in plain (no-scene) mode.
+  watermark: PIXI.Sprite
 
   // Design group (zoomable) — contains frame, mat, artwork, shadow
   designGroup: PIXI.Container
@@ -312,6 +314,25 @@ export default function CanvasStage({
       const bgGraphics = new PIXI.Graphics()
       bgContainer.addChild(bgGraphics)
 
+      // Faint centred brand watermark behind the design (plain mode only —
+      // hidden once an interior/scenery scene fills the background). Loaded
+      // async; positioned + scaled each render(), so it starts invisible.
+      const watermark = new PIXI.Sprite()
+      watermark.eventMode = 'none'
+      watermark.anchor.set(0.5)
+      watermark.alpha = 0.16
+      watermark.visible = false
+      bgContainer.addChild(watermark)
+      void PIXI.Assets.load('/images/logo.png')
+        .then((tex: PIXI.Texture) => {
+          if (cancelled) return
+          watermark.texture = tex
+          render()
+        })
+        .catch(() => {
+          /* watermark is decorative — ignore load failures */
+        })
+
       // 2. Design group (zoomable + pannable)
       const designGroup = new PIXI.Container()
       const shadowG = new PIXI.Graphics()
@@ -361,9 +382,11 @@ export default function CanvasStage({
       artworkCont.mask = artMask
       artworkCont.eventMode = 'static'
 
-      // Design group z-order: shadow → white/mat → artwork → frame (top) → overlay
-      // Frame on top so its inner shadow textures overlay artwork naturally
-      designGroup.addChild(shadowG, matSolidG, matTexCont, artworkCont, frameCont, uploadOverlay)
+      // Design group z-order: shadow → white/mat → frame → artwork (top) → overlay
+      // Artwork sits ON TOP of the frame so the uploaded photo shows fully in
+      // front of the frame/stretcher (it stays masked to the opening, so the
+      // outer moulding is still visible around it).
+      designGroup.addChild(shadowG, matSolidG, matTexCont, frameCont, artworkCont, uploadOverlay)
 
       // 3. Front container (foreground objects from interior scenes)
       // Render-only — must not intercept pointer events, otherwise the
@@ -384,7 +407,7 @@ export default function CanvasStage({
       app.stage.eventMode = 'static'
 
       layersRef.current = {
-        bgContainer, bgSprite: null, bgGraphics,
+        bgContainer, bgSprite: null, bgGraphics, watermark,
         designGroup, shadowG, frameCont,
         matSolidG, matTexCont,
         artworkCont, artMask,
@@ -602,6 +625,20 @@ export default function CanvasStage({
       L.bgSprite.height = bgSceneH * bgScale
     }
 
+    // Brand watermark — centred, ~45% of the smaller canvas dimension, shown
+    // only in plain mode (a scene image would otherwise cover it anyway).
+    {
+      const wm = L.watermark
+      const hasTex = !!wm.texture && wm.texture.width > 2
+      wm.visible = hasTex && !bgScene
+      if (wm.visible) {
+        const k = (Math.min(W, H) * 0.45) / wm.texture.width
+        wm.scale.set(k)
+        wm.x = cx
+        wm.y = cy
+      }
+    }
+
     // ── 1b. Front layer (foreground objects from interior) ───────────────
     const frontUrl = (bgMode === 'interior' && interior?.frontOssUrl)
       ? resolveUrl(interior.frontOssUrl) : ''
@@ -776,12 +813,14 @@ export default function CanvasStage({
       frameX0 = posCenterX - outerW / 2
       frameY0 = posCenterY - outerH / 2
     } else {
-      // Default viewport cap — fits frame to 55% W / 65% H of canvas.
-      // Every ratio (including Custom) renders at this same viewport fit so
-      // switching ratio always lands at zoom 1 with no zoom-out: the cm
-      // dimensions only choose orientation + aspect, never the preview scale.
-      const maxW = Math.max(W * 0.55, 280)
-      const maxH = Math.max(H * 0.65, 280)
+      // Default viewport cap — fits frame to 55% W / 65% H of canvas, then
+      // scaled down by FRAME_FIT so the frame renders ~25% smaller on the
+      // editor canvas. Every ratio (including Custom) renders at this same
+      // viewport fit so switching ratio always lands at zoom 1 with no
+      // zoom-out: the cm dimensions only choose orientation + aspect.
+      const FRAME_FIT = 0.75
+      const maxW = Math.max(W * 0.55, 280) * FRAME_FIT
+      const maxH = Math.max(H * 0.65, 280) * FRAME_FIT
       const fitByW = maxW / aspectRatio <= maxH
       outerW = fitByW ? maxW : maxH * aspectRatio
       outerH = fitByW ? maxW / aspectRatio : maxH

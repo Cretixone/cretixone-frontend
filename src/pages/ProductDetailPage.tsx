@@ -5,6 +5,7 @@ import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { Button } from '@/components/ui/button'
 import { Lightbox } from '@/components/Lightbox'
+import { ReviewsSection } from '@/components/ReviewsSection'
 import { useEditorStore } from '@/store/editorStore'
 import { useFetchFrameByIdQuery, useFetchFrameSizesQuery } from '@/store/api/apiSlice'
 import { formatOMR, formatOMRRate } from '@/lib/format'
@@ -58,9 +59,10 @@ export default function ProductDetailPage() {
     [frameSizes],
   )
 
-  // Spec sheet (Rabbet Depth removed per product decision).
+  // Spec sheet — these labels are intentionally hidden from the storefront.
+  const HIDDEN_SPECS = new Set(['Rabbet Depth', 'Image / Art Sizes', 'Substrates'])
   const specEntries = frame
-    ? Object.entries(frame.specifications ?? {}).filter(([label]) => label !== 'Rabbet Depth')
+    ? Object.entries(frame.specifications ?? {}).filter(([label]) => !HIDDEN_SPECS.has(label))
     : []
 
   // Match the landing/products body theme (white bg, black text).
@@ -101,6 +103,18 @@ export default function ProductDetailPage() {
       return formatOMR(total)
     }
     return `${formatOMRRate(frame.pricePerCm)} / cm`
+  })()
+
+  // Display-only "was" price (struck-through). Same formula as the real price
+  // but from oldPricePerCm — never fed into any calculation. Only shown when
+  // it's a genuine higher "was" price.
+  const oldPriceLabel = (() => {
+    const old = frame?.oldPricePerCm ?? 0
+    if (!frame || old <= 0 || old <= frame.pricePerCm) return null
+    if (selectedFrameSize) {
+      return formatOMR(old * (selectedFrameSize.widthCm + selectedFrameSize.lengthCm) * 2)
+    }
+    return `${formatOMRRate(old)} / cm`
   })()
 
   // "Upload a preview image" opens the editor (with this frame, when we have
@@ -145,6 +159,8 @@ export default function ProductDetailPage() {
             subtitle={frame?.categorySlug ? frame.categorySlug.replace(/-/g, ' ') : 'Custom picture frame'}
             sizes={sizes}
             priceLabel={priceLabel}
+            oldPriceLabel={oldPriceLabel}
+            showService={(frame?.specifications?.['Frame Type'] ?? '').toLowerCase() === 'floating'}
             service={service}
             onService={setService}
             size={size}
@@ -167,22 +183,21 @@ export default function ProductDetailPage() {
 
         {/* Specifications */}
         {specEntries.length > 0 && (
-          <section className="mt-10 max-w-4xl">
-            <h2 className="text-xl font-semibold text-brand-navy">Product Details</h2>
-            <h3 className="mt-4 text-sm font-semibold text-foreground">Specifications</h3>
-            <dl className="mt-3 grid grid-cols-1 gap-x-10 gap-y-0 sm:grid-cols-2">
+          <section className="mt-10 max-w-lg">
+            <h2 className="text-xl font-bold text-brand-navy">Product Details</h2>
+            <dl className="mt-5 space-y-3 text-[13px]">
               {specEntries.map(([label, value]) => (
-                <div
-                  key={label}
-                  className="flex items-center justify-between gap-4 border-b border-black/[0.06] py-2.5 text-sm"
-                >
+                <div key={label} className="grid grid-cols-[150px_1fr] gap-4">
                   <dt className="font-semibold text-foreground">{label}:</dt>
-                  <dd className="text-right text-foreground/70">{value}</dd>
+                  <dd className="text-foreground/70">{value}</dd>
                 </div>
               ))}
             </dl>
           </section>
         )}
+
+        {/* Reviews + write-a-review form */}
+        <ReviewsSection frameId={id ? Number(id) : 0} />
       </main>
 
       <Footer />
@@ -286,22 +301,26 @@ function BuyPanel({
   subtitle,
   sizes,
   priceLabel,
+  oldPriceLabel,
   service,
   onService,
   size,
   onSize,
   onUpload,
+  showService,
   className,
 }: {
   title: string
   subtitle: string
   sizes: string[]
   priceLabel: string
+  oldPriceLabel: string | null
   service: string
   onService: (id: string) => void
   size: string
   onSize: (s: string) => void
   onUpload: () => void
+  showService: boolean
   className?: string
 }) {
   return (
@@ -313,14 +332,16 @@ function BuyPanel({
         {subtitle}
       </p>
 
-      {/* Service */}
-      <p className="mt-6 text-base font-semibold text-foreground">
-        Choose Your Service
-      </p>
-      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {SERVICES.map((s) => {
-          const selected = service === s.id
-          return (
+      {/* Service — only shown for floating frames */}
+      {showService && (
+        <>
+          <p className="mt-6 text-base font-semibold text-foreground">
+            Choose Your Service
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {SERVICES.map((s) => {
+              const selected = service === s.id
+              return (
             <button
               key={s.id}
               type="button"
@@ -350,9 +371,11 @@ function BuyPanel({
                 </span>
               </span>
             </button>
-          )
-        })}
-      </div>
+              )
+            })}
+          </div>
+        </>
+      )}
 
       {/* Size + upload */}
       <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
@@ -382,6 +405,11 @@ function BuyPanel({
           <span className="text-2xl font-bold text-brand-navy tabular-nums">
             {priceLabel}
           </span>
+          {oldPriceLabel && (
+            <del className="text-base font-medium text-foreground/40 tabular-nums">
+              {oldPriceLabel}
+            </del>
+          )}
         </div>
         <Button
           variant="navy"

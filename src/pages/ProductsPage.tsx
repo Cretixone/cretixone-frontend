@@ -10,7 +10,7 @@ import {
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { cn } from '@/lib/utils'
-import { useFetchFramesPageQuery, useFetchFrameSizesQuery } from '@/store/api/apiSlice'
+import { useFetchFacetsQuery, useFetchFramesPageQuery, useFetchFrameSizesQuery } from '@/store/api/apiSlice'
 import { Pagination } from '@/components/ui/pagination'
 import { formatOMR, formatOMRRate } from '@/lib/format'
 import type { ApiFrame } from '@/types/api'
@@ -29,109 +29,21 @@ const BANNER_IMAGES = [
 ]
 
 // ── Filter configuration — labels + counts mirror the Figma spec ───────────
+type FilterGroupKey = 'material' | 'type' | 'color'
+
 interface FilterOption {
+  value: string // stable value sent to the API (category slug or type/colour name)
   label: string
   count: number
 }
 interface FilterGroup {
-  key: string
+  key: FilterGroupKey
   title: string
   options: FilterOption[]
   collapsedAfter?: number // show "show N more" beyond this many
 }
 
-const FILTER_GROUPS: FilterGroup[] = [
-  {
-    key: 'material',
-    title: 'Frame Material',
-    options: [
-      { label: 'Wood', count: 15 },
-      { label: 'Metal', count: 2 },
-    ],
-  },
-  {
-    key: 'type',
-    title: 'Frame Type',
-    options: [
-      { label: 'Floating', count: 10 },
-      { label: 'Rustic', count: 18 },
-    ],
-  },
-  {
-    key: 'color',
-    title: 'Frame Color',
-    collapsedAfter: 7,
-    options: [
-      { label: 'Black', count: 8 },
-      { label: 'White', count: 7 },
-      { label: 'Brown', count: 3 },
-      { label: 'Silver', count: 1 },
-      { label: 'Black & White', count: 16 },
-      { label: 'Bronze', count: 5 },
-      { label: 'Gold', count: 13 },
-      { label: 'Natural', count: 4 },
-      { label: 'Walnut', count: 6 },
-      { label: 'Espresso', count: 2 },
-    ],
-  },
-  {
-    key: 'decor',
-    title: 'Decor Style',
-    options: [
-      { label: 'Modern', count: 15 },
-      { label: 'Rustic', count: 2 },
-      { label: 'Traditional', count: 1 },
-    ],
-  },
-  {
-    key: 'width',
-    title: 'Frame With',
-    options: [{ label: 'Narrow: Less than 1½"', count: 6 }],
-  },
-  {
-    key: 'art',
-    title: 'Art Type',
-    options: [
-      { label: 'Canvas', count: 3 },
-      { label: 'Paper', count: 4 },
-    ],
-  },
-]
-
 const SORT_OPTIONS = ['Popularity', 'Newest', 'Price: Low to High', 'Price: High to Low']
-
-// ── Faceted filtering ──────────────────────────────────────────────────────
-// The frame API carries no material/colour/depth metadata, so we derive a
-// stable facet value per frame+group from the frame id. Same frame always maps
-// to the same option, so checking a box reliably narrows the grid while the
-// full Figma filter set stays intact.
-function facetFor(frameId: number, group: FilterGroup): string {
-  let h = Math.abs(frameId)
-  for (let i = 0; i < group.key.length; i++) {
-    h = (h * 31 + group.key.charCodeAt(i)) | 0
-  }
-  const idx = Math.abs(h) % group.options.length
-  return group.options[idx].label
-}
-
-// Standard faceted logic: OR within a group, AND across groups.
-function filterFrames(frames: ApiFrame[], selected: Set<string>): ApiFrame[] {
-  if (selected.size === 0) return frames
-  const byGroup = FILTER_GROUPS.map((group) => ({
-    group,
-    picked: group.options
-      .map((o) => `${group.key}::${o.label}`)
-      .filter((id) => selected.has(id)),
-  })).filter((g) => g.picked.length > 0)
-
-  if (byGroup.length === 0) return frames
-
-  return frames.filter((frame) =>
-    byGroup.every(({ group, picked }) =>
-      picked.includes(`${group.key}::${facetFor(frame.id, group)}`),
-    ),
-  )
-}
 
 export default function ProductsPage() {
   // Landing pages set body bg/color manually (see LandingPage) since the
@@ -151,8 +63,7 @@ export default function ProductsPage() {
   const [searchParams] = useSearchParams()
   const category = searchParams.get('category')
 
-  // Selected filter checkboxes — keyed "groupKey::label". The frame API carries
-  // no material/colour metadata yet, so these only narrow the current page.
+  // Selected filter checkboxes — keyed "groupKey::value".
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -162,19 +73,59 @@ export default function ProductsPage() {
     })
   const reset = () => setSelected(new Set())
 
-  // Server-side pagination (DB LIMIT/OFFSET). Reset to page 1 on category change.
+  // Filter facets (categories / frame types / frame colours) with usage counts,
+  // built dynamically from admin-managed data.
+  const { data: facets } = useFetchFacetsQuery()
+  const filterGroups: FilterGroup[] = useMemo(() => {
+    if (!facets) return []
+    return [
+      {
+        key: 'material',
+        title: 'Frame Material',
+        options: facets.categories.map((c) => ({ value: c.slug, label: c.name, count: c.count })),
+      },
+      {
+        key: 'type',
+        title: 'Frame Type',
+        options: facets.frameTypes.map((t) => ({ value: t.name, label: t.name, count: t.count })),
+      },
+      {
+        key: 'color',
+        title: 'Frame Color',
+        collapsedAfter: 7,
+        options: facets.frameColors.map((c) => ({ value: c.name, label: c.name, count: c.count })),
+      },
+    ]
+  }, [facets])
+
+  // Selected values per group (OR within a group, AND across groups on the API).
+  const pickedFor = (key: FilterGroupKey) =>
+    (filterGroups.find((g) => g.key === key)?.options ?? [])
+      .filter((o) => selected.has(`${key}::${o.value}`))
+      .map((o) => o.value)
+  const materialSel = pickedFor('material')
+  const typeSel = pickedFor('type')
+  const colorSel = pickedFor('color')
+  // Sidebar "Frame Material" drives the category filter; otherwise a footer
+  // ?category= link scopes the page.
+  const categorySel = materialSel.length ? materialSel : category ? [category] : []
+
+  // Server-side pagination + filtering. Reset to page 1 when any filter changes.
   const [page, setPage] = useState(1)
-  useEffect(() => setPage(1), [category])
+  const filterKey = [category, ...[...selected].sort()].join('|')
+  useEffect(() => setPage(1), [filterKey])
+
   const { data, isLoading, isError } = useFetchFramesPageQuery({
     page,
     limit: PAGE_SIZE,
-    category: category ?? undefined,
+    category: categorySel.length ? categorySel : undefined,
+    frameType: typeSel.length ? typeSel : undefined,
+    color: colorSel.length ? colorSel : undefined,
   })
   const total = data?.total ?? 0
   const pageCount = data?.pageCount ?? 1
   const current = data?.page ?? page
-  // Facet checkboxes narrow the fetched page (decorative until real facets land).
-  const paged = useMemo(() => filterFrames(data?.items ?? [], selected), [data, selected])
+  const paged = data?.items ?? []
 
   // Cheapest real size preset drives each card's "from" price — the same
   // presets the detail page prices by, so the two pages agree (instead of the
@@ -224,7 +175,7 @@ export default function ProductsPage() {
 
         {/* Filters + product grid */}
         <div className="mt-8 flex flex-col gap-8 lg:flex-row lg:gap-10">
-          <FilterSidebar selected={selected} onToggle={toggle} onReset={reset} />
+          <FilterSidebar groups={filterGroups} selected={selected} onToggle={toggle} onReset={reset} />
 
           <section className="min-w-0 flex-1">
             <ResultsBar count={total} loading={isLoading} />
@@ -284,10 +235,12 @@ function BannerStrip() {
 
 // ── Left filter sidebar ────────────────────────────────────────────────────
 function FilterSidebar({
+  groups,
   selected,
   onToggle,
   onReset,
 }: {
+  groups: FilterGroup[]
   selected: Set<string>
   onToggle: (id: string) => void
   onReset: () => void
@@ -310,7 +263,7 @@ function FilterSidebar({
       </div>
 
       <div className="mt-4 space-y-3">
-        {FILTER_GROUPS.map((group) => (
+        {groups.map((group) => (
           <FilterGroupBlock
             key={group.key}
             group={group}
@@ -363,7 +316,7 @@ function FilterGroupBlock({
       {open && (
         <ul className="mt-3 space-y-2.5">
           {visible.map((opt) => {
-            const id = `${group.key}::${opt.label}`
+            const id = `${group.key}::${opt.value}`
             const checked = selected.has(id)
             return (
               <li key={id}>

@@ -71,6 +71,7 @@ interface CretixFrameDto {
   portraitUrl: string
   squareUrl: string | null
   pricePerCm: number
+  oldPricePerCm: number
   sizeFrom: number
   sizeTo: number
   sortOrder: number
@@ -147,6 +148,7 @@ const mapCretixFrame = (f: CretixFrameDto): ApiFrame => ({
   portraitUrl: resolveBackendUrl(f.portraitUrl),
   squareUrl: f.squareUrl ? resolveBackendUrl(f.squareUrl) : null,
   pricePerCm: f.pricePerCm ?? 0,
+  oldPricePerCm: f.oldPricePerCm ?? 0,
   sizeFrom: f.sizeFrom ?? 0,
   sizeTo: f.sizeTo ?? 0,
   description: f.description ?? null,
@@ -155,6 +157,12 @@ const mapCretixFrame = (f: CretixFrameDto): ApiFrame => ({
 })
 
 // ─── RTK Query API ───────────────────────────────────────────────────────────
+
+export interface FrameFacets {
+  categories: { id: string; name: string; slug: string; count: number }[]
+  frameTypes: { name: string; count: number }[]
+  frameColors: { name: string; color: string; count: number }[]
+}
 
 export const apiSlice = createApi({
   reducerPath: 'api',
@@ -175,13 +183,24 @@ export const apiSlice = createApi({
     // ── Paginated active frames (storefront products grid) ─────────────────
     fetchFramesPage: builder.query<
       { items: ApiFrame[]; total: number; page: number; pageCount: number },
-      { page: number; limit: number; category?: string }
+      {
+        page: number
+        limit: number
+        category?: string[]
+        frameType?: string[]
+        color?: string[]
+      }
     >({
-      query: ({ page, limit, category }) => ({
-        url: `/frames/public?page=${page}&limit=${limit}${category ? `&category=${encodeURIComponent(category)}` : ''}`,
-        method: 'GET',
-        client: 'cretix',
-      }),
+      query: ({ page, limit, category, frameType, color }) => {
+        const parts = [`page=${page}`, `limit=${limit}`]
+        const add = (key: string, vals?: string[]) => {
+          if (vals && vals.length) parts.push(`${key}=${encodeURIComponent(vals.join(','))}`)
+        }
+        add('category', category)
+        add('frameType', frameType)
+        add('color', color)
+        return { url: `/frames/public?${parts.join('&')}`, method: 'GET', client: 'cretix' }
+      },
       transformResponse: (
         response: CretixApiOk<CretixFrameDto[]> & {
           meta?: { page: number; limit: number; total: number; pageCount: number }
@@ -212,6 +231,16 @@ export const apiSlice = createApi({
         client: 'cretix',
       }),
       transformResponse: (response: CretixApiOk<CretixCategoryDto[]>) => response.data,
+    }),
+
+    // ── Filter facets (categories / frame types / frame colours + counts) ──
+    fetchFacets: builder.query<FrameFacets, void>({
+      query: () => ({
+        url: '/frames/facets',
+        method: 'GET',
+        client: 'cretix',
+      }),
+      transformResponse: (response: CretixApiOk<FrameFacets>) => response.data,
     }),
 
     // ── Frame sizes (Cretixone backend — admin-managed presets) ────────────
@@ -300,6 +329,7 @@ export const {
   useFetchFramesPageQuery,
   useFetchFrameByIdQuery,
   useFetchFrameCategoriesQuery,
+  useFetchFacetsQuery,
   useFetchFrameSizesQuery,
   useFetchInteriorsQuery,
   useFetchSceneryQuery,
