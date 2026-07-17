@@ -164,6 +164,18 @@ export interface FrameFacets {
   frameColors: { name: string; color: string; count: number }[]
 }
 
+export interface FrameTypePublic {
+  id: string
+  name: string
+  imageUrl: string | null
+}
+export interface FrameColorPublic {
+  id: string
+  name: string
+  color: string
+  imageUrl: string | null
+}
+
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: routingBaseQuery,
@@ -253,6 +265,33 @@ export const apiSlice = createApi({
       transformResponse: (response: CretixApiOk<CretixFrameSizeDto[]>) => response.data,
     }),
 
+    // ── Frame types / colours (public — storefront showcase) ───────────────
+    fetchFrameTypesPublic: builder.query<FrameTypePublic[], void>({
+      query: () => ({ url: '/frame-types/public', method: 'GET', client: 'cretix' }),
+      transformResponse: (
+        response: CretixApiOk<{ id: string; name: string; imageUrl: string | null }[]>,
+      ) =>
+        response.data.map((t) => ({
+          id: t.id,
+          name: t.name,
+          imageUrl: t.imageUrl ? resolveBackendUrl(t.imageUrl) : null,
+        })),
+    }),
+    fetchFrameColorsPublic: builder.query<FrameColorPublic[], void>({
+      query: () => ({ url: '/frame-colors/public', method: 'GET', client: 'cretix' }),
+      transformResponse: (
+        response: CretixApiOk<
+          { id: string; name: string; color: string; imageUrl: string | null }[]
+        >,
+      ) =>
+        response.data.map((c) => ({
+          id: c.id,
+          name: c.name,
+          color: c.color,
+          imageUrl: c.imageUrl ? resolveBackendUrl(c.imageUrl) : null,
+        })),
+    }),
+
     // ── Interiors (type 50) ────────────────────────────────────────────────
     fetchInteriors: builder.query<ApiScene[], void>({
       query: () => ({
@@ -330,6 +369,8 @@ export const {
   useFetchFrameByIdQuery,
   useFetchFrameCategoriesQuery,
   useFetchFacetsQuery,
+  useFetchFrameTypesPublicQuery,
+  useFetchFrameColorsPublicQuery,
   useFetchFrameSizesQuery,
   useFetchInteriorsQuery,
   useFetchSceneryQuery,

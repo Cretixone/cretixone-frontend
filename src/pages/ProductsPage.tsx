@@ -59,12 +59,23 @@ export default function ProductsPage() {
     }
   }, [])
 
-  // Footer "Products" links pass ?category=<slug>. Server paginates by category.
+  // Footer "Products" links pass ?category=<slug> (server paginates by category).
+  // The landing Frame Types / Frame Colors cards deep-link here with ?type= and
+  // ?color= (comma-separated) — seed those into the selection so the grid opens
+  // pre-filtered.
   const [searchParams] = useSearchParams()
   const category = searchParams.get('category')
 
   // Selected filter checkboxes — keyed "groupKey::value".
-  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [selected, setSelected] = useState<Set<string>>(() => {
+    const init = new Set<string>()
+    const seed = (key: FilterGroupKey, raw: string | null) =>
+      raw?.split(',').forEach((v) => v.trim() && init.add(`${key}::${v.trim()}`))
+    seed('type', searchParams.get('type'))
+    seed('color', searchParams.get('color'))
+    seed('material', searchParams.get('material'))
+    return init
+  })
   const toggle = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev)
@@ -99,10 +110,12 @@ export default function ProductsPage() {
   }, [facets])
 
   // Selected values per group (OR within a group, AND across groups on the API).
+  // Parsed straight from the selection set so URL-seeded filters apply even
+  // before the facet list has loaded.
   const pickedFor = (key: FilterGroupKey) =>
-    (filterGroups.find((g) => g.key === key)?.options ?? [])
-      .filter((o) => selected.has(`${key}::${o.value}`))
-      .map((o) => o.value)
+    [...selected]
+      .filter((id) => id.startsWith(`${key}::`))
+      .map((id) => id.slice(key.length + 2))
   const materialSel = pickedFor('material')
   const typeSel = pickedFor('type')
   const colorSel = pickedFor('color')

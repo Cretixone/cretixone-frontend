@@ -136,6 +136,8 @@ export function ReviewsSection({ frameId }: { frameId: number }) {
   const [agree, setAgree] = useState(false)
   const [agreeError, setAgreeError] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  // The write-a-review form is hidden until the user clicks "Write Review".
+  const [showForm, setShowForm] = useState(false)
 
   // Report popup state
   const [reportFor, setReportFor] = useState<Review | null>(null)
@@ -160,6 +162,18 @@ export function ReviewsSection({ frameId }: { frameId: number }) {
 
   const scrollToForm = () =>
     formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+  // "Write Review" reveals the form (hidden by default) and scrolls to it. If
+  // it's already open, just scroll — the reveal effect below fires only on the
+  // hidden→shown transition, once the form has actually rendered into the DOM.
+  const openForm = () => {
+    if (showForm) scrollToForm()
+    else setShowForm(true)
+  }
+
+  useEffect(() => {
+    if (showForm) formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [showForm])
 
   const handleLike = async (r: Review) => {
     if (!isAuthenticated || !user) {
@@ -271,7 +285,7 @@ export function ReviewsSection({ frameId }: { frameId: number }) {
         </h2>
         <button
           type="button"
-          onClick={scrollToForm}
+          onClick={openForm}
           className="rounded-full border border-brand-navy/30 px-5 py-2 text-sm font-medium text-brand-navy transition hover:bg-brand-navy/5"
         >
           Write Review
@@ -299,7 +313,8 @@ export function ReviewsSection({ frameId }: { frameId: number }) {
         )}
       </div>
 
-      {/* Write-a-review form */}
+      {/* Write-a-review form — hidden until "Write Review" is clicked */}
+      {showForm && (
       <div ref={formRef} className="mt-12 scroll-mt-28">
         <h2 className="max-w-md text-2xl font-bold leading-snug text-brand-navy">
           We&apos;d Love To Hear About Your Experience!
@@ -397,6 +412,7 @@ export function ReviewsSection({ frameId }: { frameId: number }) {
           </button>
         </form>
       </div>
+      )}
 
       {/* Report-a-review popup */}
       <Dialog open={!!reportFor} onOpenChange={(o) => !o && setReportFor(null)}>

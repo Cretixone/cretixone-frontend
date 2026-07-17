@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ChevronDown, Home, Maximize2, Upload } from 'lucide-react'
+import { toast } from 'sonner'
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { Button } from '@/components/ui/button'
 import { Lightbox } from '@/components/Lightbox'
 import { ReviewsSection } from '@/components/ReviewsSection'
 import { useEditorStore } from '@/store/editorStore'
+import { useCartStore } from '@/store/cartStore'
 import { useFetchFrameByIdQuery, useFetchFrameSizesQuery } from '@/store/api/apiSlice'
 import { formatOMR, formatOMRRate } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -129,6 +131,36 @@ export default function ProductDetailPage() {
     navigate(id ? `/editor?frame=${id}` : '/editor')
   }
 
+  // Add-to-cart needs a concrete, priced size preset to compute the line's
+  // dimensions + price (same formula as the editor: pricePerCm × perimeter × 2).
+  const addItem = useCartStore((s) => s.addItem)
+  const canAddToCart = !!frame && frame.pricePerCm > 0 && !!selectedFrameSize
+
+  const handleAddToCart = () => {
+    if (!frame || !selectedFrameSize || frame.pricePerCm <= 0) return
+    const w = selectedFrameSize.widthCm
+    const h = selectedFrameSize.lengthCm
+    addItem({
+      frameId: frame.id,
+      name: frame.name || 'Picture Frame',
+      subtitle: selectedFrameSize.name,
+      thumbnail: frame.imgUrl || gallery[0],
+      widthCm: w,
+      heightCm: h,
+      pricePerItem: frame.pricePerCm * (w + h) * 2,
+      // No mat/MDF chosen from the product page — those are editor-only options.
+      matSizeId: null,
+      matSizeName: null,
+      matPrice: 0,
+      matColorId: null,
+      matColorName: null,
+      mdfId: null,
+      mdfName: null,
+      mdfPrice: 0,
+    })
+    toast.success('Product added to cart successfully')
+  }
+
   return (
     <div className="min-h-screen w-full bg-white font-sans text-[#000000]">
       <header className="relative z-30">
@@ -166,6 +198,8 @@ export default function ProductDetailPage() {
             size={size}
             onSize={setSize}
             onUpload={openEditor}
+            onAddToCart={handleAddToCart}
+            canAddToCart={canAddToCart}
             className="lg:flex-1"
           />
         </div>
@@ -307,6 +341,8 @@ function BuyPanel({
   size,
   onSize,
   onUpload,
+  onAddToCart,
+  canAddToCart,
   showService,
   className,
 }: {
@@ -320,6 +356,8 @@ function BuyPanel({
   size: string
   onSize: (s: string) => void
   onUpload: () => void
+  onAddToCart: () => void
+  canAddToCart: boolean
   showService: boolean
   className?: string
 }) {
@@ -414,10 +452,11 @@ function BuyPanel({
         <Button
           variant="navy"
           size="lg"
-          onClick={onUpload}
+          onClick={onAddToCart}
+          disabled={!canAddToCart}
           className="min-w-[140px] rounded-lg"
         >
-          Preview in editor
+          Add to cart
         </Button>
       </div>
     </div>
