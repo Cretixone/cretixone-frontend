@@ -3,6 +3,7 @@ import { PillNav } from '@/components/landing/Navbar'
 import Banner from '@/components/landing/Banner'
 import Categories from '@/components/landing/Categories'
 import Journey from '@/components/landing/Journey'
+import FrameShowcase from '@/components/landing/FrameShowcase'
 import Spaces from '@/components/landing/Spaces'
 import PhotoStocks from '@/components/landing/PhotoStocks'
 import Testimonials from '@/components/landing/Testimonials'
@@ -30,11 +31,11 @@ export default function LandingPage() {
         <Categories />
         <Journey />
         <div className="relative">
+          <FrameShowcase />
           <Spaces />
           <PhotoStocks />
           <Testimonials />
           <BusinessCustomers />
-
           <div
             aria-hidden
             className="pointer-events-none absolute rounded-[50%]"
