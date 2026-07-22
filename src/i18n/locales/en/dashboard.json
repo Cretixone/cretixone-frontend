@@ -1,0 +1,48 @@
+{
+  "account": {
+    "title": "My Account",
+    "signedInAs": "Signed in as {{name}} · {{email}}"
+  },
+  "nav": {
+    "profile": "Profile",
+    "myOrders": "My Orders",
+    "logout": "Log out"
+  },
+  "continueShopping": "Continue shopping",
+  "orders": {
+    "loadError": "Couldn't load your orders. Please refresh.",
+    "empty": {
+      "title": "No orders yet",
+      "subtitle": "When you place an order it will show up here.",
+      "browseFrames": "Browse frames"
+    },
+    "placed": "Placed {{date}}",
+    "total": "Total",
+    "dimensions": "{{width}}×{{height}} cm",
+    "matLabel": "Mat: {{name}}",
+    "mdfLabel": "MDF: {{name}}",
+    "qtyLabel": "Qty {{qty}}",
+    "status": {
+      "pending": "Pending",
+      "processing": "Processing",
+      "shipped": "Shipped",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    }
+  },
+  "profile": {
+    "title": "Profile settings",
+    "subtitle": "Update your contact and shipping details.",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "email": "Email",
+    "emailHelp": "Email can't be changed.",
+    "phone": "Phone",
+    "address": "Address",
+    "zipcode": "Zip code",
+    "save": "Save changes",
+    "validation": {
+      "required": "Required"
+    }
+  }
+}

@@ -1,54 +1,22 @@
 import { motion, type Variants } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
+import { useDirection } from '@/hooks/useDirection'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Pagination, Autoplay } from 'swiper/modules'
-import TestimonialCard, {
-  type TestimonialCardProps,
-} from '@/components/landing/TestimonialCard'
+import TestimonialCard from '@/components/landing/TestimonialCard'
 
 import 'swiper/css'
 import 'swiper/css/pagination'
 
-const TESTIMONIALS: TestimonialCardProps[] = [
-  {
-    name: 'Viezh Robert',
-    location: 'Warsaw, Poland',
-    avatar: 'https://randomuser.me/api/portraits/men/22.jpg',
-    rating: 4.5,
-    quote:
-      'Wow… I am very happy to use this VPN, it turned out to be more than my expectations and so far there have been no problems. LaslesVPN always the best.',
-  },
-  {
-    name: 'Yessica Christy',
-    location: 'Shanxi, China',
-    avatar: 'https://randomuser.me/api/portraits/men/39.jpg',
-    rating: 4.5,
-    quote:
-      'Wow… I am very happy to use this VPN, it turned out to be more than my expectations and so far there have been no problems. LaslesVPN always the best.',
-  },
-  {
-    name: 'Kim Young Jou',
-    location: 'Seoul, South Korea',
-    avatar: 'https://randomuser.me/api/portraits/men/40.jpg',
-    rating: 4.5,
-    quote:
-      'Wow… I am very happy to use this VPN, it turned out to be more than my expectations and so far there have been no problems. LaslesVPN always the best.',
-  },
-  {
-    name: 'Maria Stevens',
-    location: 'Lisbon, Portugal',
-    avatar: 'https://randomuser.me/api/portraits/men/41.jpg',
-    rating: 4.5,
-    quote:
-      'Wow… I am very happy to use this VPN, it turned out to be more than my expectations and so far there have been no problems. LaslesVPN always the best.',
-  },
-  {
-    name: 'Daniel Park',
-    location: 'Vancouver, Canada',
-    avatar: 'https://randomuser.me/api/portraits/men/42.jpg',
-    rating: 4.5,
-    quote:
-      'Wow… I am very happy to use this VPN, it turned out to be more than my expectations and so far there have been no problems. LaslesVPN always the best.',
-  },
+// User-facing name/location/quote are resolved from the `landingSections`
+// namespace at render time (key = `testimonials.items.<id>`); only avatar and
+// rating stay hardcoded here.
+const TESTIMONIALS: { id: string; avatar: string; rating: number }[] = [
+  { id: 'viezh', avatar: 'https://randomuser.me/api/portraits/men/22.jpg', rating: 4.5 },
+  { id: 'yessica', avatar: 'https://randomuser.me/api/portraits/men/39.jpg', rating: 4.5 },
+  { id: 'kim', avatar: 'https://randomuser.me/api/portraits/men/40.jpg', rating: 4.5 },
+  { id: 'maria', avatar: 'https://randomuser.me/api/portraits/men/41.jpg', rating: 4.5 },
+  { id: 'daniel', avatar: 'https://randomuser.me/api/portraits/men/42.jpg', rating: 4.5 },
 ]
 
 const fadeUp: Variants = {
@@ -57,6 +25,8 @@ const fadeUp: Variants = {
 }
 
 export default function Testimonials() {
+  const { t } = useTranslation('landingSections')
+  const dir = useDirection()
   return (
     <section
       aria-labelledby="testimonials-title"
@@ -78,14 +48,13 @@ export default function Testimonials() {
             className="text-3xl tracking-tight text-brand-navy font-medium md:text-5xl"
             variants={fadeUp}
           >
-            Trusted by Thousands of Happy Customer
+            {t('testimonials.title')}
           </motion.h2>
           <motion.p
             className="mx-auto mt-3 max-w-xxl tracking-[0.09em] text-sm text-foreground/80 md:text-base"
             variants={fadeUp}
           >
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-            eiusmod tempor incididunt ut lab
+            {t('testimonials.subtitle')}
           </motion.p>
         </motion.div>
 
@@ -97,6 +66,8 @@ export default function Testimonials() {
           transition={{ duration: 0.7, ease: 'easeOut', delay: 0.15 }}
         >
           <Swiper
+            key={dir}
+            dir={dir}
             modules={[Pagination, Autoplay]}
             slidesPerView={1}
             spaceBetween={40}
@@ -114,9 +85,15 @@ export default function Testimonials() {
             }}
             className="!pb-[70px]"
           >
-            {TESTIMONIALS.map((t) => (
-              <SwiperSlide key={t.name} className="!h-auto">
-                <TestimonialCard {...t} />
+            {TESTIMONIALS.map((item) => (
+              <SwiperSlide key={item.id} className="!h-auto">
+                <TestimonialCard
+                  name={t(`testimonials.items.${item.id}.name`)}
+                  location={t(`testimonials.items.${item.id}.location`)}
+                  quote={t(`testimonials.items.${item.id}.quote`)}
+                  avatar={item.avatar}
+                  rating={item.rating}
+                />
               </SwiperSlide>
             ))}
           </Swiper>

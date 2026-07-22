@@ -1,0 +1,41 @@
+{
+  "breadcrumb": {
+    "aria": "Breadcrumb",
+    "current": "Canvas Prints"
+  },
+  "title": "Canvas Prints",
+  "intro": "Add a touch of timeless style to your space with these classic picture frames. With clean lines and versatile finishes, these frames bring a sense of balance and sophistication to any setting. Whether you're framing cherished art or a standout photo, these curated classics never go out of style.",
+  "filter": {
+    "heading": "Filter",
+    "reset": "Reset",
+    "groups": {
+      "material": "Frame Material",
+      "type": "Frame Type",
+      "color": "Frame Color"
+    },
+    "showMore": "show {{count}} more",
+    "showLess": "show less"
+  },
+  "sort": {
+    "label": "Sort:",
+    "options": {
+      "popularity": "Popularity",
+      "newest": "Newest",
+      "priceLowHigh": "Price: Low to High",
+      "priceHighLow": "Price: High to Low"
+    }
+  },
+  "results": {
+    "count": "{{count}} Result",
+    "loading": "Loading…"
+  },
+  "states": {
+    "empty": "No frames available right now.",
+    "error": "Couldn't load frames. Please try again."
+  },
+  "card": {
+    "from": "from",
+    "fallbackSubtitle": "Picture frame",
+    "imageAlt": "Picture frame"
+  }
+}

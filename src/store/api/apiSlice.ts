@@ -167,11 +167,13 @@ export interface FrameFacets {
 export interface FrameTypePublic {
   id: string
   name: string
+  nameAr: string | null
   imageUrl: string | null
 }
 export interface FrameColorPublic {
   id: string
   name: string
+  nameAr: string | null
   color: string
   imageUrl: string | null
 }
@@ -269,11 +271,14 @@ export const apiSlice = createApi({
     fetchFrameTypesPublic: builder.query<FrameTypePublic[], void>({
       query: () => ({ url: '/frame-types/public', method: 'GET', client: 'cretix' }),
       transformResponse: (
-        response: CretixApiOk<{ id: string; name: string; imageUrl: string | null }[]>,
+        response: CretixApiOk<
+          { id: string; name: string; nameAr: string | null; imageUrl: string | null }[]
+        >,
       ) =>
         response.data.map((t) => ({
           id: t.id,
           name: t.name,
+          nameAr: t.nameAr ?? null,
           imageUrl: t.imageUrl ? resolveBackendUrl(t.imageUrl) : null,
         })),
     }),
@@ -281,12 +286,13 @@ export const apiSlice = createApi({
       query: () => ({ url: '/frame-colors/public', method: 'GET', client: 'cretix' }),
       transformResponse: (
         response: CretixApiOk<
-          { id: string; name: string; color: string; imageUrl: string | null }[]
+          { id: string; name: string; nameAr: string | null; color: string; imageUrl: string | null }[]
         >,
       ) =>
         response.data.map((c) => ({
           id: c.id,
           name: c.name,
+          nameAr: c.nameAr ?? null,
           color: c.color,
           imageUrl: c.imageUrl ? resolveBackendUrl(c.imageUrl) : null,
         })),

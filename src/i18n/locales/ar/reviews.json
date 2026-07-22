@@ -1,0 +1,72 @@
+{
+  "heading": "التقييمات",
+  "writeReview": "اكتب تقييمًا",
+  "loading": "جارٍ تحميل التقييمات…",
+  "empty": "لا توجد تقييمات بعد — كن أول من يشارك تجربته.",
+  "reportThisReview": "الإبلاغ عن هذا التقييم",
+  "time": {
+    "justNow": "الآن",
+    "minutesAgo_one": "منذ دقيقة",
+    "minutesAgo_two": "منذ دقيقتين",
+    "minutesAgo_few": "منذ {{count}} دقائق",
+    "minutesAgo_many": "منذ {{count}} دقيقة",
+    "minutesAgo_other": "منذ {{count}} دقيقة",
+    "hoursAgo_one": "منذ ساعة",
+    "hoursAgo_two": "منذ ساعتين",
+    "hoursAgo_few": "منذ {{count}} ساعات",
+    "hoursAgo_many": "منذ {{count}} ساعة",
+    "hoursAgo_other": "منذ {{count}} ساعة",
+    "daysAgo_one": "منذ يوم",
+    "daysAgo_two": "منذ يومين",
+    "daysAgo_few": "منذ {{count}} أيام",
+    "daysAgo_many": "منذ {{count}} يومًا",
+    "daysAgo_other": "منذ {{count}} يوم",
+    "monthsAgo_one": "منذ شهر",
+    "monthsAgo_two": "منذ شهرين",
+    "monthsAgo_few": "منذ {{count}} أشهر",
+    "monthsAgo_many": "منذ {{count}} شهرًا",
+    "monthsAgo_other": "منذ {{count}} شهر",
+    "yearsAgo_one": "منذ سنة",
+    "yearsAgo_two": "منذ سنتين",
+    "yearsAgo_few": "منذ {{count}} سنوات",
+    "yearsAgo_many": "منذ {{count}} سنة",
+    "yearsAgo_other": "منذ {{count}} سنة"
+  },
+  "form": {
+    "heading": "يسعدنا أن نسمع عن تجربتك!",
+    "rateQuestion": "كيف تقيّم تجربتك؟",
+    "ratingRequired": "يرجى اختيار تقييم بالنجوم للإرسال.",
+    "writeReviewLabel": "اكتب تقييمك",
+    "bodyPlaceholder": "شارك تجربتك…",
+    "titleLabel": "اكتب عنوانًا لتقييمك",
+    "titlePlaceholder": "لخّص تجربتك…",
+    "charCount": "{{current}}/{{max}} حرف",
+    "consent": "أؤكد أن هذا التقييم يستند إلى تجربتي الشخصية ويعكس رأيي الصادق في هذه المنشأة. ليس لديّ أي علاقة شخصية أو تجارية بهذه المنشأة ولم أتلقَّ أي حافز أو مبلغ منها لكتابة هذا التقييم. كما أدرك أن Cretixone تطبّق سياسة صارمة لعدم التسامح مطلقًا مع التقييمات المزيّفة.",
+    "consentRequired": "يرجى تأكيد العبارة أعلاه لإرسال تقييمك.",
+    "submit": "إرسال",
+    "submitting": "جارٍ الإرسال…"
+  },
+  "report": {
+    "title": "الإبلاغ عن التقييم",
+    "description": "أخبرنا لماذا تبلّغ عن هذا التقييم.",
+    "reasons": {
+      "spam": "بريد مزعج أو إعلانات",
+      "offensive": "مسيء أو غير لائق",
+      "fake": "مزيّف أو مضلّل",
+      "offTopic": "خارج الموضوع / غير ذي صلة",
+      "other": "أخرى"
+    },
+    "otherPlaceholder": "يرجى وصف السبب…",
+    "selectReason": "يرجى اختيار سبب.",
+    "describeReason": "يرجى وصف السبب.",
+    "cancel": "إلغاء",
+    "submit": "إرسال البلاغ",
+    "submitting": "جارٍ الإرسال…"
+  },
+  "toast": {
+    "reportSubmitted": "تم إرسال البلاغ — شكرًا لإبلاغنا.",
+    "selectRating": "يرجى اختيار تقييم بالنجوم",
+    "addTitleAndReview": "يرجى إضافة عنوان وتقييمك",
+    "reviewSubmitted": "تم إرسال التقييم"
+  }
+}

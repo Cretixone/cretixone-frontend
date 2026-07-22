@@ -1,0 +1,44 @@
+{
+  "nav": {
+    "allFrames": "جميع الإطارات",
+    "customPrints": "طباعة مخصصة",
+    "stockPhoto": "صور جاهزة",
+    "customMirror": "مرآة مخصصة",
+    "gifts": "الهدايا",
+    "about": "من نحن"
+  },
+  "actions": {
+    "uploadPhoto": "رفع صورة",
+    "login": "تسجيل الدخول",
+    "logout": "تسجيل الخروج",
+    "myAccount": "حسابي",
+    "myOrders": "طلباتي",
+    "cart": "عربة التسوق",
+    "language": "اللغة"
+  },
+  "footer": {
+    "tagline": "رؤيتنا هي توفير الراحة والمساعدة في زيادة مبيعات عملك.",
+    "headings": {
+      "products": "المنتجات",
+      "company": "الشركة",
+      "socials": "وسائل التواصل"
+    },
+    "products": {
+      "allFrames": "جميع الإطارات",
+      "framedPrints": "المطبوعات المؤطرة",
+      "canvasPrints": "مطبوعات الكانفاس",
+      "photoPrints": "طباعة الصور",
+      "gifts": "الهدايا",
+      "mirrorWorks": "أعمال المرايا",
+      "customMirrors": "مرايا مخصصة"
+    },
+    "company": {
+      "about": "من نحن",
+      "team": "الفريق",
+      "testimonials": "آراء العملاء"
+    },
+    "rightsReserved": "جميع الحقوق محفوظة",
+    "privacy": "الخصوصية والسياسة",
+    "terms": "الشروط والأحكام"
+  }
+}

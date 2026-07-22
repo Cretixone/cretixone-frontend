@@ -1,0 +1,46 @@
+{
+  "aria": {
+    "breadcrumb": "Breadcrumb",
+    "viewImage": "View image {{number}}",
+    "viewFullscreen": "View fullscreen"
+  },
+  "breadcrumb": {
+    "canvasPrints": "Canvas Prints"
+  },
+  "gallery": {
+    "previewAlt": "Product preview"
+  },
+  "services": {
+    "frameOnly": {
+      "title": "Frame Only",
+      "desc": "Frame it yourself, effortlessly."
+    },
+    "printFrame": {
+      "title": "Print + Frame",
+      "desc": "Printed, framed & wall-ready."
+    }
+  },
+  "buyPanel": {
+    "chooseService": "Choose Your Service",
+    "frameSize": "Frame Size",
+    "customSizes": "Custom sizes set in the editor",
+    "uploadPreview": "Upload a preview image",
+    "addToCart": "Add to cart"
+  },
+  "sizePicker": {
+    "moreSizes": "More sizes"
+  },
+  "description": {
+    "heading": "Product Description"
+  },
+  "details": {
+    "heading": "Product Details"
+  },
+  "toast": {
+    "addedToCart": "Product added to cart successfully"
+  },
+  "fallback": {
+    "pictureFrame": "Picture Frame",
+    "customPictureFrame": "Custom picture frame"
+  }
+}

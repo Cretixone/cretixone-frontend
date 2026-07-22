@@ -1,15 +1,16 @@
 import { motion, type Variants } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import StackSlider from '@/components/landing/StackSlider'
 
 const SPACES = [
-  { label: 'Bedroom', image: '/images/webp/slide-1.webp' },
-  { label: 'Living Room', image: '/images/webp/slide-2.webp' },
-  { label: 'Office', image: '/images/webp/slide-3.webp' },
-  { label: 'Bathroom', image: '/images/webp/slide-4.webp' },
-  { label: 'Kitchen', image: '/images/webp/slide-5.webp' },
-  { label: 'Hallway', image: '/images/webp/slide-6.webp' },
-  { label: 'Lounge', image: '/images/webp/slide-7.webp' },
-  { label: 'Dining', image: '/images/webp/slide-8.webp' },
+  { labelKey: 'spaces.items.bedroom', image: '/images/webp/slide-1.webp' },
+  { labelKey: 'spaces.items.livingRoom', image: '/images/webp/slide-2.webp' },
+  { labelKey: 'spaces.items.office', image: '/images/webp/slide-3.webp' },
+  { labelKey: 'spaces.items.bathroom', image: '/images/webp/slide-4.webp' },
+  { labelKey: 'spaces.items.kitchen', image: '/images/webp/slide-5.webp' },
+  { labelKey: 'spaces.items.hallway', image: '/images/webp/slide-6.webp' },
+  { labelKey: 'spaces.items.lounge', image: '/images/webp/slide-7.webp' },
+  { labelKey: 'spaces.items.dining', image: '/images/webp/slide-8.webp' },
 ]
 
 const fadeUp: Variants = {
@@ -18,6 +19,7 @@ const fadeUp: Variants = {
 }
 
 export default function Spaces() {
+  const { t } = useTranslation('landing')
   return (
     <section
       aria-labelledby="spaces-title"
@@ -39,15 +41,15 @@ export default function Spaces() {
             className="font-display text-3xl leading-tight font-medium tracking-tight text-brand-navy md:text-5xl"
             variants={fadeUp}
           >
-            Make Your Home and Office
+            {t('spaces.title.line1')}
             <br />
-            Dreams Come True
+            {t('spaces.title.line2')}
           </motion.h2>
           <motion.p
             className="mx-auto mt-4 max-w-xxl tracking-[0.09em] text-sm text-foreground/80 md:text-base"
             variants={fadeUp}
           >
-            Where Vision Meets Perfect Design.
+            {t('spaces.description')}
           </motion.p>
         </motion.div>
 
@@ -58,7 +60,9 @@ export default function Spaces() {
           viewport={{ once: true, margin: '-60px' }}
           transition={{ duration: 0.8, ease: 'easeOut', delay: 0.15 }}
         >
-          <StackSlider slides={SPACES} />
+          <StackSlider
+            slides={SPACES.map((s) => ({ label: t(s.labelKey), image: s.image }))}
+          />
         </motion.div>
       </div>
     </section>

@@ -1,0 +1,61 @@
+{
+  "business": {
+    "titleLine1": "Cretix for Business",
+    "titleLine2": "Customers",
+    "description": "Partnering with galleries, designers, and businesses to deliver exceptional framing solutions.",
+    "quote": "The Curator Lab is the only lab we trust with our limited edition series. Their attention to detail is simply unmatched.",
+    "quoteAuthor": "— Director, NYC Modern Gallery",
+    "form": {
+      "ariaLabel": "Request partnership",
+      "companyName": "Company Name",
+      "fullName": "Full Name",
+      "phoneNumber": "Phone Number",
+      "email": "Email",
+      "message": "Message",
+      "submit": "Request Partnership"
+    }
+  },
+  "photoStocks": {
+    "title": "Photo Stocks",
+    "description": "A Digital platform for photographers and artist-",
+    "launchingSoon": "launching soon...",
+    "imageAlt": "Photographer and designer working with the Cretixone marketplace"
+  },
+  "testimonials": {
+    "title": "Trusted by Thousands of Happy Customer",
+    "subtitle": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut lab",
+    "items": {
+      "viezh": {
+        "name": "Viezh Robert",
+        "location": "Warsaw, Poland",
+        "quote": "Wow… I am very happy to use this VPN, it turned out to be more than my expectations and so far there have been no problems. LaslesVPN always the best."
+      },
+      "yessica": {
+        "name": "Yessica Christy",
+        "location": "Shanxi, China",
+        "quote": "Wow… I am very happy to use this VPN, it turned out to be more than my expectations and so far there have been no problems. LaslesVPN always the best."
+      },
+      "kim": {
+        "name": "Kim Young Jou",
+        "location": "Seoul, South Korea",
+        "quote": "Wow… I am very happy to use this VPN, it turned out to be more than my expectations and so far there have been no problems. LaslesVPN always the best."
+      },
+      "maria": {
+        "name": "Maria Stevens",
+        "location": "Lisbon, Portugal",
+        "quote": "Wow… I am very happy to use this VPN, it turned out to be more than my expectations and so far there have been no problems. LaslesVPN always the best."
+      },
+      "daniel": {
+        "name": "Daniel Park",
+        "location": "Vancouver, Canada",
+        "quote": "Wow… I am very happy to use this VPN, it turned out to be more than my expectations and so far there have been no problems. LaslesVPN always the best."
+      }
+    }
+  },
+  "frameShowcase": {
+    "frameTypes": "Frame Types",
+    "frameColors": "Frame Colors",
+    "inspiredByOman": "Inspired by Oman",
+    "omanDescription": "From majestic mountains and golden deserts to historic forts and breathtaking coastlines, Oman represents a perfect balance of tradition, culture, and modern progress. Our journey is inspired by the country's rich heritage, remarkable architecture, and welcoming spirit."
+  }
+}

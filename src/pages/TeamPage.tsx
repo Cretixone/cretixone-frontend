@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { ChevronRight, Home } from 'lucide-react'
 import { motion, type Variants } from 'framer-motion'
@@ -32,7 +33,8 @@ const fadeUp: Variants = {
 // backdrop is a coral circle we draw with a div, plus a small pink accent dot.
 interface Member {
   name: string
-  role: string
+  /** Key under the `team.roles.*` i18n namespace (role/title is translated). */
+  roleKey: string
   avatar: string
   /** Blob background PNG. Omitted for the founder (drawn as a circle instead). */
   bg?: string
@@ -51,48 +53,48 @@ interface Member {
 const TEAM: Member[] = [
   {
     name: 'Ayesha Saboor',
-    role: 'Founder & Executive Chairperson',
+    roleKey: 'founder',
     avatar: '/images/vector-circle.png',
     circleColor: '#FC6875',
     dotColor: '#FC6875',
   },
   {
     name: 'Yousif Al Jabri',
-    role: 'CEO & Managing Director',
+    roleKey: 'ceo',
     avatar: '/images/vector-1-avatar.png',
     bg: '/images/vector-1.png',
     avatarPos: 'right-[15px]',
   },
   {
     name: 'Shantunu Chowdhury',
-    role: 'Chief Finance & Corporate Affairs Officer',
+    roleKey: 'cfo',
     avatar: '/images/vector-2-avatar.png',
     bg: '/images/vector-2.png',
     avatarPos: 'right-[0px]',
   },
   {
     name: 'Kavinda',
-    role: 'Graphic Designer / Design Consultant',
+    roleKey: 'designer',
     avatar: '/images/vector-3-avatar.png',
     bg: '/images/vector-3.png',
   },
   {
     name: 'Faisal',
-    role: 'Lead Framer / Sales — Indoor',
+    roleKey: 'framerIndoor',
     avatar: '/images/vector-4-avatar.png',
     bg: '/images/vector-4.png',
     avatarPos: 'right-[0px]',
   },
   {
     name: 'Babar Khan',
-    role: 'Lead Framer / Workshop Manager',
+    roleKey: 'framerWorkshop',
     avatar: '/images/vector-5-avatar.png',
     bg: '/images/vector-5.png',
     avatarPos: 'right-[0px]',
   },
   {
     name: 'Ahsan Farooq',
-    role: 'Glass Specialist / Sales — Outdoor & Installer',
+    roleKey: 'glassSpecialist',
     avatar: '/images/vector-6-avatar.png',
     bg: '/images/vector-6.png',
     avatarPos: 'right-[20px]',
@@ -100,6 +102,8 @@ const TEAM: Member[] = [
 ]
 
 export default function TeamPage() {
+  const { t } = useTranslation('pages')
+
   useEffect(() => {
     const prevBg = document.body.style.background
     const prevColor = document.body.style.color
@@ -144,14 +148,14 @@ export default function TeamPage() {
       <section className="relative pt-24 md:pt-32">
         <div className="mx-auto max-w-[1100px] px-5 md:px-8 lg:px-10">
           <nav
-            aria-label="Breadcrumb"
+            aria-label={t('team.breadcrumb.aria')}
             className="flex items-center gap-2 text-xs text-brand-navy md:text-[13px]"
           >
-            <Link to="/" aria-label="Home" className="inline-flex items-center transition hover:opacity-80">
+            <Link to="/" aria-label={t('team.breadcrumb.home')} className="inline-flex items-center transition hover:opacity-80">
               <Home className="h-3.5 w-3.5" strokeWidth={2} />
             </Link>
             <ChevronRight className="h-3 w-3 text-brand-navy/60" />
-            <span className="text-brand-navy/70">Team</span>
+            <span className="text-brand-navy/70">{t('team.breadcrumb.current')}</span>
           </nav>
 
           <motion.div
@@ -164,21 +168,16 @@ export default function TeamPage() {
               variants={fadeUp}
               className="text-[30px] font-medium leading-[1.1] tracking-tight text-brand-navy sm:text-[38px] md:text-[44px]"
             >
-              The Creative Minds
+              {t('team.hero.titleLine1')}
               <br />
-              Behind the Work We Love
+              {t('team.hero.titleLine2')}
             </motion.h1>
 
             <motion.p
               variants={fadeUp}
               className="mx-auto mt-6  text-sm leading-relaxed text-foreground/60 md:text-[15px]"
             >
-              Our team is a group of passionate experts driven by creativity,
-              innovation, and a commitment to excellence. We bring together
-              diverse skills and experiences to build solutions that make a real
-              difference. United by shared values and a bold vision, we work
-              together to push boundaries, embrace new ideas, and turn challenges
-              into opportunities.
+              {t('team.hero.subtitle')}
             </motion.p>
           </motion.div>
         </div>
@@ -210,6 +209,7 @@ export default function TeamPage() {
 // vector — her backdrop is a coral circle, and her avatar is clipped to it with
 // a plain `overflow-hidden rounded-full`.
 function TeamCard({ member }: { member: Member }) {
+  const { t } = useTranslation('pages')
   return (
     <motion.div
       variants={cardVariant}
@@ -283,7 +283,7 @@ function TeamCard({ member }: { member: Member }) {
         {member.name}
       </h3>
       <p className="mt-1 text-[12px] leading-snug text-foreground/55 md:text-[13px]">
-        {member.role}
+        {t(`team.roles.${member.roleKey}`)}
       </p>
     </motion.div>
   )

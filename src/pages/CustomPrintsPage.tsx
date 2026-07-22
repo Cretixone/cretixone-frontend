@@ -1,8 +1,10 @@
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { motion, type Variants } from 'framer-motion'
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
+import { useLangStore } from '@/store/langStore'
 
 // ── Animation variants ───────────────────────────────────────────────────────
 const stagger: Variants = {
@@ -19,42 +21,35 @@ const fadeUp: Variants = {
 // NOTE: `img` paths are placeholders using existing photos. Drop real print
 // photos in /public/images and update the paths to match.
 const CATEGORIES = [
-  { title: 'Photo Prints', img: '/images/prints/print-1.png' },
-  { title: 'Canvas Prints', img: '/images/prints/print-2.jpg' },
-  { title: 'Fine Art Prints', img: '/images/prints/print-3.jpg' },
-  { title: 'Large Format Printing', img: '/images/prints/print-4.jpg' },
-  { title: 'Personalized Wall Décor', img: '/images/prints/print-5.jpg' },
-  { title: 'Corporate Printing Solutions', img: '/images/prints/print-6.jpg' },
+  { titleKey: 'photoPrints', img: '/images/prints/print-1.png' },
+  { titleKey: 'canvasPrints', img: '/images/prints/print-2.jpg' },
+  { titleKey: 'fineArt', img: '/images/prints/print-3.jpg' },
+  { titleKey: 'largeFormat', img: '/images/prints/print-4.jpg' },
+  { titleKey: 'wallDecor', img: '/images/prints/print-5.jpg' },
+  { titleKey: 'corporate', img: '/images/prints/print-6.jpg' },
 ]
 
 // ── "Why Choose Us?" features ─────────────────────────────────────────────────
 // `highlight` paints the cream background — arranged as a diagonal checkerboard
-// across the 2-column grid, matching the design.
+// across the 2-column grid, matching the design. `titleKey` resolves the title
+// via i18n; every feature shares the same translated description.
 interface Feature {
   icon: string
-  title: string
-  desc: string
+  titleKey: string
   highlight: boolean
 }
 
-const FEATURE_DESC =
-  'Crafted from premium materials, our custom prints offer exceptional clarity, lasting durability, and an elegant finish for every space.'
-
 const FEATURES: Feature[] = [
-  { icon: '/images/svg/premium.svg', title: 'Premium quality materials', desc: FEATURE_DESC, highlight: true },
-  { icon: '/images/svg/fade.svg', title: 'Fade-resistant printing', desc: FEATURE_DESC, highlight: false },
-  { icon: '/images/svg/multiple-size.svg', title: 'Multiple sizes available', desc: FEATURE_DESC, highlight: false },
-  { icon: '/images/svg/fast.svg', title: 'Fast production', desc: FEATURE_DESC, highlight: true },
-  { icon: '/images/svg/professional.svg', title: 'Professional finishing', desc: FEATURE_DESC, highlight: true },
+  { icon: '/images/svg/premium.svg', titleKey: 'premium', highlight: true },
+  { icon: '/images/svg/fade.svg', titleKey: 'fadeResistant', highlight: false },
+  { icon: '/images/svg/multiple-size.svg', titleKey: 'multipleSizes', highlight: false },
+  { icon: '/images/svg/fast.svg', titleKey: 'fastProduction', highlight: true },
+  { icon: '/images/svg/professional.svg', titleKey: 'professional', highlight: true },
 ]
 
-// Landscape used for the fanned pills in the closing section (placeholder).
-const PILL_IMG = '/images/slide-3.jpg'
-
-const SECTION_BLURB =
-  "Whether it's family portraits, wedding memories, travel adventures, artwork, or business branding, we provide vibrant colors, sharp details, and long-lasting quality using premium printing materials."
-
 export default function CustomPrintsPage() {
+  const { t } = useTranslation('pages')
+  const isRtl = useLangStore((s) => s.isRtl)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -87,7 +82,9 @@ export default function CustomPrintsPage() {
           style={{
             width: '1530px',
             height: '1530px',
-            left: '-707px',
+            ...(isRtl
+              ? { right: '-707px' }
+              : { left: '-707px' }),
             top: '-374px',
             background: '#D9D9D9',
             filter: 'blur(303.35px)',
@@ -99,7 +96,10 @@ export default function CustomPrintsPage() {
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              'linear-gradient(90deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.58) 30%, rgba(255,255,255,0) 56%)',
+              isRtl
+                ? 'linear-gradient(270deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.58) 30%, rgba(255,255,255,0) 56%)'
+                : 'linear-gradient(90deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.58) 30%, rgba(255,255,255,0) 56%)'
+
           }}
         />
 
@@ -114,20 +114,17 @@ export default function CustomPrintsPage() {
           <motion.div className="max-w-3xl" initial="hidden" animate="show" variants={stagger}>
             <motion.h1 variants={fadeUp} className="font-bold leading-[1.03] tracking-tight">
               <span className="block text-[42px] text-brand-navy sm:text-6xl md:text-7xl">
-                Turn Your Memories
+                {t('customPrints.hero.titleLine1')}
               </span>
               <span className="mt-1 block text-[28px] text-black sm:text-4xl md:text-5xl">
-                into Timeless Art
+                {t('customPrints.hero.titleLine2')}
               </span>
             </motion.h1>
             <motion.p
               variants={fadeUp}
               className="mt-8 max-w-md text-sm leading-relaxed text-black"
             >
-              At Creative One Business SPC, we believe every photograph tells a
-              story. Our Custom Print service allows you to transform your
-              favorite memories into premium-quality prints crafted with
-              precision and care.
+              {t('customPrints.hero.text')}
             </motion.p>
           </motion.div>
 
@@ -139,7 +136,7 @@ export default function CustomPrintsPage() {
             transition={{ duration: 0.5, ease: 'easeOut', delay: 0.35 }}
             className="mt-12 inline-flex w-fit items-center justify-center self-start rounded-full bg-brand-gold px-8 py-3.5 text-sm font-semibold uppercase tracking-wide text-white shadow-md transition hover:bg-brand-gold/90"
           >
-            Buy Your Design
+            {t('customPrints.hero.cta')}
           </motion.button>
         </div>
       </section>
@@ -157,13 +154,13 @@ export default function CustomPrintsPage() {
               variants={fadeUp}
               className="text-[28px] font-medium tracking-tight text-brand-navy sm:text-[40px]"
             >
-              Custom Prints
+              {t('customPrints.prints.title')}
             </motion.h2>
             <motion.p
               variants={fadeUp}
               className="mx-auto mt-3 max-w-xl text-[13px] leading-relaxed text-foreground/60 md:text-sm"
             >
-              {SECTION_BLURB}
+              {t('customPrints.sectionBlurb')}
             </motion.p>
           </motion.div>
 
@@ -175,12 +172,12 @@ export default function CustomPrintsPage() {
             viewport={{ once: true, margin: '-60px' }}
           >
             {CATEGORIES.map((c) => (
-              <motion.div key={c.title} variants={fadeUp} className="group text-center">
+              <motion.div key={c.titleKey} variants={fadeUp} className="group text-center">
                 <div className="overflow-hidden rounded-3xl bg-black/5">
                   <div className="h-[380px] w-full">
                     <img
                       src={c.img}
-                      alt={c.title}
+                      alt={t(`customPrints.categories.${c.titleKey}`)}
                       loading="lazy"
                       draggable={false}
                       className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
@@ -188,7 +185,7 @@ export default function CustomPrintsPage() {
                   </div>
                 </div>
                 <p className="mt-3 text-[15px] font-normal text-black md:text-base">
-                  {c.title}
+                  {t(`customPrints.categories.${c.titleKey}`)}
                 </p>
               </motion.div>
             ))}
@@ -208,13 +205,13 @@ export default function CustomPrintsPage() {
               variants={fadeUp}
               className="text-[28px] font-medium tracking-tight text-brand-navy sm:text-[40px]"
             >
-              Why Choose Us?
+              {t('customPrints.whyChoose.title')}
             </motion.h2>
             <motion.p
               variants={fadeUp}
               className="mx-auto mt-3 max-w-xl text-[13px] leading-relaxed text-foreground/60 md:text-sm"
             >
-              {SECTION_BLURB}
+              {t('customPrints.sectionBlurb')}
             </motion.p>
           </motion.div>
 
@@ -227,7 +224,7 @@ export default function CustomPrintsPage() {
           >
             {FEATURES.map((f) => (
               <motion.div
-                key={f.title}
+                key={f.titleKey}
                 variants={fadeUp}
                 className={
                   'rounded-2xl p-7 ' + (f.highlight ? 'bg-[#FBF6EC]' : 'bg-transparent hover:bg-[#FBF6EC] transition-colors')
@@ -235,10 +232,10 @@ export default function CustomPrintsPage() {
               >
                 <img src={f.icon} className="w-[70px]" />
                 <h3 className="mt-5 text-[15px] font-semibold text-brand-navy md:text-base">
-                  {f.title}
+                  {t(`customPrints.features.${f.titleKey}`)}
                 </h3>
                 <p className="mt-2 text-[12px] leading-relaxed text-foreground/55">
-                  {f.desc}
+                  {t('customPrints.featureDesc')}
                 </p>
               </motion.div>
             ))}
@@ -255,7 +252,7 @@ export default function CustomPrintsPage() {
               transition={{ duration: 0.6, ease: 'easeOut' }}
               className="max-w-md text-[26px] font-medium leading-snug tracking-tight text-black sm:text-[34px]"
             >
-              Bring your ideas to life with custom prints made just for you.
+              {t('customPrints.ctaSection.title')}
             </motion.h2>
 
             {/* Fanned landscape pills */}

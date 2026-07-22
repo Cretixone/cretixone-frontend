@@ -1,5 +1,6 @@
 import 'react-phone-number-input/style.css'
 import PhoneInput from 'react-phone-number-input'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -15,7 +16,9 @@ interface Props {
  * library renders a country <select> + flag + text input; we style the
  * surrounding box and let `.PhoneInputInput` go borderless (see index.css).
  */
-export function PhoneField({ value, onChange, placeholder = 'Phone number', invalid, id }: Props) {
+export function PhoneField({ value, onChange, placeholder, invalid, id }: Props) {
+  const { t } = useTranslation('auth')
+  const resolvedPlaceholder = placeholder ?? t('fields.phonePlaceholder')
   return (
     <div
       className={cn(
@@ -31,7 +34,10 @@ export function PhoneField({ value, onChange, placeholder = 'Phone number', inva
         defaultCountry="OM"
         value={value}
         onChange={onChange}
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
+        // Phone numbers always read left-to-right, even in Arabic/RTL. The
+        // library's flag + input row still mirrors correctly via flexbox+dir.
+        numberInputProps={{ dir: 'ltr' }}
         className="w-full"
       />
     </div>

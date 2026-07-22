@@ -1,4 +1,8 @@
+import { cn } from '@/lib/utils'
+import { useLangStore } from '@/store/langStore'
 import { motion } from 'framer-motion'
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const HERO_IMAGE = '/images/webp/photo-stocks.webp'
 const STOCKS_VECTOR = '/images/svg/stocks-vector.svg'
@@ -6,24 +10,20 @@ const STOCKS_VECTOR = '/images/svg/stocks-vector.svg'
 // Tailwind arbitrary value: padding that lines up with the rest of the page's
 // 1400px-centered content area on wide viewports, while never going below 2.5rem.
 //   max(2.5rem, (100vw - 1400px) / 2 + 2.5rem)
-const CONTENT_LEFT_PAD =
-  'md:pl-[max(2.5rem,calc((100vw-1400px)/2+2.5rem))]'
 
 export default function PhotoStocks() {
+  const { t } = useTranslation('landingSections')
+  const isRtl = useLangStore((s) => s.isRtl)
+  const CONTENT_LEFT_PAD = useMemo(
+    () => (isRtl ? 'md:pl-[max(2.5rem,calc((100vw-1400px)/2+2.5rem))]' : 'md:pr-0 md:pl-[max(2.5rem,calc((100vw-1400px)/2+2.5rem))]'),
+    [isRtl]
+  )
+
   return (
     <section
       aria-labelledby="photostocks-title"
       className="relative w-full overflow-hidden bg-white pb-20 md:pb-24 lg:pb-28"
     >
-      {/* Decorative gold "C" vector — perfectly centered in the section
-          (equal distance from top/bottom and left/right). The SVG has its own
-          opacity (0.25) and gold-gradient stroke baked in, so it renders as a
-          soft watermark. Hidden on mobile where the columns stack and the
-          vector would sit awkwardly between rows.
-
-          Note: x/y translate is part of the motion target (not a Tailwind
-          class) because framer-motion's `scale` transform would otherwise
-          override `-translate-x-1/2 -translate-y-1/2`. */}
       <motion.img
         src={STOCKS_VECTOR}
         alt=""
@@ -35,13 +35,9 @@ export default function PhotoStocks() {
         className="pointer-events-none absolute left-1/2 top-1/2 z-0 hidden h-auto w-[460px] md:block lg:w-[560px] xl:w-[640px]"
       />
 
-      {/* No max-width wrapper here on purpose: the right-hand image is
-          intentionally full-bleed to the page edge, while the left-hand text
-          still lines up with content from the other sections. */}
       <div className="relative z-10 grid grid-cols-1 items-center gap-12 md:grid-cols-2 md:gap-10 lg:gap-16">
-        {/* Left column: copy */}
         <motion.div
-          className={`relative px-6 md:pr-0 ${CONTENT_LEFT_PAD}`}
+          className={`relative px-6 ${CONTENT_LEFT_PAD}`}
           initial={{ opacity: 0, x: -40 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true, margin: '-80px' }}
@@ -65,7 +61,7 @@ export default function PhotoStocks() {
                 show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: 'easeOut' } },
               }}
             >
-              Photo Stocks
+              {t('photoStocks.title')}
             </motion.h2>
             <motion.p
               className="mt-6 max-w-md text-sm text-foreground/75 md:text-[17px]"
@@ -74,7 +70,7 @@ export default function PhotoStocks() {
                 show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
               }}
             >
-              A Digital platform for photographers and artist-
+              {t('photoStocks.description')}
             </motion.p>
             <motion.p
               className=" text-3xl font-dm font-medium tracking-tight text-foreground sm:text-4xl lg:text-4xl"
@@ -83,7 +79,7 @@ export default function PhotoStocks() {
                 show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
               }}
             >
-              launching soon...
+              {t('photoStocks.launchingSoon')}
             </motion.p>
           </motion.div>
         </motion.div>
@@ -96,10 +92,16 @@ export default function PhotoStocks() {
           transition={{ duration: 0.9, ease: 'easeOut', delay: 0.1 }}
         >
           <div
-            className="ml-auto aspect-[666/587] w-full max-w-[666px] overflow-hidden bg-neutral-200 bg-cover bg-center shadow-[0_24px_50px_-20px_rgba(0,0,0,0.25)] ring-1 ring-black/5 rounded-[28px] md:rounded-r-none md:rounded-l-[32px]"
+            className={cn(
+              'ml-auto aspect-[666/587] md:rounded-l-[32px] w-full max-w-[666px] overflow-hidden bg-neutral-200 bg-cover bg-center shadow-[0_24px_50px_-20px_rgba(0,0,0,0.25)] ring-1 ring-black/5 rounded-[28px]',
+              {
+                'md:rounded-l-[32px]': isRtl,
+                'md:rounded-r-none': !isRtl,
+              }
+            )}
             style={{ backgroundImage: `url(${HERO_IMAGE})` }}
             role="img"
-            aria-label="Photographer and designer working with the Cretixone marketplace"
+            aria-label={t('photoStocks.imageAlt')}
           />
         </motion.div>
       </div>

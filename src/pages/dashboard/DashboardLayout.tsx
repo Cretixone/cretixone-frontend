@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { LogOut, Package, User as UserIcon } from 'lucide-react'
 import Navbar from '@/components/landing/Navbar'
@@ -8,11 +9,12 @@ import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
 
 const NAV = [
-  { to: '/dashboard/profile', label: 'Profile', icon: UserIcon },
-  { to: '/dashboard/orders', label: 'My Orders', icon: Package },
+  { to: '/dashboard/profile', labelKey: 'nav.profile', icon: UserIcon },
+  { to: '/dashboard/orders', labelKey: 'nav.myOrders', icon: Package },
 ]
 
 export default function DashboardLayout() {
+  const { t } = useTranslation('dashboard')
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const clear = useAuthStore((s) => s.clear)
@@ -39,10 +41,15 @@ export default function DashboardLayout() {
       <main className="mx-auto max-w-[1200px] px-5 pb-20 pt-10 md:px-8">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold tracking-tight text-brand-navy md:text-3xl">
-            My Account
+            {t('account.title')}
           </h1>
           <p className="mt-1 text-sm text-foreground/55">
-            {user ? `Signed in as ${user.firstName} ${user.lastName} · ${user.email}` : ''}
+            {user
+              ? t('account.signedInAs', {
+                  name: `${user.firstName} ${user.lastName}`,
+                  email: user.email,
+                })
+              : ''}
           </p>
         </div>
 
@@ -50,7 +57,7 @@ export default function DashboardLayout() {
           {/* Sidebar */}
           <aside className="lg:sticky lg:top-24 lg:self-start">
             <nav className="flex gap-2 rounded-2xl border border-black/[0.07] bg-white p-2 shadow-sm lg:flex-col">
-              {NAV.map(({ to, label, icon: Icon }) => (
+              {NAV.map(({ to, labelKey, icon: Icon }) => (
                 <NavLink
                   key={to}
                   to={to}
@@ -64,7 +71,7 @@ export default function DashboardLayout() {
                   }
                 >
                   <Icon className="h-4 w-4" />
-                  {label}
+                  {t(labelKey)}
                 </NavLink>
               ))}
               <button
@@ -72,11 +79,11 @@ export default function DashboardLayout() {
                 className="flex flex-1 items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-medium text-red-500 transition hover:bg-red-50"
               >
                 <LogOut className="h-4 w-4" />
-                Log out
+                {t('nav.logout')}
               </button>
             </nav>
             <Link to="/products" className="mt-3 hidden text-center text-[12px] text-foreground/50 hover:text-brand-navy lg:block">
-              ← Continue shopping
+              ← {t('continueShopping')}
             </Link>
           </aside>
 

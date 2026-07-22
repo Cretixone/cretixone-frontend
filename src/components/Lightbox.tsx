@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -17,6 +18,7 @@ interface Props {
  * close, ← / → to navigate.
  */
 export function Lightbox({ images, index, open, onIndex, onClose }: Props) {
+  const { t } = useTranslation('cart')
   const count = images.length
   const go = (delta: number) => onIndex((index + delta + count) % count)
 
@@ -52,10 +54,10 @@ export function Lightbox({ images, index, open, onIndex, onClose }: Props) {
           onContextMenu={(e) => e.preventDefault()}
           role="dialog"
           aria-modal="true"
-          aria-label="Image viewer"
+          aria-label={t('lightbox.viewer')}
         >
           {/* Close */}
-          <button onClick={onClose} aria-label="Close" className={cn(btn, 'absolute right-4 top-4 z-10 h-10 w-10')}>
+          <button onClick={onClose} aria-label={t('lightbox.close')} className={cn(btn, 'absolute right-4 top-4 z-10 h-10 w-10')}>
             <X className="h-5 w-5" />
           </button>
 
@@ -71,14 +73,14 @@ export function Lightbox({ images, index, open, onIndex, onClose }: Props) {
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); go(-1) }}
-                aria-label="Previous image"
+                aria-label={t('lightbox.prev')}
                 className={cn(btn, 'absolute left-3 top-1/2 z-10 h-11 w-11 -translate-y-1/2 sm:left-6')}
               >
                 <ChevronLeft className="h-6 w-6" />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); go(1) }}
-                aria-label="Next image"
+                aria-label={t('lightbox.next')}
                 className={cn(btn, 'absolute right-3 top-1/2 z-10 h-11 w-11 -translate-y-1/2 sm:right-6')}
               >
                 <ChevronRight className="h-6 w-6" />
@@ -111,7 +113,7 @@ export function Lightbox({ images, index, open, onIndex, onClose }: Props) {
                   key={i}
                   type="button"
                   onClick={() => onIndex(i)}
-                  aria-label={`Go to image ${i + 1}`}
+                  aria-label={t('lightbox.goToImage', { number: i + 1 })}
                   className={cn(
                     'h-12 w-12 shrink-0 overflow-hidden rounded-md border-2 transition',
                     i === index ? 'border-white' : 'border-white/25 opacity-60 hover:opacity-100',

@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { useDirection } from '@/hooks/useDirection'
+import { localizedName } from '@/lib/localizedName'
 import { motion } from 'framer-motion'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import {
@@ -8,6 +11,7 @@ import {
 } from '@/store/api/apiSlice'
 
 import 'swiper/css'
+import { useLangStore } from '@/store/langStore'
 
 // Oman collage — each tile is ABSOLUTELY positioned (as a % of the collage
 // "frame") to reproduce the exact scatter + gaps from the design: a left
@@ -124,7 +128,15 @@ function useIsMobile() {
   return mobile
 }
 
-function OmanFrame({ mobile, style }: { mobile: boolean; style?: React.CSSProperties }) {
+function OmanFrame({
+  mobile,
+  rtl = false,
+  style,
+}: {
+  mobile: boolean
+  rtl?: boolean
+  style?: React.CSSProperties
+}) {
   return (
     <div
       className="relative h-[360px] shrink-0 md:h-[420px] lg:h-[688px]"
@@ -134,12 +146,20 @@ function OmanFrame({ mobile, style }: { mobile: boolean; style?: React.CSSProper
         <div
           key={i}
           className="absolute overflow-hidden bg-black/5 [transform:translateZ(0)] [backface-visibility:hidden]"
-          // <576px → fixed px width (t.mw); ≥576px → % width. Position stays %.
-          style={{ left: t.left, top: t.top, width: mobile ? t.mw : t.width, height: t.height }}
+          style={{
+            ...(rtl ? { right: t.left } : { left: t.left }),
+            top: t.top,
+            width: mobile ? t.mw : t.width,
+            height: t.height,
+          }}
         >
-          {/* eager + async-decode: lazy-loading makes copies pop in (blink) as
-              they scroll into view. Real fix is smaller images (these are huge). */}
-          <img src={t.src} alt="" aria-hidden decoding="async" className="h-full w-full object-cover" />
+          <img
+            src={t.src}
+            alt=""
+            aria-hidden
+            decoding="async"
+            className="h-full w-full object-cover"
+          />
         </div>
       ))}
     </div>
@@ -148,23 +168,59 @@ function OmanFrame({ mobile, style }: { mobile: boolean; style?: React.CSSProper
 
 function OmanMarquee() {
   const mobile = useIsMobile()
+  const isRtl = useLangStore((s) => s.isRtl)
+
+  const xAnimation = useMemo(() => {
+    if (mobile) {
+      return isRtl
+        ? [MOBILE_PERIOD, 0]
+        : [0, -MOBILE_PERIOD]
+    }
+
+    return isRtl
+      ? [`${PERIOD_VW}vw`, '0vw']
+      : ['0vw', `-${PERIOD_VW}vw`]
+  }, [mobile, isRtl])
+
+  const overlapStyle = isRtl
+    ? {
+      marginRight: mobile ? -MOBILE_OVERLAP : `-${OVERLAP_VW}vw`,
+    }
+    : {
+      marginLeft: mobile ? -MOBILE_OVERLAP : `-${OVERLAP_VW}vw`,
+    };
+
   return (
-    <div className="overflow-hidden">
-      <motion.div
-        className="flex w-max will-change-transform [backface-visibility:hidden]"
-        animate={{ x: mobile ? [0, -MOBILE_PERIOD] : ['0vw', `-${PERIOD_VW}vw`] }}
-        transition={{ duration: 20, ease: 'linear', repeat: Infinity }}
-      >
-        <OmanFrame mobile={mobile} />
-        {/* second copy pulled left by the overlap so the repeat seam gap matches
-            the collage's internal gaps instead of the full right margin */}
-        <OmanFrame mobile={mobile} style={{ marginLeft: mobile ? -MOBILE_OVERLAP : `-${OVERLAP_VW}vw` }} />
-      </motion.div>
-    </div>
+    <motion.div
+      className="flex w-max will-change-transform [backface-visibility:hidden]"
+      animate={{ x: xAnimation }}
+      transition={{
+        duration: 20,
+        ease: 'linear',
+        repeat: Infinity,
+      }}
+    >
+      <>
+        {isRtl ? (
+          <>
+            <OmanFrame mobile={mobile} style={overlapStyle} />
+            <OmanFrame mobile={mobile} />
+          </>
+        ) : (
+          <>
+            <OmanFrame mobile={mobile} />
+            <OmanFrame mobile={mobile} style={overlapStyle} />
+          </>
+        )}
+      </>
+    </motion.div>
   )
 }
 
 export default function FrameShowcase() {
+  const { t } = useTranslation('landingSections')
+  const dir = useDirection()
+  const isRtl = dir === 'rtl'
   const { data: frameTypes } = useFetchFrameTypesPublicQuery()
   const { data: frameColors } = useFetchFrameColorsPublicQuery()
 
@@ -173,85 +229,85 @@ export default function FrameShowcase() {
       {/* Frame Types + Frame Colors live inside the page container. Skip the
           whole wrapper (and its padding) when neither list has items. */}
       {(!!frameTypes?.length || !!frameColors?.length) && (
-      <div className="mx-auto max-w-[1400px] px-6 md:px-10">
-        {/* ── Frame Types (slider) ─────────────────────────────────────────── */}
-        {!!frameTypes?.length && (
-          <>
-            <Heading>Frame Types</Heading>
-            <div className="mt-9">
-              <Swiper
-                slidesPerView={1}
-                spaceBetween={18}
-                grabCursor
-                breakpoints={{
-                  576: { slidesPerView: 2 },
-                  768: { slidesPerView: 3 },
-                  1024: { slidesPerView: 4 },
-                }}
-                className="!px-1 !py-2"
-              >
-                {frameTypes.map((t) => (
-                  <SwiperSlide key={t.id}>
-                    <SwatchCard
-                      img={t.imageUrl}
-                      label={t.name}
-                      ratio="h-[385px]"
-                      to={`/products?type=${encodeURIComponent(t.name)}`}
-                    />
-                  </SwiperSlide>
-                ))}
-              </Swiper>
-            </div>
-          </>
-        )}
+        <div className="mx-auto max-w-[1400px] px-6 md:px-10">
+          {/* ── Frame Types (slider) ─────────────────────────────────────────── */}
+          {!!frameTypes?.length && (
+            <>
+              <Heading>{t('frameShowcase.frameTypes')}</Heading>
+              <div className="mt-9">
+                <Swiper
+                  key={dir}
+                  dir={dir}
+                  slidesPerView={1}
+                  spaceBetween={18}
+                  grabCursor
+                  breakpoints={{
+                    576: { slidesPerView: 2 },
+                    768: { slidesPerView: 3 },
+                    1024: { slidesPerView: 4 },
+                  }}
+                  className="!px-1 !py-2"
+                >
+                  {frameTypes.map((t) => (
+                    <SwiperSlide key={t.id}>
+                      <SwatchCard
+                        img={t.imageUrl}
+                        label={localizedName(t, isRtl)}
+                        ratio="h-[385px]"
+                        to={`/products?type=${encodeURIComponent(t.name)}`}
+                      />
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+              </div>
+            </>
+          )}
 
-        {/* ── Frame Colors (slider) ────────────────────────────────────────── */}
-        {!!frameColors?.length && (
-          <div className="mt-16 md:mt-20">
-            <Heading>Frame Colors</Heading>
-            <div className="mt-9">
-              <Swiper
-                slidesPerView={1}
-                spaceBetween={10}
-                grabCursor
-                breakpoints={{
-                  576: { slidesPerView: 3 },
-                  768: { slidesPerView: 4 },
-                  992: { slidesPerView: 5 },
-                  1300: { slidesPerView: 6 },
-                }}
-                className="!px-1 !py-2"
-              >
-                {frameColors.map((c) => (
-                  <SwiperSlide key={c.id}>
-                    <SwatchCard
-                      img={c.imageUrl}
-                      color={c.color}
-                      label={c.name}
-                      ratio="h-[238px]"
-                      contain
-                      to={`/products?color=${encodeURIComponent(c.name)}`}
-                    />
-                  </SwiperSlide>
-                ))}
-              </Swiper>
+          {/* ── Frame Colors (slider) ────────────────────────────────────────── */}
+          {!!frameColors?.length && (
+            <div className="mt-16 md:mt-20">
+              <Heading>{t('frameShowcase.frameColors')}</Heading>
+              <div className="mt-9">
+                <Swiper
+                  key={dir}
+                  dir={dir}
+                  slidesPerView={1}
+                  spaceBetween={10}
+                  grabCursor
+                  breakpoints={{
+                    576: { slidesPerView: 3 },
+                    768: { slidesPerView: 4 },
+                    992: { slidesPerView: 5 },
+                    1300: { slidesPerView: 6 },
+                  }}
+                  className="!px-1 !py-2"
+                >
+                  {frameColors.map((c) => (
+                    <SwiperSlide key={c.id}>
+                      <SwatchCard
+                        img={c.imageUrl}
+                        color={c.color}
+                        label={localizedName(c, isRtl)}
+                        ratio="h-[238px]"
+                        contain
+                        to={`/products?color=${encodeURIComponent(c.name)}`}
+                      />
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
       )}
 
       {/* ── Inspired by Oman ───────────────────────────────────────────────── */}
       <div className="mt-16 md:mt-24">
         {/* heading + copy stay centred within the container */}
         <div className="mx-auto max-w-4xl px-5 text-center">
-          <Heading>Inspired by Oman</Heading>
+          <Heading>{t('frameShowcase.inspiredByOman')}</Heading>
           <p className="mx-auto mt-4 tracking-[0.09em] text-sm text-foreground/80 md:text-base">
-            From majestic mountains and golden deserts to historic forts and
-            breathtaking coastlines, Oman represents a perfect balance of
-            tradition, culture, and modern progress. Our journey is inspired by
-            the country&apos;s rich heritage, remarkable architecture, and
-            welcoming spirit.
+            {t('frameShowcase.omanDescription')}
           </p>
         </div>
 

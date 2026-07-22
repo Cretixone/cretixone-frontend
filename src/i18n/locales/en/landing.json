@@ -1,0 +1,59 @@
+{
+  "banner": {
+    "title": {
+      "line1": "Your Legacy,",
+      "line2": "Archived in Elegance."
+    },
+    "description": "We combine museum-grade materials with modern design to create custom frames that don't just protect your art—they elevate it to gallery status.",
+    "cta": "Buy Your Design"
+  },
+  "categories": {
+    "title": "Frame Your Moments. Elevate Your Space",
+    "description": "Museum-quality frames crafted for your memories. Designed online. Delivered ready to hang.",
+    "viewAll": "View All",
+    "items": {
+      "frames": "Frames",
+      "printing": "Printing",
+      "mirror": "Mirror & Glasses",
+      "gifts": "Gifts"
+    }
+  },
+  "journey": {
+    "title": "A Curated Journey",
+    "description": "A thoughtfully crafted path designed to guide every step with purpose and precision.",
+    "steps": {
+      "upload": {
+        "iconAlt": "Upload icon",
+        "title": "Upload your photo",
+        "description": "Upload your photo or artwork."
+      },
+      "style": {
+        "iconAlt": "Frame and matting icon",
+        "title": "Choose your Style",
+        "description": "Select your frame and matting"
+      },
+      "delivery": {
+        "iconAlt": "Gift box delivery icon",
+        "title": "Gallery- ready delivery",
+        "description": "Receive it ready to hand"
+      }
+    }
+  },
+  "spaces": {
+    "title": {
+      "line1": "Make Your Home and Office",
+      "line2": "Dreams Come True"
+    },
+    "description": "Where Vision Meets Perfect Design.",
+    "items": {
+      "bedroom": "Bedroom",
+      "livingRoom": "Living Room",
+      "office": "Office",
+      "bathroom": "Bathroom",
+      "kitchen": "Kitchen",
+      "hallway": "Hallway",
+      "lounge": "Lounge",
+      "dining": "Dining"
+    }
+  }
+}

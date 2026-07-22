@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ChevronDown, Download, ImagePlus, Moon, Redo2, Sun, Undo2 } from 'lucide-react'
+import { ArrowLeft, ChevronDown, Download, ImagePlus, Moon, Sun } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '@/store/editorStore'
 import { useImageUpload } from '@/hooks/useImageUpload'
 import {
@@ -50,6 +51,7 @@ function IconButton({
 }
 
 export default function Topbar() {
+  const { t } = useTranslation('editor')
   const navigate = useNavigate()
   const artworkImageUrl = useEditorStore((s) => s.artworkImageUrl)
   const editorTheme = useEditorStore((s) => s.editorTheme)
@@ -70,11 +72,11 @@ export default function Topbar() {
     >
       {/* Left cluster: back · logo · doc title */}
       <div className="flex items-center gap-2">
-        <IconButton label="Back to home" onClick={() => navigate('/')}>
-          <ArrowLeft size={16} strokeWidth={1.8} />
+        <IconButton label={t('topbar.backToHome')} onClick={() => navigate('/')}>
+          <ArrowLeft size={16} strokeWidth={1.8} className="rtl:-scale-x-100" />
         </IconButton>
 
-        <Link to="/" aria-label="Cretixone home" className="mx-1 flex items-center">
+        <Link to="/" aria-label={t('topbar.brandHome')} className="mx-1 flex items-center">
           <img src="/images/svg/logo.svg" alt="Cretixone" className="h-6 w-auto" />
         </Link>
 
@@ -84,24 +86,14 @@ export default function Topbar() {
           className="ml-2 hidden text-xs font-medium md:inline"
           style={{ color: 'var(--ed-fg-muted)' }}
         >
-          Untitled design
+          {t('topbar.untitledDesign')}
         </span>
-      </div>
-
-      {/* Center cluster: history controls */}
-      <div className="flex items-center gap-1">
-        <IconButton label="Undo" disabled>
-          <Undo2 size={15} strokeWidth={1.8} />
-        </IconButton>
-        <IconButton label="Redo" disabled>
-          <Redo2 size={15} strokeWidth={1.8} />
-        </IconButton>
       </div>
 
       {/* Right cluster: theme · change image · export */}
       <div className="flex items-center gap-1.5">
         <IconButton
-          label={editorTheme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+          label={editorTheme === 'light' ? t('topbar.switchToDark') : t('topbar.switchToLight')}
           onClick={toggleEditorTheme}
         >
           {editorTheme === 'light' ? <Moon size={15} strokeWidth={1.8} /> : <Sun size={15} strokeWidth={1.8} />}
@@ -125,7 +117,7 @@ export default function Topbar() {
             }}
           >
             <ImagePlus size={14} strokeWidth={1.8} />
-            Change image
+            {t('topbar.changeImage')}
           </button>
         )}
 
@@ -140,21 +132,21 @@ export default function Topbar() {
               }}
             >
               <Download size={13} strokeWidth={2} />
-              Save
+              {t('topbar.save')}
               <ChevronDown size={11} className="opacity-70" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
-            <DropdownMenuLabel>Export as</DropdownMenuLabel>
+            <DropdownMenuLabel>{t('topbar.exportAs')}</DropdownMenuLabel>
             <DropdownMenuItem onSelect={triggerSave}>
-              PNG (transparent)
+              {t('topbar.pngTransparent')}
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={triggerSave}>
-              JPG (high quality)
+              {t('topbar.jpgHighQuality')}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={triggerSave}>
-              Quick save
+              {t('topbar.quickSave')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

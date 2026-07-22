@@ -1,0 +1,148 @@
+{
+  "topbar": {
+    "backToHome": "Back to home",
+    "brandHome": "Cretixone home",
+    "untitledDesign": "Untitled design",
+    "undo": "Undo",
+    "redo": "Redo",
+    "switchToDark": "Switch to dark theme",
+    "switchToLight": "Switch to light theme",
+    "changeImage": "Change image",
+    "save": "Save",
+    "exportAs": "Export as",
+    "pngTransparent": "PNG (transparent)",
+    "jpgHighQuality": "JPG (high quality)",
+    "quickSave": "Quick save"
+  },
+  "rail": {
+    "ariaLabel": "Editor tools",
+    "frames": "Frames",
+    "interiors": "Interiors",
+    "scenery": "Scenery",
+    "mat": "Mat",
+    "mdf": "MDF",
+    "effects": "Effects"
+  },
+  "panel": {
+    "library": "Library",
+    "expand": "Expand",
+    "expandPanel": "Expand panel",
+    "collapse": "Collapse",
+    "collapsePanel": "Collapse panel",
+    "none": "None",
+    "badgeNew": "NEW",
+    "badgePro": "PRO",
+    "frameAlt": "Frame {{id}}",
+    "sceneAlt": "Scene {{id}}",
+    "titles": {
+      "frames": "Frames",
+      "interiors": "Interiors",
+      "scenery": "Scenery",
+      "mat": "Mat",
+      "mdf": "MDF",
+      "effect": "Effects"
+    },
+    "frames": {
+      "header": "Picture frames",
+      "hint": "Pick a style — control width in the right inspector",
+      "error": "Failed to load frames",
+      "empty": "No frames in this category yet."
+    },
+    "interiors": {
+      "header": "Interior scenes",
+      "hint": "Picking an interior removes scenery",
+      "error": "Failed to load interiors"
+    },
+    "scenery": {
+      "header": "Scenery",
+      "hint": "Picking scenery removes interior",
+      "error": "Failed to load scenery"
+    },
+    "mat": {
+      "header": "Mat",
+      "hint": "Size sets thickness + price · Color sets the look",
+      "error": "Failed to load mat options",
+      "noColors": "No mat colors yet.",
+      "noSizes": "No mat sizes yet.",
+      "tabSize": "Size",
+      "tabColor": "Color"
+    },
+    "mdf": {
+      "header": "MDF backing",
+      "hint": "Price scales with the frame size — added to the total",
+      "error": "Failed to load MDF options",
+      "empty": "No MDF options yet.",
+      "noPhoto": "No photo"
+    },
+    "effect": {
+      "header": "Effects",
+      "hint": "One effect at a time across all tabs",
+      "error": "Failed to load effects"
+    }
+  },
+  "inspector": {
+    "title": "Inspector",
+    "expand": "Expand inspector",
+    "collapse": "Collapse",
+    "tabs": {
+      "size": "Size",
+      "style": "Style",
+      "shadow": "Shadow"
+    },
+    "size": {
+      "sectionTitle": "Size",
+      "frameSizeAria": "Frame size",
+      "choosePlaceholder": "Choose a size…",
+      "sizeOption": "{{name}} · {{w}}×{{h}} cm",
+      "customButton": "Custom size",
+      "customCm": "Custom (cm)",
+      "lockAspect": "Lock aspect ratio",
+      "unlockAspect": "Unlock aspect ratio",
+      "aspectLocked": "Aspect locked",
+      "aspectFree": "Aspect free",
+      "width": "Width",
+      "height": "Height"
+    },
+    "style": {
+      "sectionTitle": "Composition",
+      "frame": "Frame",
+      "matSize": "Mat size",
+      "matPrice": "Mat price",
+      "matColor": "Mat color",
+      "mdf": "MDF",
+      "none": "None",
+      "hint": "Switch tools on the left rail to change Frame · Mat · Effects."
+    },
+    "shadow": {
+      "sectionTitle": "Drop shadow",
+      "enable": "Enable",
+      "blur": "Blur",
+      "opacity": "Opacity"
+    },
+    "checkout": {
+      "frame": "Frame",
+      "mat": "Mat",
+      "mdf": "MDF",
+      "addToCart": "Add to cart",
+      "requestInquiry": "Request Inquiry"
+    }
+  },
+  "status": {
+    "noFrame": "No frame",
+    "frameNum": "Frame #{{id}}",
+    "sizeCm": "{{w}} × {{h}} cm",
+    "ratio": {
+      "landscape": "Landscape",
+      "portrait": "Portrait",
+      "square": "Square"
+    },
+    "picture": "Picture {{pct}}%",
+    "canvas": "Canvas {{pct}}%",
+    "hint": "Scroll on picture to zoom · scroll outside to zoom canvas · double-click picture to replace"
+  },
+  "canvas": {
+    "uploadImage": "Upload image",
+    "loadingFrame": "Loading frame…",
+    "hint": "Scroll over picture = zoom picture · Scroll outside = zoom frame · Drag to reposition"
+  }
+}

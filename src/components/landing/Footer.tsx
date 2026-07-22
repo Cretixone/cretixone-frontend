@@ -1,27 +1,10 @@
 import { Facebook, Twitter, Instagram } from 'lucide-react'
 import { motion, type Variants } from 'framer-motion'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
-// Footer product links open the products screen. "All Frames" goes to the
-// full listing; the rest carry a ?category= hint the products page reads to
-// pre-filter the grid (unknown categories simply fall back to all frames).
-const PRODUCT_LINKS = [
-  { label: 'All Frames', href: '/products' },
-  { label: 'Framed Prints', href: '/products?category=framed-prints' },
-  { label: 'Canvas Prints', href: '/products?category=canvas-prints' },
-  { label: 'Photo Prints', href: '/products?category=photo-prints' },
-  { label: 'Gifts', href: '/products?category=gifts' },
-  { label: 'Mirror Works', href: '/products?category=mirror-works' },
-  { label: 'Custom Mirrors', href: '/custom-mirrors' },
-]
-
-const COMPANY_LINKS = [
-  { label: 'About', href: '/about' },
-  { label: 'Team', href: '/team' },
-  { label: 'Testimonials', href: '/testimonials' },
-]
-
+// Social names are brand names — kept literal (never translated).
 const SOCIAL_LINKS = [
   { label: 'Discord', href: '#discord' },
   { label: 'Instagram', href: '#instagram' },
@@ -41,6 +24,26 @@ const fadeUp: Variants = {
 }
 
 export default function Footer() {
+  const { t } = useTranslation('common')
+
+  // Product links open the products screen. "All Frames" goes to the full
+  // listing; the rest carry a ?category= hint the products page reads to
+  // pre-filter the grid (unknown categories simply fall back to all frames).
+  const productLinks = [
+    { label: t('footer.products.allFrames'), href: '/products' },
+    { label: t('footer.products.framedPrints'), href: '/products?category=framed-prints' },
+    { label: t('footer.products.canvasPrints'), href: '/products?category=canvas-prints' },
+    { label: t('footer.products.photoPrints'), href: '/products?category=photo-prints' },
+    { label: t('footer.products.gifts'), href: '/products?category=gifts' },
+    { label: t('footer.products.mirrorWorks'), href: '/products?category=mirror-works' },
+    { label: t('footer.products.customMirrors'), href: '/custom-mirrors' },
+  ]
+  const companyLinks = [
+    { label: t('footer.company.about'), href: '/about' },
+    { label: t('footer.company.team'), href: '/team' },
+    { label: t('footer.company.testimonials'), href: '/testimonials' },
+  ]
+
   return (
     <footer
       className="relative w-full overflow-hidden text-foreground"
@@ -87,8 +90,7 @@ export default function Footer() {
               />
             </Link>
             <p className="mt-5 max-w-xs text-sm leading-relaxed text-foreground">
-              Our vision is to provide convenience and help increase your sales
-              business.
+              {t('footer.tagline')}
             </p>
             <div className="mt-6 flex items-center gap-3">
               {SOCIAL_ICONS.map(({ Icon, label, href }) => (
@@ -109,21 +111,21 @@ export default function Footer() {
 
           {/* Products */}
           <FooterColumn
-            heading="Products"
-            links={PRODUCT_LINKS}
+            heading={t('footer.headings.products')}
+            links={productLinks}
             className="md:col-span-3"
           />
 
           {/* Company */}
           <FooterColumn
-            heading="Company"
-            links={COMPANY_LINKS}
+            heading={t('footer.headings.company')}
+            links={companyLinks}
             className="md:col-span-2"
           />
 
           {/* Socials (text links) */}
           <FooterColumn
-            heading="Socials"
+            heading={t('footer.headings.socials')}
             links={SOCIAL_LINKS}
             className="md:col-span-3"
           />
@@ -138,19 +140,19 @@ export default function Footer() {
           transition={{ duration: 0.55, ease: 'easeOut', delay: 0.1 }}
         >
           <div className="flex flex-col gap-3 text-xs text-foreground sm:flex-row sm:items-center sm:justify-between md:text-[14px]">
-            <p>©{new Date().getFullYear()} Cretixone. All rights reserved</p>
+            <p>©{new Date().getFullYear()} Cretixone. {t('footer.rightsReserved')}</p>
             <div className="flex items-center gap-8">
               <a
                 href="#privacy"
                 className="transition hover:text-brand-navy"
               >
-                Privacy &amp; Policy
+                {t('footer.privacy')}
               </a>
               <Link
                 to="/terms"
                 className="transition hover:text-brand-navy"
               >
-                Terms &amp; Condition
+                {t('footer.terms')}
               </Link>
             </div>
           </div>

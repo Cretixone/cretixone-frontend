@@ -1,0 +1,99 @@
+{
+  "breadcrumb": {
+    "home": "Home",
+    "label": "Breadcrumb"
+  },
+  "cartPage": {
+    "breadcrumb": "Cart",
+    "title": "Cart",
+    "productSingular": "Product",
+    "productPlural": "Products",
+    "empty": {
+      "title": "Your cart is empty",
+      "subtitle": "Pick a frame and design it to add it here.",
+      "browse": "Browse frames"
+    },
+    "note": {
+      "title": "Note for image optimization",
+      "body": "Image optimization is activated for one or more of your photos. If you did not intend to utilize this feature, you can deactivate it from the editor."
+    },
+    "actions": {
+      "backHome": "Back to home page",
+      "createProduct": "Create a new product"
+    },
+    "summary": {
+      "title": "Purchase Summary",
+      "subtotal": "Subtotal",
+      "shipping": "Standard Shipping",
+      "total": "Total",
+      "taxLine1": "Sales tax not included",
+      "taxLine2": "Sales tax may apply",
+      "goToCheckout": "Go to checkout",
+      "loginToCheckout": "Log in to checkout",
+      "pricingPolicy": "Pricing policy: The full list price is a price at which we have offered the product for sale; however, we may not have sold the item at that price."
+    },
+    "row": {
+      "finishedSize": "Finished Size:",
+      "frameSku": "Frame SKU:",
+      "edit": "Edit",
+      "dimensions": "{{w}} × {{h}} cm",
+      "perItem": "{{price}} per item",
+      "removeItem": "Remove item",
+      "decreaseQty": "Decrease quantity",
+      "increaseQty": "Increase quantity"
+    }
+  },
+  "checkoutModal": {
+    "close": "Close",
+    "title": "Checkout details",
+    "subtitle": "Tell us where to send your order.",
+    "dialogLabel": "Checkout details",
+    "fields": {
+      "fullName": "Full name",
+      "fullNamePlaceholder": "Jane Doe",
+      "email": "Email address",
+      "emailPlaceholder": "jane@example.com",
+      "phone": "Phone number",
+      "phonePlaceholder": "+968 …",
+      "address": "Address",
+      "addressPlaceholder": "Street, building, area",
+      "zip": "Zip code",
+      "zipPlaceholder": "100",
+      "optional": "(optional)"
+    },
+    "errors": {
+      "required": "Required",
+      "invalidEmail": "Enter a valid email"
+    },
+    "cancel": "Cancel",
+    "placeOrder": "Place order"
+  },
+  "checkoutPage": {
+    "breadcrumbInquiry": "Inquiry",
+    "breadcrumbCheckout": "Checkout",
+    "titleInquiry": "Request an Inquiry",
+    "titleCheckout": "Checkout",
+    "selectedFrameAlt": "Selected frame",
+    "customFrame": "Custom frame",
+    "size": "Size: {{w}} × {{h}} cm",
+    "total": "Total",
+    "noItem": "No item selected yet.",
+    "inquiryNote": "This size is outside the frame's standard range — submit an inquiry and our team will get back to you with a custom quote. (Inquiry form coming soon.)",
+    "checkoutNote": "Full checkout + cart is being set up. The order summary above reflects your current selection."
+  },
+  "success": {
+    "title": "Order placed!",
+    "message": "Thank you — we've emailed your confirmation. Your order is now being processed.",
+    "orderNumber": "Order number",
+    "total": "Total",
+    "viewOrders": "View my orders",
+    "continue": "Continue shopping"
+  },
+  "lightbox": {
+    "viewer": "Image viewer",
+    "close": "Close",
+    "prev": "Previous image",
+    "next": "Next image",
+    "goToImage": "Go to image {{number}}"
+  }
+}

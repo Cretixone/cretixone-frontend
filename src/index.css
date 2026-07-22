@@ -2,6 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
+/* postcss-rtlcss flips `left:50%` → `right:50%` under RTL, but the paired
+   Tailwind `-translate-x-1/2` (a CSS var) can't be flipped, which shifts
+   centred elements (modals, lightbox, popovers) off-centre. `left:50%`
+   centring is direction-agnostic, so pin it back for RTL. The rtl:ignore
+   comment stops postcss-rtlcss from re-flipping this very rule. */
+/*rtl:ignore*/
+[dir="rtl"] .left-1\/2 {
+  left: 50%;
+  right: auto;
+}
+
+/* ── Noto Sans Arabic — used only in Arabic (RTL) mode ─────────────────────── */
+@font-face {
+  font-family: 'Noto Sans Arabic';
+  src: url('/fonts/noto-sans-arabic/NotoSansArabic-Variable.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* When Arabic is active (<html dir="rtl">), render everything in Noto Sans
+   Arabic. The font utilities are overridden too (not just body) so headings
+   that set `font-sans`/`font-display` switch as well. */
+[dir="rtl"],
+[dir="rtl"] body,
+[dir="rtl"] .editor-shell,
+[dir="rtl"] .font-sans,
+[dir="rtl"] .font-display {
+  font-family: 'Noto Sans Arabic', 'Helvetica Neue', Helvetica, Arial, system-ui,
+    sans-serif;
+}
+
 /* ── JasmineUPC (self-hosted, regular only) ─────────────────────────────── */
 @font-face {
   font-family: 'JasmineUPC';

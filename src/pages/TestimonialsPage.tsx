@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { ChevronRight, Home, Smile, Star } from 'lucide-react'
 import { motion, type Variants } from 'framer-motion'
@@ -23,106 +24,85 @@ const stagger: Variants = {
 
 interface Testimonial {
   name: string
-  role: string
+  /** Key under the `testimonials.people.*` i18n namespace (role + quote). */
+  id: string
   avatar: string
-  quote: string
 }
 
 // Three columns of testimonials for the vertical marquee.
+// `name`/`avatar` stay literal demo data; role + quote are resolved via i18n.
 const COL_A: Testimonial[] = [
   {
     name: 'Emily Johnson',
-    role: 'Interior Designer',
+    id: 'emily',
     avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
-    quote:
-      "Cretixone's custom framing turned my client's photos into gallery-worthy pieces. The quality and finish exceeded every expectation.",
   },
   {
     name: 'Sarah Lee',
-    role: 'Home Stylist',
+    id: 'sarah',
     avatar: 'https://randomuser.me/api/portraits/women/65.jpg',
-    quote:
-      'The range of frame styles and mat options is incredible. I found the perfect match for every room in just minutes.',
   },
   {
     name: 'Olivia Martinez',
-    role: 'Illustrator',
+    id: 'olivia',
     avatar: 'https://randomuser.me/api/portraits/women/29.jpg',
-    quote:
-      'Being able to sell my artwork and have it printed and framed on demand completely changed how I run my studio.',
   },
   {
     name: 'Ethan Lee',
-    role: 'Marketing Lead',
+    id: 'ethan',
     avatar: 'https://randomuser.me/api/portraits/men/22.jpg',
-    quote:
-      'Quick, reliable, and the print quality is exceptional. Cretixone has become our go-to for wall art.',
   },
 ]
 
 const COL_B: Testimonial[] = [
   {
     name: 'James Wilson',
-    role: 'Photographer',
+    id: 'james',
     avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
-    quote:
-      'The preview editor let me see exactly how my prints would look before ordering. Zero surprises, beautiful results.',
   },
   {
     name: 'Michael Roberts',
-    role: 'Freelance Designer',
+    id: 'michael',
     avatar: 'https://randomuser.me/api/portraits/men/45.jpg',
-    quote:
-      'Cretixone makes framing effortless — upload, choose a style, done. The floater frames are my new favorite.',
   },
   {
     name: 'David Turner',
-    role: 'Architect',
+    id: 'david',
     avatar: 'https://randomuser.me/api/portraits/men/76.jpg',
-    quote:
-      'The craftsmanship is outstanding. Natural wood, clean lines — these frames genuinely elevate any space.',
   },
   {
     name: 'Daniel Brown',
-    role: 'Gallery Curator',
+    id: 'daniel',
     avatar: 'https://randomuser.me/api/portraits/men/41.jpg',
-    quote:
-      'The variety and quality on Cretixone exceeded our expectations. Perfect for professional presentations.',
   },
 ]
 
 const COL_C: Testimonial[] = [
   {
     name: 'Laura Smith',
-    role: 'Art Collector',
+    id: 'laura',
     avatar: 'https://randomuser.me/api/portraits/women/68.jpg',
-    quote:
-      'From upload to delivery the whole experience felt premium. My framed prints arrived flawless and ready to hang.',
   },
   {
     name: 'Chris Brown',
-    role: 'Business Owner',
+    id: 'chris',
     avatar: 'https://randomuser.me/api/portraits/men/52.jpg',
-    quote:
-      'I ordered prints in bulk for our office and the consistency was spot on. Great service and fast turnaround.',
   },
   {
     name: 'Mia Clark',
-    role: 'Content Creator',
+    id: 'mia',
     avatar: 'https://randomuser.me/api/portraits/women/12.jpg',
-    quote:
-      'Easy to navigate, beautiful results, and the support team is genuinely helpful. Highly recommended!',
   },
   {
     name: 'Sophia Reyes',
-    role: 'Interior Architect',
+    id: 'sophia',
     avatar: 'https://randomuser.me/api/portraits/women/90.jpg',
-    quote:
-      'Every detail, from the mat to the moulding, is considered. The result is timeless and elegant.',
   },
 ]
 
 export default function TestimonialsPage() {
+  const { t } = useTranslation('pages')
+
   useEffect(() => {
     const prevBg = document.body.style.background
     const prevColor = document.body.style.color
@@ -171,14 +151,14 @@ export default function TestimonialsPage() {
       <section className="relative pt-20 md:pt-24">
         <div className="relative mx-auto max-w-[1100px] px-5 md:px-8 lg:px-10">
           <nav
-            aria-label="Breadcrumb"
+            aria-label={t('testimonials.breadcrumb.aria')}
             className="flex items-center gap-2 text-xs text-brand-navy md:text-[13px]"
           >
-            <Link to="/" aria-label="Home" className="inline-flex items-center transition hover:opacity-80">
+            <Link to="/" aria-label={t('testimonials.breadcrumb.home')} className="inline-flex items-center transition hover:opacity-80">
               <Home className="h-3.5 w-3.5" strokeWidth={2} />
             </Link>
             <ChevronRight className="h-3 w-3 text-brand-navy/60" />
-            <span className="text-brand-navy/70">Testimonials</span>
+            <span className="text-brand-navy/70">{t('testimonials.breadcrumb.current')}</span>
           </nav>
 
           {/* Heart graphic with avatars + glowing brand mark */}
@@ -205,20 +185,19 @@ export default function TestimonialsPage() {
               }}
             >
               <Smile size={20} className="text-[#E0A23A]" />
-              Testimonials
+              {t('testimonials.badge')}
             </motion.span>
             <motion.h1
               variants={fadeUp}
               className="mt-5 text-3xl font-semibold tracking-tight text-brand-navy md:text-[44px]"
             >
-              Hear from Our Users
+              {t('testimonials.title')}
             </motion.h1>
             <motion.p
               variants={fadeUp}
               className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-foreground/60 md:text-[15px]"
             >
-              Read how our users have framed their best moments and elevated their
-              spaces with Cretixone&apos;s custom prints and frames.
+              {t('testimonials.subtitle')}
             </motion.p>
           </motion.div>
         </div>
@@ -287,6 +266,7 @@ function MarqueeColumn({
 
 // ── Testimonial card (styled per the provided spec) ──────────────────────────
 function Card({ t }: { t: Testimonial }) {
+  const { t: tr } = useTranslation('pages')
   return (
     <article
       className="mb-6 flex w-full flex-col items-start gap-6 rounded-[20px] border p-[30px]"
@@ -301,7 +281,7 @@ function Card({ t }: { t: Testimonial }) {
       }}
     >
       <p className="text-[14px] leading-relaxed text-[#486284]">
-        &ldquo;{t.quote}&rdquo;
+        &ldquo;{tr(`testimonials.people.${t.id}.quote`)}&rdquo;
       </p>
       <div className="flex w-full items-center gap-3 border-t border-[#E8EAF0] pt-6">
         <img
@@ -313,7 +293,7 @@ function Card({ t }: { t: Testimonial }) {
         />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-brand-navy">{t.name}</p>
-          <p className="truncate text-xs text-foreground/50">{t.role}</p>
+          <p className="truncate text-xs text-foreground/50">{tr(`testimonials.people.${t.id}.role`)}</p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-0.5">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -327,6 +307,7 @@ function Card({ t }: { t: Testimonial }) {
 
 // ── Heart graphic (heart + avatars image) with the brand logo centred ────────
 function HeartGraphic() {
+  const { t } = useTranslation('pages')
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.92 }}
@@ -337,7 +318,7 @@ function HeartGraphic() {
     >
       <img
         src={HEART_IMG}
-        alt="Happy Cretixone users"
+        alt={t('testimonials.heartAlt')}
         draggable={false}
         className="h-full w-full select-none object-cover object-top"
       />

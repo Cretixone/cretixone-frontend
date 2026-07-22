@@ -1,0 +1,44 @@
+{
+  "nav": {
+    "allFrames": "All Frames",
+    "customPrints": "Custom Prints",
+    "stockPhoto": "Stock Photo",
+    "customMirror": "Custom Mirror",
+    "gifts": "Gifts",
+    "about": "About"
+  },
+  "actions": {
+    "uploadPhoto": "Upload Photo",
+    "login": "Log in",
+    "logout": "Log out",
+    "myAccount": "My account",
+    "myOrders": "My orders",
+    "cart": "Cart",
+    "language": "Language"
+  },
+  "footer": {
+    "tagline": "Our vision is to provide convenience and help increase your sales business.",
+    "headings": {
+      "products": "Products",
+      "company": "Company",
+      "socials": "Socials"
+    },
+    "products": {
+      "allFrames": "All Frames",
+      "framedPrints": "Framed Prints",
+      "canvasPrints": "Canvas Prints",
+      "photoPrints": "Photo Prints",
+      "gifts": "Gifts",
+      "mirrorWorks": "Mirror Works",
+      "customMirrors": "Custom Mirrors"
+    },
+    "company": {
+      "about": "About",
+      "team": "Team",
+      "testimonials": "Testimonials"
+    },
+    "rightsReserved": "All rights reserved",
+    "privacy": "Privacy & Policy",
+    "terms": "Terms & Condition"
+  }
+}

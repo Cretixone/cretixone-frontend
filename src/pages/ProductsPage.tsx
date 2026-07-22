@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import {
   ChevronUp,
@@ -12,6 +13,13 @@ import Footer from '@/components/landing/Footer'
 import { cn } from '@/lib/utils'
 import { useFetchFacetsQuery, useFetchFramesPageQuery, useFetchFrameSizesQuery } from '@/store/api/apiSlice'
 import { Pagination } from '@/components/ui/pagination'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { formatOMR, formatOMRRate } from '@/lib/format'
 import type { ApiFrame } from '@/types/api'
 
@@ -43,9 +51,11 @@ interface FilterGroup {
   collapsedAfter?: number // show "show N more" beyond this many
 }
 
-const SORT_OPTIONS = ['Popularity', 'Newest', 'Price: Low to High', 'Price: High to Low']
+// Stable keys resolved to labels via t('sort.options.<key>') at render time.
+const SORT_OPTION_KEYS = ['popularity', 'newest', 'priceLowHigh', 'priceHighLow'] as const
 
 export default function ProductsPage() {
+  const { t } = useTranslation('products')
   // Landing pages set body bg/color manually (see LandingPage) since the
   // editor scopes its own theme onto <body>. Mirror that here.
   useEffect(() => {
@@ -92,22 +102,22 @@ export default function ProductsPage() {
     return [
       {
         key: 'material',
-        title: 'Frame Material',
+        title: t('filter.groups.material'),
         options: facets.categories.map((c) => ({ value: c.slug, label: c.name, count: c.count })),
       },
       {
         key: 'type',
-        title: 'Frame Type',
-        options: facets.frameTypes.map((t) => ({ value: t.name, label: t.name, count: t.count })),
+        title: t('filter.groups.type'),
+        options: facets.frameTypes.map((ft) => ({ value: ft.name, label: ft.name, count: ft.count })),
       },
       {
         key: 'color',
-        title: 'Frame Color',
+        title: t('filter.groups.color'),
         collapsedAfter: 7,
         options: facets.frameColors.map((c) => ({ value: c.name, label: c.name, count: c.count })),
       },
     ]
-  }, [facets])
+  }, [facets, t])
 
   // Selected values per group (OR within a group, AND across groups on the API).
   // Parsed straight from the selection set so URL-seeded filters apply even
@@ -162,27 +172,23 @@ export default function ProductsPage() {
 
         {/* Breadcrumb */}
         <nav
-          aria-label="Breadcrumb"
+          aria-label={t('breadcrumb.aria')}
           className="mt-7 flex items-center gap-2 text-sm text-foreground/70"
         >
           <Link to="/" className="inline-flex items-center hover:text-brand-navy">
             <Home className="h-4 w-4" />
           </Link>
           <span className="text-foreground/40">›</span>
-          <span className="text-foreground/80">Canvas Prints</span>
+          <span className="text-foreground/80">{t('breadcrumb.current')}</span>
         </nav>
 
         {/* Title + intro */}
         <div className="mt-4 max-w-4xl">
           <h1 className="font-display text-3xl font-medium tracking-tight text-brand-navy md:text-[40px]">
-            Canvas Prints
+            {t('title')}
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-foreground/70 md:text-[15px]">
-            Add a touch of timeless style to your space with these classic
-            picture frames. With clean lines and versatile finishes, these
-            frames bring a sense of balance and sophistication to any setting.
-            Whether you&apos;re framing cherished art or a standout photo, these
-            curated classics never go out of style.
+            {t('intro')}
           </p>
         </div>
 
@@ -195,7 +201,7 @@ export default function ProductsPage() {
 
             {isError ? (
               <div className="flex h-64 items-center justify-center rounded-xl border border-black/5 bg-black/[0.02] text-sm text-foreground/60">
-                Couldn&apos;t load frames. Please try again.
+                {t('states.error')}
               </div>
             ) : isLoading ? (
               <ProductGridSkeleton />
@@ -258,20 +264,21 @@ function FilterSidebar({
   onToggle: (id: string) => void
   onReset: () => void
 }) {
+  const { t } = useTranslation('products')
   return (
     <aside className="w-full shrink-0 lg:w-[260px]">
       {/* Filter header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-[#002365]">
           <Filter className="h-4 w-4" />
-          <span className="text-base font-semibold">Filter</span>
+          <span className="text-base font-semibold">{t('filter.heading')}</span>
         </div>
         <button
           type="button"
           onClick={onReset}
           className="rounded-full bg-[#C08C40] px-3 py-1 text-xs font-medium text-white transition hover:bg-[#C08C40]/90"
         >
-          Reset
+          {t('filter.reset')}
         </button>
       </div>
 
@@ -298,6 +305,7 @@ function FilterGroupBlock({
   selected: Set<string>
   onToggle: (id: string) => void
 }) {
+  const { t } = useTranslation('products')
   const [open, setOpen] = useState(true)
   const [expanded, setExpanded] = useState(false)
 
@@ -384,7 +392,7 @@ function FilterGroupBlock({
                 onClick={() => setExpanded((v) => !v)}
                 className="text-xs font-medium text-foreground/60 underline underline-offset-2 hover:text-brand-navy"
               >
-                {expanded ? 'show less' : `show ${hiddenCount} more`}
+                {expanded ? t('filter.showLess') : t('filter.showMore', { count: hiddenCount })}
               </button>
             </li>
           )}
@@ -396,26 +404,30 @@ function FilterGroupBlock({
 
 // ── Results count + sort ───────────────────────────────────────────────────
 function ResultsBar({ count, loading }: { count: number; loading: boolean }) {
-  const [sort, setSort] = useState(SORT_OPTIONS[0])
+  const { t } = useTranslation('products')
+  const [sort, setSort] = useState<(typeof SORT_OPTION_KEYS)[number]>(SORT_OPTION_KEYS[0])
   return (
     <div className="mb-5 flex items-center justify-between">
       <p className="text-base font-semibold text-brand-navy">
-        {loading ? 'Loading…' : `${count} Result`}
+        {loading ? t('results.loading') : t('results.count', { count })}
       </p>
       <div className="flex items-center gap-2">
-        <span className="text-sm text-foreground/60">Sort:</span>
-        <div className="relative">
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-            className="appearance-none rounded-lg border border-black/10 bg-white py-2 pl-3 pr-9 text-sm text-foreground/80 focus:border-brand-gold focus:outline-none"
-          >
-            {SORT_OPTIONS.map((o) => (
-              <option key={o}>{o}</option>
+        <span className="text-sm text-foreground/60">{t('sort.label')}</span>
+        <Select
+          value={sort}
+          onValueChange={(v) => setSort(v as (typeof SORT_OPTION_KEYS)[number])}
+        >
+          <SelectTrigger className="h-9 w-[190px] rounded-lg border-black/10 bg-white text-sm text-foreground/80 focus:ring-brand-gold/30">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SORT_OPTION_KEYS.map((key) => (
+              <SelectItem key={key} value={key}>
+                {t(`sort.options.${key}`)}
+              </SelectItem>
             ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/50" />
-        </div>
+          </SelectContent>
+        </Select>
       </div>
     </div>
   )
@@ -423,10 +435,11 @@ function ResultsBar({ count, loading }: { count: number; loading: boolean }) {
 
 // ── Product grid ───────────────────────────────────────────────────────────
 function ProductGrid({ frames, minPerimeter }: { frames: ApiFrame[]; minPerimeter: number }) {
+  const { t } = useTranslation('products')
   if (frames.length === 0) {
     return (
       <div className="flex h-64 items-center justify-center rounded-xl border border-black/5 bg-black/[0.02] text-sm text-foreground/60">
-        No frames available right now.
+        {t('states.empty')}
       </div>
     )
   }
@@ -440,6 +453,7 @@ function ProductGrid({ frames, minPerimeter }: { frames: ApiFrame[]; minPerimete
 }
 
 function ProductCard({ frame, minPerimeter }: { frame: ApiFrame; minPerimeter: number }) {
+  const { t } = useTranslation('products')
   const navigate = useNavigate()
   // Show the square thumbnail first (imgUrl = thumbnailUrl), then fall back.
   const img = frame.imgUrl || frame.portraitUrl || frame.landscapeUrl
@@ -456,7 +470,7 @@ function ProductCard({ frame, minPerimeter }: { frame: ApiFrame; minPerimeter: n
       : `${formatOMRRate(frame.pricePerCm)} / cm`
   const subtitle = frame.categorySlug
     ? frame.categorySlug.replace(/-/g, ' ')
-    : 'Picture frame'
+    : t('card.fallbackSubtitle')
 
   // Clicking a product opens its detail page (which in turn links into the
   // editor via "Upload a preview image").
@@ -474,7 +488,7 @@ function ProductCard({ frame, minPerimeter }: { frame: ApiFrame; minPerimeter: n
         {img ? (
           <img
             src={img}
-            alt="Picture frame"
+            alt={t('card.imageAlt')}
             loading="lazy"
             draggable={false}
             className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.03]"
@@ -494,7 +508,7 @@ function ProductCard({ frame, minPerimeter }: { frame: ApiFrame; minPerimeter: n
         </p>
         {priceLabel && (
           <div className="mt-2 flex items-baseline gap-1.5">
-            {hasRealSize && <span className="text-[11px] text-foreground/45">from</span>}
+            {hasRealSize && <span className="text-[11px] text-foreground/45">{t('card.from')}</span>}
             <span className="text-sm font-bold tabular-nums text-brand-navy">
               {priceLabel}
             </span>

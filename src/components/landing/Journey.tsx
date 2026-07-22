@@ -1,24 +1,25 @@
 import { motion, type Variants } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import JourneyStep from '@/components/landing/JourneyStep'
 
 const STEPS = [
   {
     iconSrc: '/images/svg/upload-icon.svg',
-    iconAlt: 'Upload icon',
-    title: 'Upload your photo',
-    description: 'Upload your photo or artwork.',
+    iconAltKey: 'journey.steps.upload.iconAlt',
+    titleKey: 'journey.steps.upload.title',
+    descriptionKey: 'journey.steps.upload.description',
   },
   {
     iconSrc: '/images/svg/choose-style.svg',
-    iconAlt: 'Frame and matting icon',
-    title: 'Choose your Style',
-    description: 'Select your frame and matting',
+    iconAltKey: 'journey.steps.style.iconAlt',
+    titleKey: 'journey.steps.style.title',
+    descriptionKey: 'journey.steps.style.description',
   },
   {
     iconSrc: '/images/svg/ready-delivery.svg',
-    iconAlt: 'Gift box delivery icon',
-    title: 'Gallery- ready delivery',
-    description: 'Receive it ready to hand',
+    iconAltKey: 'journey.steps.delivery.iconAlt',
+    titleKey: 'journey.steps.delivery.title',
+    descriptionKey: 'journey.steps.delivery.description',
     active: true,
   },
 ]
@@ -29,6 +30,7 @@ const fadeUp: Variants = {
 }
 
 export default function Journey() {
+  const { t } = useTranslation('landing')
   return (
     <section
       aria-labelledby="journey-title"
@@ -50,14 +52,13 @@ export default function Journey() {
             className="font-display md:text-5xl font-medium tracking-tight text-brand-navy text-3xl"
             variants={fadeUp}
           >
-            A Curated Journey
+            {t('journey.title')}
           </motion.h2>
           <motion.p
             className="mx-auto mt-3 max-w-xxl font-normal tracking-[0.09em] text-sm text-foreground/80 md:text-base"
             variants={fadeUp}
           >
-            A thoughtfully crafted path designed to guide every step with
-            purpose and precision.
+            {t('journey.description')}
           </motion.p>
         </motion.div>
 
@@ -83,12 +84,12 @@ export default function Journey() {
             }}
           >
             {STEPS.map((s, i) => (
-              <motion.div key={s.title} variants={fadeUp}>
+              <motion.div key={s.titleKey} variants={fadeUp}>
                 <JourneyStep
                   iconSrc={s.iconSrc}
-                  iconAlt={s.iconAlt}
-                  title={s.title}
-                  description={s.description}
+                  iconAlt={t(s.iconAltKey)}
+                  title={t(s.titleKey)}
+                  description={t(s.descriptionKey)}
                   showLeftBorder={i > 0}
                 />
               </motion.div>

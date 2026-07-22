@@ -1,0 +1,57 @@
+{
+  "heading": "Review",
+  "writeReview": "Write Review",
+  "loading": "Loading reviews…",
+  "empty": "No reviews yet — be the first to share your experience.",
+  "reportThisReview": "Report this review",
+  "time": {
+    "justNow": "just now",
+    "minutesAgo_one": "{{count}} minute ago",
+    "minutesAgo_other": "{{count}} minutes ago",
+    "hoursAgo_one": "{{count}} hour ago",
+    "hoursAgo_other": "{{count}} hours ago",
+    "daysAgo_one": "{{count}} day ago",
+    "daysAgo_other": "{{count}} days ago",
+    "monthsAgo_one": "{{count}} month ago",
+    "monthsAgo_other": "{{count}} months ago",
+    "yearsAgo_one": "{{count}} year ago",
+    "yearsAgo_other": "{{count}} years ago"
+  },
+  "form": {
+    "heading": "We'd Love To Hear About Your Experience!",
+    "rateQuestion": "How would you rate your experience?",
+    "ratingRequired": "Please select a star rating to submit.",
+    "writeReviewLabel": "Write Your Review",
+    "bodyPlaceholder": "Share your experience…",
+    "titleLabel": "Write A Title For Your Review",
+    "titlePlaceholder": "Summarize your experience…",
+    "charCount": "{{current}}/{{max}} characters",
+    "consent": "I confirm that this review is based on my personal experience and reflects my genuine opinion of this establishment. I have no personal or business relationship with this establishment and have not received any incentive or payment from it to write this review. I also understand that Cretixone maintains a strict zero-tolerance policy against fake reviews.",
+    "consentRequired": "Please confirm the statement above to submit your review.",
+    "submit": "Submit",
+    "submitting": "Submitting…"
+  },
+  "report": {
+    "title": "Report review",
+    "description": "Tell us why you're reporting this review.",
+    "reasons": {
+      "spam": "Spam or advertising",
+      "offensive": "Offensive or inappropriate",
+      "fake": "Fake or misleading",
+      "offTopic": "Off-topic / irrelevant",
+      "other": "Other"
+    },
+    "otherPlaceholder": "Please describe the reason…",
+    "selectReason": "Please select a reason.",
+    "describeReason": "Please describe the reason.",
+    "cancel": "Cancel",
+    "submit": "Submit report",
+    "submitting": "Submitting…"
+  },
+  "toast": {
+    "reportSubmitted": "Report submitted — thanks for letting us know.",
+    "selectRating": "Please select a star rating",
+    "addTitleAndReview": "Please add a title and your review",
+    "reviewSubmitted": "Review submitted"
+  }
+}

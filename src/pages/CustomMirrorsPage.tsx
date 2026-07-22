@@ -1,8 +1,11 @@
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { motion, type Variants } from 'framer-motion'
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
+import { useLangStore } from '@/store/langStore'
+import { cn } from '@/lib/utils'
 
 // ── Animation variants ───────────────────────────────────────────────────────
 const stagger: Variants = {
@@ -16,12 +19,12 @@ const fadeUp: Variants = {
 }
 
 const CATEGORIES = [
-  { title: 'Wall Mirrors', img: '/images/mirors/miror-1.png' },
-  { title: 'Decorative Mirrors', img: '/images/mirors/miror-2.png' },
-  { title: 'LED Mirrors', img: '/images/mirors/miror-3.png' },
-  { title: 'Custom Shapes', img: '/images/mirors/miror-4.png' },
-  { title: 'Beveled Edge Mirrors', img: '/images/mirors/miror-6.png' },
-  { title: 'Framed Mirrors', img: '/images/mirors/miror-5.png' },
+  { titleKey: 'wall', img: '/images/mirors/miror-1.png' },
+  { titleKey: 'decorative', img: '/images/mirors/miror-2.png' },
+  { titleKey: 'led', img: '/images/mirors/miror-3.png' },
+  { titleKey: 'customShapes', img: '/images/mirors/miror-4.png' },
+  { titleKey: 'beveled', img: '/images/mirors/miror-6.png' },
+  { titleKey: 'framed', img: '/images/mirors/miror-5.png' },
 ]
 
 const COLLAGE = {
@@ -31,7 +34,9 @@ const COLLAGE = {
 }
 
 export default function CustomMirrorsPage() {
+  const { t } = useTranslation('pages')
   const navigate = useNavigate()
+  const isRtl = useLangStore((s) => s.isRtl)
 
   useEffect(() => {
     const prevBg = document.body.style.background
@@ -56,29 +61,30 @@ export default function CustomMirrorsPage() {
           aria-hidden
           className="absolute inset-0 h-full w-full object-cover object-center"
         />
-        {/* Soft grey glow ellipse on the left (per design spec) */}
+        {/* Soft grey glow ellipse */}
         <div
           aria-hidden
           className="pointer-events-none absolute rounded-full"
           style={{
             width: '1530px',
             height: '1530px',
-            left: '-707px',
+            ...(isRtl ? { right: '-707px' } : { left: '-707px' }),
             top: '-374px',
             background: '#D9D9D9',
             filter: 'blur(303.35px)',
           }}
         />
-        {/* White fade on the left so the dark heading stays legible */}
+
+        {/* White fade */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0"
           style={{
-            background:
-              'linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.55) 30%, rgba(255,255,255,0) 56%)',
+            background: isRtl
+              ? 'linear-gradient(270deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.55) 30%, rgba(255,255,255,0) 56%)'
+              : 'linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.55) 30%, rgba(255,255,255,0) 56%)',
           }}
         />
-
         {/* Nav overlays the hero image */}
         <div className="relative z-30">
           <Navbar />
@@ -95,19 +101,17 @@ export default function CustomMirrorsPage() {
           >
             <motion.h1 variants={fadeUp} className="font-bold leading-[1.03] tracking-tight">
               <span className="block text-[42px] text-brand-navy sm:text-6xl md:text-7xl">
-                Elegant Mirrors
+                {t('customMirrors.hero.titleLine1')}
               </span>
               <span className="mt-1 block text-[28px] text-black sm:text-4xl md:text-5xl">
-                Designed for Your Space
+                {t('customMirrors.hero.titleLine2')}
               </span>
             </motion.h1>
             <motion.p
               variants={fadeUp}
               className="mt-8 max-w-md text-sm leading-relaxed text-foreground/70"
             >
-              We create mirrors that combine functionality with style, making
-              them perfect for homes, offices, hotels, retail stores, and
-              commercial interiors.
+              {t('customMirrors.hero.text')}
             </motion.p>
           </motion.div>
 
@@ -119,7 +123,7 @@ export default function CustomMirrorsPage() {
             transition={{ duration: 0.5, ease: 'easeOut', delay: 0.35 }}
             className="mt-10 inline-flex w-fit items-center justify-center self-start rounded-full bg-brand-gold px-8 py-3.5 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-brand-gold/90"
           >
-            Buy Your Design
+            {t('customMirrors.hero.cta')}
           </motion.button>
         </div>
       </section>
@@ -136,13 +140,13 @@ export default function CustomMirrorsPage() {
             variants={fadeUp}
             className="text-[28px] font-medium tracking-tight text-brand-navy sm:text-[40px]"
           >
-            Custom Mirrors
+            {t('customMirrors.header.title')}
           </motion.h1>
           <motion.p
             variants={fadeUp}
             className="mx-auto mt-1 max-w-md text-[16px] leading-relaxed text-foreground/60"
           >
-            Enhance your interiors with beautifully crafted custom mirrors.
+            {t('customMirrors.header.subtitle')}
           </motion.p>
         </motion.div>
 
@@ -155,12 +159,12 @@ export default function CustomMirrorsPage() {
           viewport={{ once: true, margin: '-60px' }}
         >
           {CATEGORIES.map((c) => (
-            <motion.div key={c.title} variants={fadeUp} className="group text-center">
+            <motion.div key={c.titleKey} variants={fadeUp} className="group text-center">
               <div className="overflow-hidden rounded-3xl bg-black/5">
                 <div className="h-[380px] w-full">
                   <img
                     src={c.img}
-                    alt={c.title}
+                    alt={t(`customMirrors.categories.${c.titleKey}`)}
                     loading="lazy"
                     draggable={false}
                     className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
@@ -168,7 +172,7 @@ export default function CustomMirrorsPage() {
                 </div>
               </div>
               <p className="mt-3 text-[16px] font-normal text-black">
-                {c.title}
+                {t(`customMirrors.categories.${c.titleKey}`)}
               </p>
             </motion.div>
           ))}
@@ -188,14 +192,13 @@ export default function CustomMirrorsPage() {
                 variants={fadeUp}
                 className="text-[28px] font-medium tracking-tight text-brand-navy md:text-[46px]"
               >
-                Crafted with Precision
+                {t('customMirrors.crafted.title')}
               </motion.h2>
               <motion.p
                 variants={fadeUp}
                 className="mt-4 max-w-md text-[13px] leading-relaxed text-foreground/60 md:text-sm"
               >
-                Every mirror is manufactured with precision using premium
-                materials for durability and elegance.
+                {t('customMirrors.crafted.text')}
               </motion.p>
               <motion.button
                 variants={fadeUp}
@@ -203,7 +206,7 @@ export default function CustomMirrorsPage() {
                 onClick={() => navigate('/editor')}
                 className="mt-7 inline-flex items-center justify-center rounded-md bg-brand-gold px-6 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-brand-gold/90"
               >
-                Create a new product
+                {t('customMirrors.crafted.cta')}
               </motion.button>
             </motion.div>
 
@@ -215,7 +218,7 @@ export default function CustomMirrorsPage() {
               transition={{ duration: 0.6, ease: 'easeOut' }}
               className="grid h-[360px] grid-cols-4 grid-rows-2 gap-1 md:h-[600px]"
             >
-              <div className="col-span-1 col-start-1 row-start-1 rounded-r-none overflow-hidden rounded-3xl bg-black/5">
+              <div className="col-span-1 col-start-1 rounded-l-3xl row-start-1 overflow-hidden bg-black/5">
                 <img
                   src={COLLAGE.topLeft}
                   alt=""
@@ -224,7 +227,8 @@ export default function CustomMirrorsPage() {
                   className="h-full w-full object-cover"
                 />
               </div>
-              <div className="col-span-1 col-start-1 rounded-r-none row-start-2 overflow-hidden rounded-3xl bg-black/5">
+              <div
+                className="col-span-1 rounded-l-3xl col-start-1 row-start-2  overflow-hidden bg-black/5">
                 <img
                   src={COLLAGE.bottomLeft}
                   alt=""
@@ -233,7 +237,7 @@ export default function CustomMirrorsPage() {
                   className="h-full w-full object-cover"
                 />
               </div>
-              <div className="col-span-3 col-start-2 row-span-2 row-start-1 overflow-hidden rounded-3xl rounded-l-none bg-black/5">
+              <div className="col-span-3 col-start-2 row-span-2 rounded-r-3xl row-start-1 overflow-hidden  bg-black/5">
                 <img
                   src={COLLAGE.right}
                   alt=""
@@ -248,7 +252,7 @@ export default function CustomMirrorsPage() {
       </main>
 
       <Footer />
-       <div
+      <div
         aria-hidden
         className="pointer-events-none z-10 absolute top-[30%] rounded-full"
         style={{

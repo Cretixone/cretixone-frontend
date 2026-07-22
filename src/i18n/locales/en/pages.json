@@ -1,0 +1,293 @@
+{
+  "about": {
+    "breadcrumb": {
+      "home": "Home",
+      "aria": "Breadcrumb",
+      "current": "About"
+    },
+    "hero": {
+      "by": "By Creative One Business SPC",
+      "tagline": "Heritage of 1986. Vision for 2040.",
+      "intro1": "Cretixone is the official digital and creative platform developed by Creative One Business SPC, a company based in Muscat, Sultanate of Oman.",
+      "intro2": "Built on a strong foundation of legacy and trust, Creative One Business SPC proudly carries forward the heritage of IBN AL FARSI, a respected establishment founded in 1986. With decades of experience behind us, we are now transforming that legacy into a modern, technology-driven future.",
+      "intro3": "Cretixone represents this transformation—bringing together creativity, commerce, and digital innovation under one unified platform aligned with the ambitions of Oman Vision 2040."
+    },
+    "legacy": {
+      "title": "A Legacy We Honor, A Future We Build",
+      "p1": "From traditional craftsmanship to digital excellence, our journey reflects a seamless evolution.",
+      "p2": "With deep-rooted industry expertise inherited from IBN AL FARSI, Creative One Business SPC is redefining the creative landscape through Cretixone—bridging the gap between artists, businesses, and modern consumers.",
+      "showcaseAlt": "Showcase {{num}}"
+    },
+    "foundation": {
+      "title": "Our Foundation",
+      "established": {
+        "alt": "History",
+        "title": "Established Legacy",
+        "text": "IBN AL FARSI, established in 1986, has long been known for its commitment to quality, craftsmanship, and customer trust."
+      },
+      "modern": {
+        "alt": "Transformation",
+        "title": "Modern Transformation",
+        "text": "Creative One Business SPC introduces advanced systems, digital platforms, and innovative solutions through its brand Cretixone."
+      },
+      "vision": {
+        "alt": "Vision",
+        "title": "Aligned with Vision 2040",
+        "text": "We actively support Oman Vision 2040 by contributing to a diversified, creative, and knowledge-based economy."
+      },
+      "value": {
+        "alt": "Together",
+        "title": "Creating Value Together",
+        "text": "We empower artists, photographers, and businesses while building long-term partnerships across industries."
+      }
+    },
+    "whatWeDo": {
+      "title": "What We Do",
+      "services": {
+        "framing": { "alt": "Art", "label": "Custom framing and art solutions" },
+        "print": { "alt": "Print", "label": "Digital artwork and print production" },
+        "design": { "alt": "Creative", "label": "Creative design and branding solutions" },
+        "corporate": { "alt": "Corporate", "label": "Corporate and bulk creative services" },
+        "development": { "alt": "Development", "label": "Development of digital creative platforms" }
+      },
+      "marketplaceLine1": "Oman's First Creative",
+      "marketplaceLine2": "Market Place",
+      "p1": "Cretixone is proud to introduce Oman's first-ever platform where photographers and artists can sell their products.",
+      "p2": "This platform is designed to provide a professional, secure, and inspiring digital space where creatives can showcase, promote, and monetize their work—reaching both local and global audiences.",
+      "imageAlt": "Framed artworks on a wall"
+    },
+    "commitment": {
+      "title": "Our Commitment",
+      "deliver": { "alt": "Deliver premium", "text": "Deliver premium-quality products and services" },
+      "support": { "alt": "Support", "text": "Support and empower creative talent" },
+      "innovative": { "alt": "Innovative solutions", "text": "Build innovative and sustainable solutions" },
+      "elevate": { "alt": "Elevate globally", "text": "Elevate Oman's creative industry globally" }
+    },
+    "promise": {
+      "commitmentAlt": "Our commitment",
+      "commitmentTitle": "Our Commitment",
+      "commitmentText": "To position Cretixone as a leading creative and digital platform in Oman and the region—where art, technology, and commerce come together seamlessly.",
+      "promiseTitle": "Our Promise",
+      "promiseP1": "At Creative One Business SPC, we don't just continue a legacy—we transform it.",
+      "promiseP2": "Through Cretixone, we combine decades of experience with modern innovation to redefine how creativity is created, experienced, and shared."
+    }
+  },
+  "team": {
+    "breadcrumb": {
+      "home": "Home",
+      "aria": "Breadcrumb",
+      "current": "Team"
+    },
+    "hero": {
+      "titleLine1": "The Creative Minds",
+      "titleLine2": "Behind the Work We Love",
+      "subtitle": "Our team is a group of passionate experts driven by creativity, innovation, and a commitment to excellence. We bring together diverse skills and experiences to build solutions that make a real difference. United by shared values and a bold vision, we work together to push boundaries, embrace new ideas, and turn challenges into opportunities."
+    },
+    "roles": {
+      "founder": "Founder & Executive Chairperson",
+      "ceo": "CEO & Managing Director",
+      "cfo": "Chief Finance & Corporate Affairs Officer",
+      "designer": "Graphic Designer / Design Consultant",
+      "framerIndoor": "Lead Framer / Sales — Indoor",
+      "framerWorkshop": "Lead Framer / Workshop Manager",
+      "glassSpecialist": "Glass Specialist / Sales — Outdoor & Installer"
+    }
+  },
+  "testimonials": {
+    "breadcrumb": {
+      "home": "Home",
+      "aria": "Breadcrumb",
+      "current": "Testimonials"
+    },
+    "badge": "Testimonials",
+    "title": "Hear from Our Users",
+    "subtitle": "Read how our users have framed their best moments and elevated their spaces with Cretixone's custom prints and frames.",
+    "heartAlt": "Happy Cretixone users",
+    "people": {
+      "emily": { "role": "Interior Designer", "quote": "Cretixone's custom framing turned my client's photos into gallery-worthy pieces. The quality and finish exceeded every expectation." },
+      "sarah": { "role": "Home Stylist", "quote": "The range of frame styles and mat options is incredible. I found the perfect match for every room in just minutes." },
+      "olivia": { "role": "Illustrator", "quote": "Being able to sell my artwork and have it printed and framed on demand completely changed how I run my studio." },
+      "ethan": { "role": "Marketing Lead", "quote": "Quick, reliable, and the print quality is exceptional. Cretixone has become our go-to for wall art." },
+      "james": { "role": "Photographer", "quote": "The preview editor let me see exactly how my prints would look before ordering. Zero surprises, beautiful results." },
+      "michael": { "role": "Freelance Designer", "quote": "Cretixone makes framing effortless — upload, choose a style, done. The floater frames are my new favorite." },
+      "david": { "role": "Architect", "quote": "The craftsmanship is outstanding. Natural wood, clean lines — these frames genuinely elevate any space." },
+      "daniel": { "role": "Gallery Curator", "quote": "The variety and quality on Cretixone exceeded our expectations. Perfect for professional presentations." },
+      "laura": { "role": "Art Collector", "quote": "From upload to delivery the whole experience felt premium. My framed prints arrived flawless and ready to hang." },
+      "chris": { "role": "Business Owner", "quote": "I ordered prints in bulk for our office and the consistency was spot on. Great service and fast turnaround." },
+      "mia": { "role": "Content Creator", "quote": "Easy to navigate, beautiful results, and the support team is genuinely helpful. Highly recommended!" },
+      "sophia": { "role": "Interior Architect", "quote": "Every detail, from the mat to the moulding, is considered. The result is timeless and elegant." }
+    }
+  },
+  "terms": {
+    "breadcrumb": {
+      "home": "Home",
+      "aria": "Breadcrumb",
+      "current": "Terms and conditions"
+    },
+    "title": "Terms and Conditions",
+    "company": "Creative One Business SPC (Cretixone)",
+    "lastUpdatedLabel": "Last Updated:",
+    "lastUpdatedDate": "April 23, 2026",
+    "s1": {
+      "title": "INTRODUCTION",
+      "p1": "Welcome to Cretixone, operated by Creative One Business SPC, a company registered in the Sultanate of Oman. These Terms & Conditions (“Terms”) govern your access to and use of our website, services, digital marketplace, and content platform. By accessing or using our platform, you agree to be legally bound by these Terms."
+    },
+    "s2": {
+      "title": "DEFINITIONS",
+      "platformLabel": "Platform:",
+      "platformText": "The website and services operated by Cretixone.",
+      "userLabel": "User:",
+      "userText": "Any person accessing or using the platform.",
+      "contributorLabel": "Contributor:",
+      "contributorText": "A user who uploads, shares, or sells content.",
+      "contentLabel": "Content:",
+      "contentText": "Images, artwork, designs, media, and digital files.",
+      "buyerLabel": "Buyer:",
+      "buyerText": "A user purchasing or licensing content."
+    },
+    "s3": {
+      "title": "ELIGIBILITY",
+      "intro": "To use this platform, you must:",
+      "p1": "Be at least 18 years old.",
+      "p2": "Have full legal capacity under the laws of the Sultanate of Oman.",
+      "p3": "Provide accurate and complete registration information.",
+      "p4": "We reserve the right to refuse service or terminate accounts at our sole discretion."
+    },
+    "s4": {
+      "title": "PLATFORM ROLE",
+      "p1": "Cretixone acts as a digital intermediary connecting contributors and buyers.",
+      "p2": "We do not own the content uploaded by users (unless otherwise stated).",
+      "p3": "We do not guarantee the accuracy, legality, or originality of user-submitted content.",
+      "p4": "Cretixone is not responsible for disputes between Buyers and Contributors."
+    },
+    "s5": {
+      "title": "USER ACCOUNTS",
+      "p1": "Users are responsible for maintaining the confidentiality of their login credentials. You accept full responsibility for all activities that occur under your account. Cretixone reserves the right to suspend or terminate accounts that violate these Terms."
+    },
+    "s6": {
+      "title": "CONTENT OWNERSHIP & LICENSING",
+      "label1": "6.1 Contributor Ownership:",
+      "text1": "Contributors retain the copyright to their uploaded content. By uploading, contributors grant Cretixone a non-exclusive, worldwide, royalty-free license to display, promote, and distribute the content for platform operations.",
+      "label2": "6.2 Buyer License:",
+      "text2": "Upon successful payment, buyers receive a limited, non-exclusive, non-transferable license to use the content based on the license type selected (e.g., Personal or Commercial).",
+      "label3": "6.3 Restrictions:",
+      "text3": "Buyers may NOT resell/redistribute content as standalone files, claim original authorship, or use content for illegal or defamatory purposes."
+    },
+    "s7": {
+      "title": "CONTRIBUTOR OBLIGATIONS",
+      "intro": "Contributors represent and warrant that:",
+      "p1": "The content is original and does not infringe upon any third-party intellectual property.",
+      "p2": "Necessary model or property releases have been obtained.",
+      "p3": "The content does not contain viruses or malicious code.",
+      "p4": "Cretixone reserves the right to remove any content without notice if it is deemed inappropriate or infringing."
+    },
+    "s8": {
+      "title": "PROHIBITED CONDUCT",
+      "intro": "Users shall not:",
+      "p1": "Use the platform for any fraudulent or illegal activity.",
+      "p2": "Attempt to bypass security features or “scrape” data from the platform.",
+      "p3": "Upload content that is offensive, discriminatory, or violates Omani public policy."
+    },
+    "s9": {
+      "title": "PAYMENTS, FEES & COMMISSIONS",
+      "pricingLabel": "Pricing:",
+      "pricingText": "All prices are set as displayed on the platform.",
+      "commissionsLabel": "Commissions:",
+      "commissionsText": "Cretixone may deduct a service fee or commission from transactions as agreed upon in the Contributor dashboard.",
+      "refundsLabel": "Refunds:",
+      "refundsText": "Due to the nature of digital products, all sales are final and non-refundable unless the file is proven to be defective or misrepresented."
+    },
+    "s10": {
+      "title": "TAXATION (OMAN VAT)",
+      "p1": "In compliance with Omani law, prices may be subject to 5% Value Added Tax (VAT) where applicable. Users are responsible for any additional tax obligations arising from their use of the platform."
+    },
+    "s11": {
+      "title": "INDEMNIFICATION",
+      "p1": "You agree to indemnify, defend, and hold harmless Creative One Business SPC, its officers, and employees from any claims, liabilities, damages, or legal expenses (including attorney fees) arising from your breach of these Terms, your use of the platform, or your infringement of any third-party rights."
+    },
+    "s12": {
+      "title": "LIMITATION OF LIABILITY",
+      "p1": "To the maximum extent permitted under Omani law, Cretixone shall not be liable for any indirect, incidental, or consequential damages, including loss of profits, data, or business reputation, arising out of your use of the platform."
+    },
+    "s13": {
+      "title": "COPYRIGHT INFRINGEMENT (TAKEDOWN POLICY)",
+      "intro": "If you believe your work has been copied in a way that constitutes copyright infringement, please contact us with:",
+      "p1": "Proof of ownership.",
+      "p2": "Identification of the infringing material.",
+      "p3": "Your contact information."
+    },
+    "s14": {
+      "title": "FORCE MAJEURE",
+      "p1": "Cretixone shall not be held liable for any delay or failure in performance resulting from causes beyond its reasonable control, including but not limited to internet outages, server failures, natural disasters, or government restrictions."
+    },
+    "s15": {
+      "title": "GOVERNING LAW & JURISDICTION",
+      "p1": "These Terms are governed by and construed in accordance with the laws of the Sultanate of Oman. Any disputes arising from these Terms shall be subject to the exclusive jurisdiction of the Omani Courts."
+    },
+    "s16": {
+      "title": "CHANGES TO TERMS",
+      "p1": "We reserve the right to update these Terms at any time. Your continued use of the platform following any changes constitutes your acceptance of the new Terms."
+    },
+    "s17": {
+      "title": "CONTACT INFORMATION",
+      "p1": "Creative One Business SPC (Cretixone) Location: Sultanate of Oman",
+      "emailLabel": "Email:",
+      "emailValue": "[Insert Your Email Here]",
+      "websiteLabel": "Website:",
+      "websiteValue": "www.cretixone.com"
+    }
+  },
+  "customPrints": {
+    "hero": {
+      "titleLine1": "Turn Your Memories",
+      "titleLine2": "into Timeless Art",
+      "text": "At Creative One Business SPC, we believe every photograph tells a story. Our Custom Print service allows you to transform your favorite memories into premium-quality prints crafted with precision and care.",
+      "cta": "Buy Your Design"
+    },
+    "sectionBlurb": "Whether it's family portraits, wedding memories, travel adventures, artwork, or business branding, we provide vibrant colors, sharp details, and long-lasting quality using premium printing materials.",
+    "prints": { "title": "Custom Prints" },
+    "whyChoose": { "title": "Why Choose Us?" },
+    "categories": {
+      "photoPrints": "Photo Prints",
+      "canvasPrints": "Canvas Prints",
+      "fineArt": "Fine Art Prints",
+      "largeFormat": "Large Format Printing",
+      "wallDecor": "Personalized Wall Décor",
+      "corporate": "Corporate Printing Solutions"
+    },
+    "featureDesc": "Crafted from premium materials, our custom prints offer exceptional clarity, lasting durability, and an elegant finish for every space.",
+    "features": {
+      "premium": "Premium quality materials",
+      "fadeResistant": "Fade-resistant printing",
+      "multipleSizes": "Multiple sizes available",
+      "fastProduction": "Fast production",
+      "professional": "Professional finishing"
+    },
+    "ctaSection": { "title": "Bring your ideas to life with custom prints made just for you." }
+  },
+  "customMirrors": {
+    "hero": {
+      "titleLine1": "Elegant Mirrors",
+      "titleLine2": "Designed for Your Space",
+      "text": "We create mirrors that combine functionality with style, making them perfect for homes, offices, hotels, retail stores, and commercial interiors.",
+      "cta": "Buy Your Design"
+    },
+    "header": {
+      "title": "Custom Mirrors",
+      "subtitle": "Enhance your interiors with beautifully crafted custom mirrors."
+    },
+    "categories": {
+      "wall": "Wall Mirrors",
+      "decorative": "Decorative Mirrors",
+      "led": "LED Mirrors",
+      "customShapes": "Custom Shapes",
+      "beveled": "Beveled Edge Mirrors",
+      "framed": "Framed Mirrors"
+    },
+    "crafted": {
+      "title": "Crafted with Precision",
+      "text": "Every mirror is manufactured with precision using premium materials for durability and elegance.",
+      "cta": "Create a new product"
+    }
+  }
+}

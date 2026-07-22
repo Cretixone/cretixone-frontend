@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ChevronRight, Home } from 'lucide-react'
 import Navbar from '@/components/landing/Navbar'
@@ -10,6 +11,7 @@ import { formatOMR } from '@/lib/format'
 // reference screenshot is provided. For now it summarises the current
 // selection from the editor so the flow is coherent end-to-end.
 export default function CheckoutPage() {
+  const { t } = useTranslation('cart')
   const [params] = useSearchParams()
   const inquiry = params.get('inquiry') === '1'
 
@@ -48,18 +50,18 @@ export default function CheckoutPage() {
 
       <main className="mx-auto max-w-[760px] px-5 pt-28 pb-20 md:px-8 md:pt-32 lg:pt-40">
         <nav
-          aria-label="Breadcrumb"
+          aria-label={t('breadcrumb.label')}
           className="flex items-center gap-2 text-xs text-brand-navy md:text-[13px]"
         >
-          <Link to="/" aria-label="Home" className="inline-flex items-center hover:opacity-80">
+          <Link to="/" aria-label={t('breadcrumb.home')} className="inline-flex items-center hover:opacity-80">
             <Home className="h-3.5 w-3.5" strokeWidth={2} />
           </Link>
           <ChevronRight className="h-3 w-3 text-brand-navy/60" />
-          <span className="text-brand-navy/70">{inquiry ? 'Inquiry' : 'Checkout'}</span>
+          <span className="text-brand-navy/70">{inquiry ? t('checkoutPage.breadcrumbInquiry') : t('checkoutPage.breadcrumbCheckout')}</span>
         </nav>
 
         <h1 className="mt-6 text-3xl font-semibold tracking-tight text-brand-navy md:text-[40px]">
-          {inquiry ? 'Request an Inquiry' : 'Checkout'}
+          {inquiry ? t('checkoutPage.titleInquiry') : t('checkoutPage.titleCheckout')}
         </h1>
 
         {selectedFrame ? (
@@ -69,20 +71,20 @@ export default function CheckoutPage() {
                 {selectedFrame.imgUrl && (
                   <img
                     src={selectedFrame.imgUrl}
-                    alt="Selected frame"
+                    alt={t('checkoutPage.selectedFrameAlt')}
                     className="h-full w-full object-contain p-1"
                   />
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-brand-navy">Custom frame</p>
+                <p className="text-sm font-semibold text-brand-navy">{t('checkoutPage.customFrame')}</p>
                 <p className="mt-1 text-sm text-foreground/60">
-                  Size: {w.toFixed(1)} × {h.toFixed(1)} cm
+                  {t('checkoutPage.size', { w: w.toFixed(1), h: h.toFixed(1) })}
                 </p>
               </div>
               {!inquiry && (
                 <div className="text-right">
-                  <p className="text-xs text-foreground/50">Total</p>
+                  <p className="text-xs text-foreground/50">{t('checkoutPage.total')}</p>
                   <p className="text-lg font-bold text-brand-navy tabular-nums">
                     {formatOMR(price)}
                   </p>
@@ -91,13 +93,13 @@ export default function CheckoutPage() {
             </div>
           </div>
         ) : (
-          <p className="mt-8 text-sm text-foreground/60">No item selected yet.</p>
+          <p className="mt-8 text-sm text-foreground/60">{t('checkoutPage.noItem')}</p>
         )}
 
         <p className="mt-6 rounded-xl bg-brand-gold/[0.07] px-4 py-3 text-[13px] text-foreground/70">
           {inquiry
-            ? "This size is outside the frame's standard range — submit an inquiry and our team will get back to you with a custom quote. (Inquiry form coming soon.)"
-            : 'Full checkout + cart is being set up. The order summary above reflects your current selection.'}
+            ? t('checkoutPage.inquiryNote')
+            : t('checkoutPage.checkoutNote')}
         </p>
       </main>
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   ChevronLeft,
   ChevronRight,
@@ -129,6 +130,7 @@ function pickByOrientation(
 }
 
 function CustomSizeInputs() {
+  const { t } = useTranslation('editor')
   const customWidthCm = useEditorStore((s) => s.customWidthCm)
   const customHeightCm = useEditorStore((s) => s.customHeightCm)
   const customAspectLocked = useEditorStore((s) => s.customAspectLocked)
@@ -159,12 +161,12 @@ function CustomSizeInputs() {
       }}
     >
       <div className="flex items-center justify-between">
-        <FieldLabel>Custom (cm)</FieldLabel>
+        <FieldLabel>{t('inspector.size.customCm')}</FieldLabel>
         <Tooltip>
           <TooltipTrigger asChild>
             <button
               onClick={() => setCustomAspectLocked(!customAspectLocked)}
-              aria-label={customAspectLocked ? 'Unlock aspect ratio' : 'Lock aspect ratio'}
+              aria-label={customAspectLocked ? t('inspector.size.unlockAspect') : t('inspector.size.lockAspect')}
               className="flex h-6 w-6 items-center justify-center rounded-md transition-colors"
               style={{
                 background: customAspectLocked ? 'var(--ed-accent-soft)' : 'transparent',
@@ -175,17 +177,17 @@ function CustomSizeInputs() {
             </button>
           </TooltipTrigger>
           <TooltipContent side="left">
-            {customAspectLocked ? 'Aspect locked' : 'Aspect free'}
+            {customAspectLocked ? t('inspector.size.aspectLocked') : t('inspector.size.aspectFree')}
           </TooltipContent>
         </Tooltip>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <label className="space-y-1">
-          <FieldLabel>Width</FieldLabel>
+          <FieldLabel>{t('inspector.size.width')}</FieldLabel>
           <NumberField value={customWidthCm} onChange={onWidth} />
         </label>
         <label className="space-y-1">
-          <FieldLabel>Height</FieldLabel>
+          <FieldLabel>{t('inspector.size.height')}</FieldLabel>
           <NumberField value={customHeightCm} onChange={onHeight} />
         </label>
       </div>
@@ -197,6 +199,7 @@ function CustomSizeInputs() {
 // the "Custom size" button reveals manual cm inputs. Defaults to the first
 // size, and auto-selects an orientation-matching size when an image is added.
 function SizePresetCard() {
+  const { t } = useTranslation('editor')
   const { data: sizes } = useFetchFrameSizesQuery()
   const customWidthCm = useEditorStore((s) => s.customWidthCm)
   const customHeightCm = useEditorStore((s) => s.customHeightCm)
@@ -255,7 +258,7 @@ function SizePresetCard() {
 
   return (
     <div className="space-y-3">
-      <SectionCard title="Size">
+      <SectionCard title={t('inspector.size.sectionTitle')}>
         <Select
           value={selectedId}
           onValueChange={(id) => {
@@ -266,13 +269,13 @@ function SizePresetCard() {
             }
           }}
         >
-          <SelectTrigger aria-label="Frame size">
-            <SelectValue placeholder="Choose a size…" />
+          <SelectTrigger aria-label={t('inspector.size.frameSizeAria')}>
+            <SelectValue placeholder={t('inspector.size.choosePlaceholder')} />
           </SelectTrigger>
           <SelectContent>
             {sizes.map((s) => (
               <SelectItem key={s.id} value={s.id}>
-                {s.name} · {s.widthCm}×{s.lengthCm} cm
+                {t('inspector.size.sizeOption', { name: s.name, w: s.widthCm, h: s.lengthCm })}
               </SelectItem>
             ))}
           </SelectContent>
@@ -288,7 +291,7 @@ function SizePresetCard() {
             background: showCustom || !selectedId ? 'var(--ed-accent-soft)' : 'transparent',
           }}
         >
-          <Sliders size={13} strokeWidth={1.8} /> Custom size
+          <Sliders size={13} strokeWidth={1.8} /> {t('inspector.size.customButton')}
         </button>
 
         {(showCustom || !selectedId) && <CustomSizeInputs />}
@@ -302,22 +305,24 @@ function RatioPanel() {
 }
 
 function StylePanel() {
+  const { t } = useTranslation('editor')
   const selectedFrame = useEditorStore((s) => s.selectedFrame)
   const selectedMatSize = useEditorStore((s) => s.selectedMatSize)
   const selectedMatColor = useEditorStore((s) => s.selectedMatColor)
   const selectedMdf = useEditorStore((s) => s.selectedMdf)
 
+  const none = t('inspector.style.none')
   const list = [
-    { label: 'Frame',    value: selectedFrame ? (selectedFrame.name || `#${selectedFrame.id}`) : 'None' },
-    { label: 'Mat size', value: selectedMatSize ? selectedMatSize.name : 'None' },
-    { label: 'Mat price', value: selectedMatSize && selectedMatSize.price > 0 ? formatOMR(selectedMatSize.price) : '—' },
-    { label: 'Mat color', value: selectedMatColor ? selectedMatColor.name : 'None' },
-    { label: 'MDF', value: selectedMdf ? selectedMdf.name : 'None' },
+    { label: t('inspector.style.frame'),    value: selectedFrame ? (selectedFrame.name || `#${selectedFrame.id}`) : none },
+    { label: t('inspector.style.matSize'), value: selectedMatSize ? selectedMatSize.name : none },
+    { label: t('inspector.style.matPrice'), value: selectedMatSize && selectedMatSize.price > 0 ? formatOMR(selectedMatSize.price) : '—' },
+    { label: t('inspector.style.matColor'), value: selectedMatColor ? selectedMatColor.name : none },
+    { label: t('inspector.style.mdf'), value: selectedMdf ? selectedMdf.name : none },
   ]
 
   return (
     <div className="space-y-3">
-      <SectionCard title="Composition">
+      <SectionCard title={t('inspector.style.sectionTitle')}>
         <div className="space-y-2">
           {list.map((item) => (
             <div key={item.label} className="flex items-center justify-between">
@@ -330,7 +335,7 @@ function StylePanel() {
         </div>
         <Separator className="my-3" />
         <p className="text-[11px] leading-relaxed" style={{ color: 'var(--ed-fg-subtle)' }}>
-          Switch tools on the left rail to change Frame · Mat · Effects.
+          {t('inspector.style.hint')}
         </p>
       </SectionCard>
     </div>
@@ -338,6 +343,7 @@ function StylePanel() {
 }
 
 function ShadowPanel() {
+  const { t } = useTranslation('editor')
   const shadowEnabled = useEditorStore((s) => s.shadowEnabled)
   const shadowBlur = useEditorStore((s) => s.shadowBlur)
   const shadowOpacity = useEditorStore((s) => s.shadowOpacity)
@@ -347,17 +353,17 @@ function ShadowPanel() {
 
   return (
     <div className="space-y-3">
-      <SectionCard title="Drop shadow">
+      <SectionCard title={t('inspector.shadow.sectionTitle')}>
         <div className="mb-3 flex items-center justify-between">
           <span className="text-[11px] font-medium" style={{ color: 'var(--ed-fg)' }}>
-            Enable
+            {t('inspector.shadow.enable')}
           </span>
           <Switch checked={shadowEnabled} onCheckedChange={setShadowEnabled} />
         </div>
         <div className={cn('space-y-3', !shadowEnabled && 'pointer-events-none opacity-50')}>
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <FieldLabel>Blur</FieldLabel>
+              <FieldLabel>{t('inspector.shadow.blur')}</FieldLabel>
               <ValueText>{shadowBlur}px</ValueText>
             </div>
             <Slider
@@ -371,7 +377,7 @@ function ShadowPanel() {
           </div>
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <FieldLabel>Opacity</FieldLabel>
+              <FieldLabel>{t('inspector.shadow.opacity')}</FieldLabel>
               <ValueText>{Math.round(shadowOpacity * 100)}%</ValueText>
             </div>
             <Slider
@@ -395,6 +401,7 @@ function ShadowPanel() {
 // and shows Checkout when the size fits the frame's [sizeFrom, sizeTo] range
 // (both width AND length within range), otherwise Request Inquiry.
 function CheckoutFooter() {
+  const { t } = useTranslation('editor')
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const editId = searchParams.get('edit')
@@ -441,18 +448,18 @@ function CheckoutFooter() {
       {/* Price breakdown — frame, mat and MDF contributions */}
       <div className="mb-2.5 space-y-1">
         <div className="flex items-center justify-between text-[11px]">
-          <span style={{ color: 'var(--ed-fg-muted)' }}>Frame</span>
+          <span style={{ color: 'var(--ed-fg-muted)' }}>{t('inspector.checkout.frame')}</span>
           <span className="tabular-nums" style={{ color: 'var(--ed-fg)' }}>{formatOMR(framePrice)}</span>
         </div>
         {matPrice > 0 && (
           <div className="flex items-center justify-between text-[11px]">
-            <span style={{ color: 'var(--ed-fg-muted)' }}>Mat</span>
+            <span style={{ color: 'var(--ed-fg-muted)' }}>{t('inspector.checkout.mat')}</span>
             <span className="tabular-nums" style={{ color: 'var(--ed-fg)' }}>{formatOMR(matPrice)}</span>
           </div>
         )}
         {selectedMdf && (
           <div className="flex items-center justify-between text-[11px]">
-            <span style={{ color: 'var(--ed-fg-muted)' }}>MDF</span>
+            <span style={{ color: 'var(--ed-fg-muted)' }}>{t('inspector.checkout.mdf')}</span>
             <span className="tabular-nums" style={{ color: 'var(--ed-fg)' }}>{formatOMR(mdfPrice)}</span>
           </div>
         )}
@@ -493,7 +500,7 @@ function CheckoutFooter() {
           className="flex w-full items-center justify-between gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ed-ring)]"
           style={{ background: 'var(--ed-accent)', color: 'var(--ed-accent-fg)' }}
         >
-          <span>Add to cart</span>
+          <span>{t('inspector.checkout.addToCart')}</span>
           <span className="tabular-nums">{formatOMR(price)}</span>
         </button>
       ) : (
@@ -507,7 +514,7 @@ function CheckoutFooter() {
             background: 'transparent',
           }}
         >
-          Request Inquiry
+          {t('inspector.checkout.requestInquiry')}
         </button>
       )}
     </div>
@@ -517,6 +524,7 @@ function CheckoutFooter() {
 // ── Right Inspector ───────────────────────────────────────────────────────
 
 export default function RightInspector() {
+  const { t } = useTranslation('editor')
   const activeControlTab = useEditorStore((s) => s.activeControlTab)
   const setActiveControlTab = useEditorStore((s) => s.setActiveControlTab)
   const inspectorCollapsed = useEditorStore((s) => s.inspectorCollapsed)
@@ -540,7 +548,7 @@ export default function RightInspector() {
           <TooltipTrigger asChild>
             <button
               onClick={() => setInspectorCollapsed(false)}
-              aria-label="Expand inspector"
+              aria-label={t('inspector.expand')}
               className="flex h-7 w-7 items-center justify-center rounded-md transition-colors"
               style={{
                 color: 'var(--ed-fg-muted)',
@@ -548,10 +556,10 @@ export default function RightInspector() {
               onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--ed-hover)' }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
             >
-              <ChevronLeft size={14} strokeWidth={1.8} />
+              <ChevronLeft size={14} strokeWidth={1.8} className="rtl:-scale-x-100" />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="left">Expand inspector</TooltipContent>
+          <TooltipContent side="left">{t('inspector.expand')}</TooltipContent>
         </Tooltip>
       </div>
     )
@@ -573,31 +581,31 @@ export default function RightInspector() {
           className="text-[10px] font-semibold uppercase tracking-[0.12em]"
           style={{ color: 'var(--ed-fg-subtle)' }}
         >
-          Inspector
+          {t('inspector.title')}
         </p>
         <Tooltip>
           <TooltipTrigger asChild>
             <button
               onClick={() => setInspectorCollapsed(true)}
-              aria-label="Collapse inspector"
+              aria-label={t('inspector.collapse')}
               className="flex h-6 w-6 items-center justify-center rounded-md transition-colors"
               style={{ color: 'var(--ed-fg-muted)' }}
               onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--ed-hover)' }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
             >
-              <ChevronRight size={13} strokeWidth={1.8} />
+              <ChevronRight size={13} strokeWidth={1.8} className="rtl:-scale-x-100" />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="left">Collapse</TooltipContent>
+          <TooltipContent side="left">{t('inspector.collapse')}</TooltipContent>
         </Tooltip>
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 pb-4 pt-3">
         <Tabs value={tab} onValueChange={setActiveControlTab}>
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="Ratio">Size</TabsTrigger>
-            <TabsTrigger value="Style">Style</TabsTrigger>
-            <TabsTrigger value="Shadow">Shadow</TabsTrigger>
+            <TabsTrigger value="Ratio">{t('inspector.tabs.size')}</TabsTrigger>
+            <TabsTrigger value="Style">{t('inspector.tabs.style')}</TabsTrigger>
+            <TabsTrigger value="Shadow">{t('inspector.tabs.shadow')}</TabsTrigger>
           </TabsList>
           <TabsContent value="Ratio">
             <RatioPanel />

@@ -1,12 +1,13 @@
 import { motion, type Variants } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import CategoryCard from '@/components/landing/CategoryCard'
 import { Button } from '@/components/ui/button'
 
 const CATEGORIES = [
-  { label: 'Frames', image: '/images/webp/frames.webp', href: '#frames' },
-  { label: 'Printing', image: '/images/webp/printing.webp', href: '#printing' },
-  { label: 'Mirror & Glasses', image: '/images/webp/miror-galsses.webp', href: '#mirror' },
-  { label: 'Gifts', image: '/images/webp/gifts.webp', href: '#gifts' },
+  { labelKey: 'categories.items.frames', image: '/images/webp/frames.webp', href: '#frames' },
+  { labelKey: 'categories.items.printing', image: '/images/webp/printing.webp', href: '#printing' },
+  { labelKey: 'categories.items.mirror', image: '/images/webp/miror-galsses.webp', href: '#mirror' },
+  { labelKey: 'categories.items.gifts', image: '/images/webp/gifts.webp', href: '#gifts' },
 ]
 
 const fadeUp: Variants = {
@@ -15,6 +16,7 @@ const fadeUp: Variants = {
 }
 
 export default function Categories() {
+  const { t } = useTranslation('landing')
   return (
     <section
       aria-labelledby="categories-title"
@@ -53,14 +55,13 @@ export default function Categories() {
             className="lg:text-[50px] font-display text-3xl tracking-tight text-brand-navy sm:text-4xl md:text-5xl font-medium"
             variants={fadeUp}
           >
-            Frame Your Moments. Elevate Your Space
+            {t('categories.title')}
           </motion.h2>
           <motion.p
             className="mx-auto mt-4 max-w-xxl tracking-[0.09em] text-sm text-foreground/80 md:text-base"
             variants={fadeUp}
           >
-            Museum-quality frames crafted for your memories. Designed online.
-            Delivered ready to hang.
+            {t('categories.description')}
           </motion.p>
         </motion.div>
 
@@ -77,7 +78,7 @@ export default function Categories() {
             size="sm"
             className="h-9 rounded-full px-5 text-xs font-medium tracking-wide shadow-md"
           >
-            View All
+            {t('categories.viewAll')}
           </Button>
         </motion.div>
 
@@ -93,8 +94,8 @@ export default function Categories() {
           }}
         >
           {CATEGORIES.map((c) => (
-            <motion.div key={c.label} variants={fadeUp}>
-              <CategoryCard label={c.label} image={c.image} href={c.href} />
+            <motion.div key={c.labelKey} variants={fadeUp}>
+              <CategoryCard label={t(c.labelKey)} image={c.image} href={c.href} />
             </motion.div>
           ))}
         </motion.div>

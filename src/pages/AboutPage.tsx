@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { ChevronRight, Home } from 'lucide-react'
 import { motion, type Variants } from 'framer-motion'
@@ -35,6 +36,8 @@ const COMMITMENT_IMAGE = '/images/commitment.jpg'
 const PROMISE_IMAGE = '/images/promise.jpg'
 
 export default function AboutPage() {
+  const { t } = useTranslation('pages')
+
   useEffect(() => {
     const prevBg = document.body.style.background
     const prevColor = document.body.style.color
@@ -91,18 +94,18 @@ export default function AboutPage() {
         <div className="mx-auto max-w-[1400px] px-5 pt-28 md:px-8 md:pt-32 lg:px-10 lg:pt-40">
           {/* Breadcrumb */}
           <nav
-            aria-label="Breadcrumb"
+            aria-label={t('about.breadcrumb.aria')}
             className="flex items-center gap-2 text-xs text-brand-navy md:text-[13px]"
           >
             <Link
               to="/"
-              aria-label="Home"
+              aria-label={t('about.breadcrumb.home')}
               className="inline-flex items-center transition hover:opacity-80"
             >
               <Home className="h-3.5 w-3.5" strokeWidth={2} />
             </Link>
             <ChevronRight className="h-3 w-3 text-brand-navy/60" />
-            <span className="text-brand-navy/70">About</span>
+            <span className="text-brand-navy/70">{t('about.breadcrumb.current')}</span>
           </nav>
 
           {/* Centered intro */}
@@ -116,29 +119,15 @@ export default function AboutPage() {
               Cretixone
             </h1>
             <p className="mt-2 text-sm text-foreground md:text-base">
-              By Creative One Business SPC
+              {t('about.hero.by')}
             </p>
             <p className="mt-8 text-base text-foreground md:text-[27px]">
-              Heritage of 1986. Vision for 2040.
+              {t('about.hero.tagline')}
             </p>
             <div className="mx-auto color-gray mt-8 max-w-[1200px] space-y-3 text-[13px] leading-relaxed md:text-sm">
-              <p>
-                Cretixone is the official digital and creative platform developed
-                by Creative One Business SPC, a company based in Muscat,
-                Sultanate of Oman.
-              </p>
-              <p>
-                Built on a strong foundation of legacy and trust, Creative One
-                Business SPC proudly carries forward the heritage of IBN AL
-                FARSI, a respected establishment founded in 1986. With decades
-                of experience behind us, we are now transforming that legacy
-                into a modern, technology-driven future.
-              </p>
-              <p>
-                Cretixone represents this transformation—bringing together
-                creativity, commerce, and digital innovation under one unified
-                platform aligned with the ambitions of Oman Vision 2040.
-              </p>
+              <p>{t('about.hero.intro1')}</p>
+              <p>{t('about.hero.intro2')}</p>
+              <p>{t('about.hero.intro3')}</p>
             </div>
           </motion.div>
         </div>
@@ -151,22 +140,14 @@ export default function AboutPage() {
             className="text-2xl font-medium text-brand-navy md:text-[34px]"
             variants={fadeUp}
           >
-            A Legacy We Honor, A Future We Build
+            {t('about.legacy.title')}
           </motion.h2>
           <motion.div
             className="mx-auto mt-7 md:pb-7 max-w-[820px] text-[13px] leading-relaxed color-gray md:text-sm"
             variants={fadeUp}
           >
-            <p>
-              From traditional craftsmanship to digital excellence, our journey
-              reflects a seamless evolution.
-            </p>
-            <p>
-              With deep-rooted industry expertise inherited from IBN AL FARSI,
-              Creative One Business SPC is redefining the creative landscape
-              through Cretixone—bridging the gap between artists, businesses,
-              and modern consumers.
-            </p>
+            <p>{t('about.legacy.p1')}</p>
+            <p>{t('about.legacy.p2')}</p>
           </motion.div>
         </motion.div>
 
@@ -191,7 +172,7 @@ export default function AboutPage() {
               >
                 <img
                   src={src}
-                  alt={`Showcase ${i + 1}`}
+                  alt={t('about.legacy.showcaseAlt', { num: i + 1 })}
                   className={`block object-cover ${
                     i === 2 ? '' : 'h-full w-full'
                   } ${i === 0 ? 'scale-[2]' : i === 1 ? 'scale-[1.8]' : ''}`}
@@ -227,7 +208,7 @@ export default function AboutPage() {
             className="text-center text-2xl font-medium text-brand-navy md:text-[32px]"
             variants={fadeUp}
           >
-            Our Foundation
+            {t('about.foundation.title')}
           </motion.h2>
 
           <motion.div
@@ -241,36 +222,36 @@ export default function AboutPage() {
               <motion.div variants={fadeUp}>
                 <FoundationItem
                   iconSrc="/images/svg/history.svg"
-                  iconAlt="History"
-                  title="Established Legacy"
-                  text="IBN AL FARSI, established in 1986, has long been known for its commitment to quality, craftsmanship, and customer trust."
+                  iconAlt={t('about.foundation.established.alt')}
+                  title={t('about.foundation.established.title')}
+                  text={t('about.foundation.established.text')}
                   hasDivider
                 />
               </motion.div>
               <motion.div variants={fadeUp}>
                 <FoundationItem
                   iconSrc="/images/svg/transformation.svg"
-                  iconAlt="Transformation"
-                  title="Modern Transformation"
-                  text="Creative One Business SPC introduces advanced systems, digital platforms, and innovative solutions through its brand Cretixone."
+                  iconAlt={t('about.foundation.modern.alt')}
+                  title={t('about.foundation.modern.title')}
+                  text={t('about.foundation.modern.text')}
                   hasDivider
                 />
               </motion.div>
               <motion.div variants={fadeUp}>
                 <FoundationItem
                   iconSrc="/images/svg/eye.svg"
-                  iconAlt="Vision"
-                  title="Aligned with Vision 2040"
-                  text="We actively support Oman Vision 2040 by contributing to a diversified, creative, and knowledge-based economy."
+                  iconAlt={t('about.foundation.vision.alt')}
+                  title={t('about.foundation.vision.title')}
+                  text={t('about.foundation.vision.text')}
                   hasDivider
                 />
               </motion.div>
               <motion.div variants={fadeUp}>
                 <FoundationItem
                   iconSrc="/images/svg/together.svg"
-                  iconAlt="Together"
-                  title="Creating Value Together"
-                  text="We empower artists, photographers, and businesses while building long-term partnerships across industries."
+                  iconAlt={t('about.foundation.value.alt')}
+                  title={t('about.foundation.value.title')}
+                  text={t('about.foundation.value.text')}
                 />
               </motion.div>
             </motion.div>
@@ -304,7 +285,7 @@ export default function AboutPage() {
               className="text-2xl font-medium text-brand-navy md:text-[32px]"
               variants={fadeUp}
             >
-              What We Do
+              {t('about.whatWeDo.title')}
             </motion.h2>
 
             <motion.ul
@@ -314,36 +295,36 @@ export default function AboutPage() {
               <motion.div variants={fadeUp}>
                 <ServiceItem
                   iconSrc="/images/svg/art.svg"
-                  iconAlt="Art"
-                  label="Custom framing and art solutions"
+                  iconAlt={t('about.whatWeDo.services.framing.alt')}
+                  label={t('about.whatWeDo.services.framing.label')}
                 />
               </motion.div>
               <motion.div variants={fadeUp}>
                 <ServiceItem
                   iconSrc="/images/svg/print.svg"
-                  iconAlt="Print"
-                  label="Digital artwork and print production"
+                  iconAlt={t('about.whatWeDo.services.print.alt')}
+                  label={t('about.whatWeDo.services.print.label')}
                 />
               </motion.div>
               <motion.div variants={fadeUp}>
                 <ServiceItem
                   iconSrc="/images/svg/creative.svg"
-                  iconAlt="Creative"
-                  label="Creative design and branding solutions"
+                  iconAlt={t('about.whatWeDo.services.design.alt')}
+                  label={t('about.whatWeDo.services.design.label')}
                 />
               </motion.div>
               <motion.div variants={fadeUp}>
                 <ServiceItem
                   iconSrc="/images/svg/corporate.svg"
-                  iconAlt="Corporate"
-                  label="Corporate and bulk creative services"
+                  iconAlt={t('about.whatWeDo.services.corporate.alt')}
+                  label={t('about.whatWeDo.services.corporate.label')}
                 />
               </motion.div>
               <motion.div variants={fadeUp}>
                 <ServiceItem
                   iconSrc="/images/svg/development.svg"
-                  iconAlt="Development"
-                  label="Development of digital creative platforms"
+                  iconAlt={t('about.whatWeDo.services.development.alt')}
+                  label={t('about.whatWeDo.services.development.label')}
                 />
               </motion.div>
             </motion.ul>
@@ -352,24 +333,16 @@ export default function AboutPage() {
               className="mt-12 text-base font-jasmine leading-8 uppercase tracking-wide text-brand-navy md:text-[40px]"
               variants={fadeUp}
             >
-              Oman&apos;s First Creative
+              {t('about.whatWeDo.marketplaceLine1')}
               <br />
-              Market Place
+              {t('about.whatWeDo.marketplaceLine2')}
             </motion.h3>
             <motion.div
               className="mt-12 space-y-3 text-[13px] leading-relaxed text-foreground md:text-sm"
               variants={fadeUp}
             >
-              <p>
-                Cretixone is proud to introduce Oman&apos;s first-ever platform
-                where photographers and artists can sell their products.
-              </p>
-              <p>
-                This platform is designed to provide a professional, secure, and
-                inspiring digital space where creatives can showcase, promote,
-                and monetize their work—reaching both local and global
-                audiences.
-              </p>
+              <p>{t('about.whatWeDo.p1')}</p>
+              <p>{t('about.whatWeDo.p2')}</p>
             </motion.div>
           </motion.div>
 
@@ -383,7 +356,7 @@ export default function AboutPage() {
           >
             <img
               src={WHAT_WE_DO_IMAGE}
-              alt="Framed artworks on a wall"
+              alt={t('about.whatWeDo.imageAlt')}
               className="h-full w-full object-cover"
               loading="lazy"
             />
@@ -398,7 +371,7 @@ export default function AboutPage() {
             className="text-2xl font-medium text-brand-navy md:text-[32px]"
             variants={fadeUp}
           >
-            Our Commitment
+            {t('about.commitment.title')}
           </motion.h2>
 
           <motion.div
@@ -408,32 +381,32 @@ export default function AboutPage() {
             <motion.div variants={fadeUp} className="h-full">
               <CommitmentCard
                 iconSrc="/images/svg/deliver-permium.svg"
-                iconAlt="Deliver premium"
-                text="Deliver premium-quality products and services"
+                iconAlt={t('about.commitment.deliver.alt')}
+                text={t('about.commitment.deliver.text')}
                 bg="rgba(207, 189, 255, 0.25)"
               />
             </motion.div>
             <motion.div variants={fadeUp} className="h-full">
               <CommitmentCard
                 iconSrc="/images/svg/support.svg"
-                iconAlt="Support"
-                text="Support and empower creative talent"
+                iconAlt={t('about.commitment.support.alt')}
+                text={t('about.commitment.support.text')}
                 bg="rgba(196, 247, 255, 0.25)"
               />
             </motion.div>
             <motion.div variants={fadeUp} className="h-full">
               <CommitmentCard
                 iconSrc="/images/svg/bell-check.svg"
-                iconAlt="Innovative solutions"
-                text="Build innovative and sustainable solutions"
+                iconAlt={t('about.commitment.innovative.alt')}
+                text={t('about.commitment.innovative.text')}
                 bg="rgba(205, 216, 255, 0.25)"
               />
             </motion.div>
             <motion.div variants={fadeUp} className="h-full">
               <CommitmentCard
                 iconSrc="/images/svg/rocket.svg"
-                iconAlt="Elevate globally"
-                text="Elevate Oman's creative industry globally"
+                iconAlt={t('about.commitment.elevate.alt')}
+                text={t('about.commitment.elevate.text')}
                 bg="rgba(253, 240, 221, 0.56)"
               />
             </motion.div>
@@ -455,7 +428,7 @@ export default function AboutPage() {
           >
             <img
               src={COMMITMENT_IMAGE}
-              alt="Our commitment"
+              alt={t('about.promise.commitmentAlt')}
               className="absolute inset-0 h-full w-full object-cover"
               loading="lazy"
             />
@@ -466,14 +439,12 @@ export default function AboutPage() {
             <div className="absolute inset-x-0 bottom-0 pl-7 py-5 text-white md:pl-12 md:py-12">
               <div className="flex items-center gap-4">
                 <h3 className="whitespace-nowrap font-medium text-2xl md:text-[28px]">
-                  Our Commitment
+                  {t('about.promise.commitmentTitle')}
                 </h3>
                 <div aria-hidden className="h-px flex-1 bg-[#D9D9D9]" />
               </div>
               <p className="mt-4  text-[13px] leading-relaxed text-white md:text-sm md:pr-16 pr-10">
-                To position Cretixone as a leading creative and digital platform
-                in Oman and the region—where art, technology, and commerce come
-                together seamlessly.
+                {t('about.promise.commitmentText')}
               </p>
             </div>
           </motion.div>
@@ -497,20 +468,13 @@ export default function AboutPage() {
             <div className="relative z-10  pl-7 py-5 text-white md:pl-12 md:py-12">
               <div className="flex items-center gap-4">
                 <h3 className="whitespace-nowrap font-medium text-2xl md:text-[28px]">
-                  Our Promise
+                  {t('about.promise.promiseTitle')}
                 </h3>
                 <div aria-hidden className="h-px flex-1 bg-[#D9D9D9]" />
               </div>
               <div className="mt-4 max-w-md space-y-3 text-[13px] leading-relaxed text-white md:text-sm">
-                <p>
-                  At Creative One Business SPC, we don&apos;t just continue a
-                  legacy—we transform it.
-                </p>
-                <p>
-                  Through Cretixone, we combine decades of experience with
-                  modern innovation to redefine how creativity is created,
-                  experienced, and shared.
-                </p>
+                <p>{t('about.promise.promiseP1')}</p>
+                <p>{t('about.promise.promiseP2')}</p>
               </div>
             </div>
           </motion.div>
@@ -544,9 +508,9 @@ function FoundationItem({
       className={
         cn(
           {
-            'lg:border-r lg:border-brand-navy/15 lg:pr-6': hasDivider,
+            '!lg:border-r !border-l-0 lg:border-brand-navy/15 lg:pr-6': hasDivider,
           },
-          "py-7"
+          "py-7 h-full"
         )
       }
     >

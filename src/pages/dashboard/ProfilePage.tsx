@@ -1,4 +1,5 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -13,8 +14,8 @@ import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
 
 const schema = z.object({
-  firstName: z.string().trim().min(1, 'Required').max(80),
-  lastName: z.string().trim().min(1, 'Required').max(80),
+  firstName: z.string().trim().min(1).max(80),
+  lastName: z.string().trim().min(1).max(80),
   phone: z.string().optional(),
   address: z.string().trim().max(500).optional(),
   zipcode: z.string().trim().max(20).optional(),
@@ -24,11 +25,24 @@ type Values = z.infer<typeof schema>
 const fieldCls = 'border border-black/15'
 
 export default function ProfilePage() {
+  const { t } = useTranslation('dashboard')
   const user = useAuthStore((s) => s.user)
   const setUser = useAuthStore((s) => s.setUser)
 
+  const localizedSchema = useMemo(
+    () =>
+      z.object({
+        firstName: z.string().trim().min(1, t('profile.validation.required')).max(80),
+        lastName: z.string().trim().min(1, t('profile.validation.required')).max(80),
+        phone: z.string().optional(),
+        address: z.string().trim().max(500).optional(),
+        zipcode: z.string().trim().max(20).optional(),
+      }),
+    [t],
+  )
+
   const form = useForm<Values>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(localizedSchema),
     defaultValues: {
       firstName: user?.firstName ?? '',
       lastName: user?.lastName ?? '',
@@ -66,31 +80,31 @@ export default function ProfilePage() {
 
   return (
     <div className="rounded-2xl border border-black/[0.07] bg-white p-6 shadow-sm md:p-8">
-      <h2 className="text-lg font-semibold text-brand-navy">Profile settings</h2>
-      <p className="mt-1 text-sm text-foreground/55">Update your contact and shipping details.</p>
+      <h2 className="text-lg font-semibold text-brand-navy">{t('profile.title')}</h2>
+      <p className="mt-1 text-sm text-foreground/55">{t('profile.subtitle')}</p>
 
       <form onSubmit={submit} className="mt-6 max-w-xl space-y-4" noValidate>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <Label htmlFor="p-first">First name</Label>
+            <Label htmlFor="p-first">{t('profile.firstName')}</Label>
             <Input id="p-first" className={cn('mt-1', fieldCls)} {...form.register('firstName')} />
             {e.firstName && <p className="mt-1 text-[11px] text-red-500">{e.firstName.message}</p>}
           </div>
           <div>
-            <Label htmlFor="p-last">Last name</Label>
+            <Label htmlFor="p-last">{t('profile.lastName')}</Label>
             <Input id="p-last" className={cn('mt-1', fieldCls)} {...form.register('lastName')} />
             {e.lastName && <p className="mt-1 text-[11px] text-red-500">{e.lastName.message}</p>}
           </div>
         </div>
 
         <div>
-          <Label>Email</Label>
+          <Label>{t('profile.email')}</Label>
           <Input value={user?.email ?? ''} disabled className={cn('mt-1 bg-black/[0.03]', fieldCls)} />
-          <p className="mt-1 text-[11px] text-foreground/40">Email can't be changed.</p>
+          <p className="mt-1 text-[11px] text-foreground/40">{t('profile.emailHelp')}</p>
         </div>
 
         <div>
-          <Label htmlFor="p-phone">Phone</Label>
+          <Label htmlFor="p-phone">{t('profile.phone')}</Label>
           <div className="mt-1">
             <Controller
               control={form.control}
@@ -101,18 +115,18 @@ export default function ProfilePage() {
         </div>
 
         <div>
-          <Label htmlFor="p-address">Address</Label>
+          <Label htmlFor="p-address">{t('profile.address')}</Label>
           <Input id="p-address" className={cn('mt-1', fieldCls)} {...form.register('address')} />
         </div>
         <div>
-          <Label htmlFor="p-zip">Zip code</Label>
+          <Label htmlFor="p-zip">{t('profile.zipcode')}</Label>
           <Input id="p-zip" className={cn('mt-1', fieldCls)} {...form.register('zipcode')} />
         </div>
 
         <div className="pt-2">
           <Button type="submit" variant="navy" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-            Save changes
+            {t('profile.save')}
           </Button>
         </div>
       </form>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ChevronDown, Home, Maximize2, Upload } from 'lucide-react'
 import { toast } from 'sonner'
@@ -21,22 +22,25 @@ const FALLBACK_GALLERY = [
   '/images/webp/slide-3.webp',
 ]
 
+// Titles/descriptions live in the productDetail namespace and are resolved with
+// t() at render time (see BuyPanel). The `id` values are logic — keep unchanged.
 const SERVICES = [
   {
     id: 'frame-only',
-    title: 'Frame Only',
-    desc: 'Frame it yourself, effortlessly.',
+    titleKey: 'services.frameOnly.title',
+    descKey: 'services.frameOnly.desc',
     icon: '/images/svg/frame-img-icon.svg',
   },
   {
     id: 'print-frame',
-    title: 'Print + Frame',
-    desc: 'Printed, framed & wall-ready.',
+    titleKey: 'services.printFrame.title',
+    descKey: 'services.printFrame.desc',
     icon: '/images/svg/frame-icon.svg',
   },
 ] as const
 
 export default function ProductDetailPage() {
+  const { t } = useTranslation('productDetail')
   const { id } = useParams()
   const navigate = useNavigate()
 
@@ -142,7 +146,7 @@ export default function ProductDetailPage() {
     const h = selectedFrameSize.lengthCm
     addItem({
       frameId: frame.id,
-      name: frame.name || 'Picture Frame',
+      name: frame.name || t('fallback.pictureFrame'),
       subtitle: selectedFrameSize.name,
       thumbnail: frame.imgUrl || gallery[0],
       widthCm: w,
@@ -158,7 +162,7 @@ export default function ProductDetailPage() {
       mdfName: null,
       mdfPrice: 0,
     })
-    toast.success('Product added to cart successfully')
+    toast.success(t('toast.addedToCart'))
   }
 
   return (
@@ -171,7 +175,7 @@ export default function ProductDetailPage() {
       <main className="mx-auto max-w-[1400px] px-5 pt-28 pb-16 md:px-8 md:pt-32 lg:px-10 lg:pt-40">
         {/* Breadcrumb */}
         <nav
-          aria-label="Breadcrumb"
+          aria-label={t('aria.breadcrumb')}
           className="mb-10 flex items-center gap-2 text-sm text-foreground/70"
         >
           <Link to="/" className="inline-flex items-center hover:text-brand-navy">
@@ -179,7 +183,7 @@ export default function ProductDetailPage() {
           </Link>
           <span className="text-foreground/40">›</span>
           <Link to="/products" className="hover:text-brand-navy">
-            Canvas Prints
+            {t('breadcrumb.canvasPrints')}
           </Link>
         </nav>
 
@@ -187,8 +191,8 @@ export default function ProductDetailPage() {
         <div className="mt-5 flex flex-col gap-8 lg:flex-row lg:gap-12">
           <Gallery images={gallery} className="lg:w-[56%]" />
           <BuyPanel
-            title={frame?.name ?? 'Picture Frame'}
-            subtitle={frame?.categorySlug ? frame.categorySlug.replace(/-/g, ' ') : 'Custom picture frame'}
+            title={frame?.name ?? t('fallback.pictureFrame')}
+            subtitle={frame?.categorySlug ? frame.categorySlug.replace(/-/g, ' ') : t('fallback.customPictureFrame')}
             sizes={sizes}
             priceLabel={priceLabel}
             oldPriceLabel={oldPriceLabel}
@@ -207,7 +211,7 @@ export default function ProductDetailPage() {
         {/* Description */}
         {frame?.description?.trim() && (
           <section className="mt-12 max-w-4xl">
-            <h2 className="text-xl font-semibold text-brand-navy">Product Description</h2>
+            <h2 className="text-xl font-semibold text-brand-navy">{t('description.heading')}</h2>
             {/* whitespace-pre-wrap preserves the line breaks + spacing the admin typed */}
             <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground/75">
               {frame.description}
@@ -218,7 +222,7 @@ export default function ProductDetailPage() {
         {/* Specifications */}
         {specEntries.length > 0 && (
           <section className="mt-10 max-w-lg">
-            <h2 className="text-xl font-bold text-brand-navy">Product Details</h2>
+            <h2 className="text-xl font-bold text-brand-navy">{t('details.heading')}</h2>
             <dl className="mt-5 space-y-3 text-[13px]">
               {specEntries.map(([label, value]) => (
                 <div key={label} className="grid grid-cols-[150px_1fr] gap-4">
@@ -247,6 +251,7 @@ function Gallery({
   images: string[]
   className?: string
 }) {
+  const { t } = useTranslation('productDetail')
   const [active, setActive] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const src = images[active] ?? images[0]
@@ -271,7 +276,7 @@ function Gallery({
                   key={img}
                   type="button"
                   onClick={() => setActive(i)}
-                  aria-label={`View image ${i + 1}`}
+                  aria-label={t('aria.viewImage', { number: i + 1 })}
                   aria-pressed={selected}
                   className={cn(
                     'relative h-[64px] w-[64px] shrink-0 overflow-hidden rounded-lg transition sm:h-[78px] sm:w-full',
@@ -302,14 +307,14 @@ function Gallery({
           <div className="group relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-[#EDE6D6] sm:aspect-auto sm:h-[420px] lg:h-[480px]">
             <img
               src={src}
-              alt="Product preview"
+              alt={t('gallery.previewAlt')}
               draggable={false}
               className="h-full w-full object-contain"
             />
             <button
               type="button"
               onClick={() => setLightboxOpen(true)}
-              aria-label="View fullscreen"
+              aria-label={t('aria.viewFullscreen')}
               className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white opacity-80 backdrop-blur-sm transition hover:bg-black/70 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
             >
               <Maximize2 className="h-4 w-4" />
@@ -361,6 +366,7 @@ function BuyPanel({
   showService: boolean
   className?: string
 }) {
+  const { t } = useTranslation('productDetail')
   return (
     <div className={cn('min-w-0', className)}>
       <h1 className="text-2xl font-semibold tracking-tight text-brand-navy md:text-[28px]">
@@ -374,7 +380,7 @@ function BuyPanel({
       {showService && (
         <>
           <p className="mt-6 text-base font-semibold text-foreground">
-            Choose Your Service
+            {t('buyPanel.chooseService')}
           </p>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {SERVICES.map((s) => {
@@ -402,10 +408,10 @@ function BuyPanel({
               </span>
               <span className="min-w-0">
                 <span className="block text-[18px] font-medium leading-none text-foreground">
-                  {s.title}
+                  {t(s.titleKey)}
                 </span>
                 <span className="mt-1 block text-[11px] font-normal leading-none text-foreground/55">
-                  {s.desc}
+                  {t(s.descKey)}
                 </span>
               </span>
             </button>
@@ -418,23 +424,21 @@ function BuyPanel({
       {/* Size + upload */}
       <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-foreground">Frame Size</p>
+          <p className="text-sm font-semibold text-foreground">{t('buyPanel.frameSize')}</p>
           {sizes.length > 0 ? (
             <SizePicker sizes={sizes} value={size} onChange={onSize} />
           ) : (
-            <p className="mt-2 text-sm text-foreground/55">Custom sizes set in the editor</p>
+            <p className="mt-2 text-sm text-foreground/55">{t('buyPanel.customSizes')}</p>
           )}
         </div>
-        {service === 'print-frame' && (
-          <Button
-            variant="outline"
-            onClick={onUpload}
-            className="gap-2 border-brand-navy/40 bg-transparent text-brand-navy hover:bg-brand-navy/5"
-          >
-            <Upload className="h-4 w-4" />
-            Upload a preview image
-          </Button>
-        )}
+        <Button
+          variant="outline"
+          onClick={onUpload}
+          className="gap-2 border-brand-navy/40 bg-transparent text-brand-navy hover:bg-brand-navy/5"
+        >
+          <Upload className="h-4 w-4" />
+          {t('buyPanel.uploadPreview')}
+        </Button>
       </div>
 
       {/* Price + add to cart */}
@@ -456,7 +460,7 @@ function BuyPanel({
           disabled={!canAddToCart}
           className="min-w-[140px] rounded-lg"
         >
-          Add to cart
+          {t('buyPanel.addToCart')}
         </Button>
       </div>
     </div>
@@ -472,6 +476,7 @@ function SizePicker({
   value: string
   onChange: (s: string) => void
 }) {
+  const { t } = useTranslation('productDetail')
   const [open, setOpen] = useState(false)
   return (
     <>
@@ -487,7 +492,7 @@ function SizePicker({
             aria-expanded={open}
             className="inline-flex items-center gap-1 rounded-lg border border-black/15 bg-white px-3 py-2 text-sm text-foreground/70 transition hover:border-brand-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/40"
           >
-            More sizes
+            {t('sizePicker.moreSizes')}
             <ChevronDown
               className={cn('h-4 w-4 transition-transform', open && 'rotate-180')}
             />

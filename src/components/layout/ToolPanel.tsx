@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { useEditorStore, OSS_PREFIX } from '@/store/editorStore'
 import {
@@ -18,6 +19,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { useLangStore } from '@/store/langStore'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -90,6 +92,7 @@ function PillTabs({
 function FrameThumb({ item, selected, onClick }: {
   item: ApiFrame; selected: boolean; onClick: () => void
 }) {
+  const { t } = useTranslation('editor')
   return (
     <div className="flex flex-col">
       <button
@@ -110,7 +113,7 @@ function FrameThumb({ item, selected, onClick }: {
       >
         <img
           src={item.imgUrl}
-          alt={`Frame ${item.id}`}
+          alt={t('panel.frameAlt', { id: item.id })}
           className="h-full w-full object-contain p-1"
           draggable={false}
           loading="lazy"
@@ -126,7 +129,7 @@ function FrameThumb({ item, selected, onClick }: {
             className="absolute left-1 top-1 rounded-sm px-1 py-0.5 text-[7px] font-bold leading-none"
             style={{ background: 'var(--ed-fg)', color: 'var(--ed-panel)' }}
           >
-            NEW
+            {t('panel.badgeNew')}
           </div>
         )}
       </button>
@@ -144,6 +147,7 @@ function FrameThumb({ item, selected, onClick }: {
 function SceneThumb({ item, selected, onClick }: {
   item: ApiScene; selected: boolean; onClick: () => void
 }) {
+  const { t } = useTranslation('editor')
   const bgUrl = item.ossUrl.startsWith('http') ? item.ossUrl : OSS_PREFIX + item.ossUrl
   return (
     <button
@@ -159,13 +163,13 @@ function SceneThumb({ item, selected, onClick }: {
         outlineOffset: selected ? '0px' : '-1px',
       }}
     >
-      <img src={bgUrl} alt={`Scene ${item.id}`} className="h-full w-full object-cover" loading="lazy" draggable={false} />
+      <img src={bgUrl} alt={t('panel.sceneAlt', { id: item.id })} className="h-full w-full object-cover" loading="lazy" draggable={false} />
       {item.isVip && (
         <div
           className="absolute right-1 top-1 rounded-sm px-1 py-0.5 text-[7px] font-bold leading-none"
           style={{ background: 'var(--ed-accent)', color: 'var(--ed-accent-fg)' }}
         >
-          PRO
+          {t('panel.badgePro')}
         </div>
       )}
     </button>
@@ -197,6 +201,7 @@ function MatColorThumb({ item, selected, onClick }: {
 function MdfThumb({ item, selected, onClick }: {
   item: ApiMdf; selected: boolean; onClick: () => void
 }) {
+  const { t } = useTranslation('editor')
   return (
     <button
       onClick={onClick}
@@ -212,7 +217,7 @@ function MdfThumb({ item, selected, onClick }: {
           <img src={item.imgUrl} alt={item.name} className="h-full w-full object-cover" loading="lazy" draggable={false} />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-[9px]" style={{ color: 'var(--ed-fg-subtle)' }}>
-            No photo
+            {t('panel.mdf.noPhoto')}
           </div>
         )}
       </div>
@@ -229,6 +234,7 @@ function MdfThumb({ item, selected, onClick }: {
 function EffectThumb({ item, selected, onClick }: {
   item: ApiEffectItem; selected: boolean; onClick: () => void
 }) {
+  const { t } = useTranslation('editor')
   return (
     <button
       onClick={onClick}
@@ -254,7 +260,7 @@ function EffectThumb({ item, selected, onClick }: {
           className="absolute right-1 top-1 rounded-sm px-1 py-0.5 text-[7px] font-bold leading-none"
           style={{ background: 'var(--ed-accent)', color: 'var(--ed-accent-fg)' }}
         >
-          PRO
+          {t('panel.badgePro')}
         </div>
       )}
     </button>
@@ -290,6 +296,8 @@ function NoneTile({
 // ── Main ToolPanel ────────────────────────────────────────────────────────
 
 export default function ToolPanel() {
+  const { t } = useTranslation('editor')
+  const isRtl = useLangStore((s) => s.isRtl)
   const {
     activeSidebarTab,
     selectedFrame, setSelectedFrame,
@@ -363,8 +371,11 @@ export default function ToolPanel() {
 
   const matSizes = matSizesQuery.data ?? []
   const matColors = matColorsQuery.data ?? []
-  // Only two tabs remain after Texture / Border were removed.
+  // Only two tabs remain after Texture / Border were removed. The id stays in
+  // English (used for logic); only the visible label is translated.
   const MAT_TABS = ['Size', 'Color']
+  const matTabLabel = (id: string) =>
+    id === 'Color' ? t('panel.mat.tabColor') : t('panel.mat.tabSize')
   const matLoading = matSizesQuery.isLoading || matColorsQuery.isLoading
   const matError = matSizesQuery.isError || matColorsQuery.isError
 
@@ -376,14 +387,14 @@ export default function ToolPanel() {
 
   // Friendly title for the panel header — mirrors the active tool.
   const PANEL_TITLES: Record<string, string> = {
-    frames: 'Frames',
-    interiors: 'Interiors',
-    scenery: 'Scenery',
-    mat: 'Mat',
-    mdf: 'MDF',
-    effect: 'Effects',
+    frames: t('panel.titles.frames'),
+    interiors: t('panel.titles.interiors'),
+    scenery: t('panel.titles.scenery'),
+    mat: t('panel.titles.mat'),
+    mdf: t('panel.titles.mdf'),
+    effect: t('panel.titles.effect'),
   }
-  const panelTitle = PANEL_TITLES[activeSidebarTab] ?? 'Library'
+  const panelTitle = PANEL_TITLES[activeSidebarTab] ?? t('panel.library')
 
   // Collapsed → a thin rail with an expand button (mirrors the right Inspector).
   if (toolPanelCollapsed) {
@@ -399,16 +410,16 @@ export default function ToolPanel() {
           <TooltipTrigger asChild>
             <button
               onClick={() => setToolPanelCollapsed(false)}
-              aria-label="Expand panel"
+              aria-label={t('panel.expandPanel')}
               className="flex h-7 w-7 items-center justify-center rounded-md transition-colors"
               style={{ color: 'var(--ed-fg-muted)' }}
               onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--ed-hover)' }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
             >
-              <ChevronRight size={14} strokeWidth={1.8} />
+              <ChevronRight size={14} strokeWidth={1.8} className="rtl:-scale-x-100" />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="right">Expand</TooltipContent>
+          <TooltipContent side="right">{t('panel.expand')}</TooltipContent>
         </Tooltip>
       </div>
     )
@@ -416,10 +427,12 @@ export default function ToolPanel() {
 
   return (
     <aside
-      className="flex h-full w-[300px] flex-shrink-0 flex-col border-r"
+      className="flex h-full w-[300px] flex-shrink-0 flex-col"
       style={{
         background: 'var(--ed-panel)',
         borderColor: 'var(--ed-border)',
+        borderLeftWidth: isRtl ? '1px' : '0',
+        borderRightWidth: isRtl ? '0' : '1px',
       }}
     >
       {/* ── Collapse header ── */}
@@ -437,23 +450,23 @@ export default function ToolPanel() {
           <TooltipTrigger asChild>
             <button
               onClick={() => setToolPanelCollapsed(true)}
-              aria-label="Collapse panel"
+              aria-label={t('panel.collapsePanel')}
               className="flex h-6 w-6 items-center justify-center rounded-md transition-colors"
               style={{ color: 'var(--ed-fg-muted)' }}
               onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--ed-hover)' }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
             >
-              <ChevronLeft size={13} strokeWidth={1.8} />
+              <ChevronLeft size={13} strokeWidth={1.8} className="rtl:-scale-x-100" />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="right">Collapse</TooltipContent>
+          <TooltipContent side="right">{t('panel.collapse')}</TooltipContent>
         </Tooltip>
       </div>
 
       {/* ── Frames ── */}
       {activeSidebarTab === 'frames' && (
         <>
-          <PanelHeader title="Picture frames" hint="Pick a style — control width in the right inspector" />
+          <PanelHeader title={t('panel.frames.header')} hint={t('panel.frames.hint')} />
           <Separator />
           {!frameCategoriesQuery.isLoading && frameCategories.length > 0 && (
             <PillTabs
@@ -467,10 +480,10 @@ export default function ToolPanel() {
               {framesQuery.isLoading ? (
                 <SkeletonGrid count={9} cols={3} />
               ) : framesQuery.isError ? (
-                <p className="py-4 text-center text-xs text-red-500">Failed to load frames</p>
+                <p className="py-4 text-center text-xs text-red-500">{t('panel.frames.error')}</p>
               ) : filteredFrames.length === 0 ? (
                 <p className="py-10 text-center text-xs" style={{ color: 'var(--ed-fg-subtle)' }}>
-                  No frames in this category yet.
+                  {t('panel.frames.empty')}
                 </p>
               ) : (
                 <div className="grid grid-cols-3 gap-2">
@@ -492,18 +505,18 @@ export default function ToolPanel() {
       {/* ── Interiors ── */}
       {activeSidebarTab === 'interiors' && (
         <>
-          <PanelHeader title="Interior scenes" hint="Picking an interior removes scenery" />
+          <PanelHeader title={t('panel.interiors.header')} hint={t('panel.interiors.hint')} />
           <Separator />
           <ScrollArea className="flex-1">
             <div className="px-3 py-3">
               {interiorsQuery.isLoading ? (
                 <SkeletonGrid count={6} cols={2} />
               ) : interiorsQuery.isError ? (
-                <p className="py-4 text-center text-xs text-red-500">Failed to load interiors</p>
+                <p className="py-4 text-center text-xs text-red-500">{t('panel.interiors.error')}</p>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
                   <NoneTile
-                    label="None"
+                    label={t('panel.none')}
                     aspect="4/3"
                     selected={!selectedInterior}
                     onClick={() => setSelectedInterior(null)}
@@ -526,18 +539,18 @@ export default function ToolPanel() {
       {/* ── Scenery ── */}
       {activeSidebarTab === 'scenery' && (
         <>
-          <PanelHeader title="Scenery" hint="Picking scenery removes interior" />
+          <PanelHeader title={t('panel.scenery.header')} hint={t('panel.scenery.hint')} />
           <Separator />
           <ScrollArea className="flex-1">
             <div className="px-3 py-3">
               {sceneryQuery.isLoading ? (
                 <SkeletonGrid count={6} cols={2} />
               ) : sceneryQuery.isError ? (
-                <p className="py-4 text-center text-xs text-red-500">Failed to load scenery</p>
+                <p className="py-4 text-center text-xs text-red-500">{t('panel.scenery.error')}</p>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
                   <NoneTile
-                    label="None"
+                    label={t('panel.none')}
                     aspect="4/3"
                     selected={!selectedScenery}
                     onClick={() => setSelectedScenery(null)}
@@ -560,10 +573,10 @@ export default function ToolPanel() {
       {/* ── Mat ── */}
       {activeSidebarTab === 'mat' && (
         <>
-          <PanelHeader title="Mat" hint="Size sets thickness + price · Color sets the look" />
+          <PanelHeader title={t('panel.mat.header')} hint={t('panel.mat.hint')} />
           <Separator />
           <PillTabs
-            items={MAT_TABS.map((t) => ({ id: t, label: t }))}
+            items={MAT_TABS.map((id) => ({ id, label: matTabLabel(id) }))}
             value={MAT_TABS.includes(activeMatTab) ? activeMatTab : 'Size'}
             onChange={(id) => setActiveMatTab(id)}
           />
@@ -572,11 +585,11 @@ export default function ToolPanel() {
               {matLoading ? (
                 <SkeletonGrid count={6} cols={2} />
               ) : matError ? (
-                <p className="py-4 text-center text-xs text-red-500">Failed to load mat options</p>
+                <p className="py-4 text-center text-xs text-red-500">{t('panel.mat.error')}</p>
               ) : activeMatTab === 'Color' ? (
                 matColors.length === 0 ? (
                   <p className="py-10 text-center text-xs" style={{ color: 'var(--ed-fg-subtle)' }}>
-                    No mat colors yet.
+                    {t('panel.mat.noColors')}
                   </p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
@@ -590,7 +603,7 @@ export default function ToolPanel() {
                           : '1px dashed var(--ed-border-strong)',
                       }}
                     >
-                      None
+                      {t('panel.none')}
                     </button>
                     {matColors.map((item) => (
                       <MatColorThumb
@@ -604,7 +617,7 @@ export default function ToolPanel() {
                 )
               ) : matSizes.length === 0 ? (
                 <p className="py-10 text-center text-xs" style={{ color: 'var(--ed-fg-subtle)' }}>
-                  No mat sizes yet.
+                  {t('panel.mat.noSizes')}
                 </p>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
@@ -621,7 +634,7 @@ export default function ToolPanel() {
                     }}
                   >
                     <span className="text-lg leading-none">∅</span>
-                    <span>None</span>
+                    <span>{t('panel.none')}</span>
                   </button>
                   {matSizes.map((item) => {
                     const sel = selectedMatSize?.id === item.id
@@ -671,17 +684,17 @@ export default function ToolPanel() {
       {/* ── MDF ── */}
       {activeSidebarTab === 'mdf' && (
         <>
-          <PanelHeader title="MDF backing" hint="Price scales with the frame size — added to the total" />
+          <PanelHeader title={t('panel.mdf.header')} hint={t('panel.mdf.hint')} />
           <Separator />
           <ScrollArea className="flex-1">
             <div className="px-3 py-3">
               {mdfQuery.isLoading ? (
                 <SkeletonGrid count={4} cols={2} />
               ) : mdfQuery.isError ? (
-                <p className="py-4 text-center text-xs text-red-500">Failed to load MDF options</p>
+                <p className="py-4 text-center text-xs text-red-500">{t('panel.mdf.error')}</p>
               ) : mdfItems.length === 0 ? (
                 <p className="py-10 text-center text-xs" style={{ color: 'var(--ed-fg-subtle)' }}>
-                  No MDF options yet.
+                  {t('panel.mdf.empty')}
                 </p>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
@@ -698,7 +711,7 @@ export default function ToolPanel() {
                     }}
                   >
                     <span className="text-lg leading-none">∅</span>
-                    <span>None</span>
+                    <span>{t('panel.none')}</span>
                   </button>
                   {mdfItems.map((item) => (
                     <MdfThumb
@@ -718,7 +731,7 @@ export default function ToolPanel() {
       {/* ── Effect ── */}
       {activeSidebarTab === 'effect' && (
         <>
-          <PanelHeader title="Effects" hint="One effect at a time across all tabs" />
+          <PanelHeader title={t('panel.effect.header')} hint={t('panel.effect.hint')} />
           <Separator />
           {!effectsQuery.isLoading && (effectsQuery.data?.length ?? 0) > 0 && (
             <PillTabs
@@ -732,10 +745,10 @@ export default function ToolPanel() {
               {effectsQuery.isLoading ? (
                 <SkeletonGrid count={6} cols={3} />
               ) : effectsQuery.isError ? (
-                <p className="py-4 text-center text-xs text-red-500">Failed to load effects</p>
+                <p className="py-4 text-center text-xs text-red-500">{t('panel.effect.error')}</p>
               ) : (
                 <div className="grid grid-cols-3 gap-2">
-                  <NoneTile label="None" selected={!selectedEffect} onClick={() => setSelectedEffect(null)} />
+                  <NoneTile label={t('panel.none')} selected={!selectedEffect} onClick={() => setSelectedEffect(null)} />
                   {effectItems.map((item) => (
                     <EffectThumb
                       key={item.id}

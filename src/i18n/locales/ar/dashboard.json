@@ -1,0 +1,48 @@
+{
+  "account": {
+    "title": "حسابي",
+    "signedInAs": "مسجّل الدخول باسم {{name}} · {{email}}"
+  },
+  "nav": {
+    "profile": "الملف الشخصي",
+    "myOrders": "طلباتي",
+    "logout": "تسجيل الخروج"
+  },
+  "continueShopping": "متابعة التسوق",
+  "orders": {
+    "loadError": "تعذّر تحميل طلباتك. يرجى تحديث الصفحة.",
+    "empty": {
+      "title": "لا توجد طلبات بعد",
+      "subtitle": "عند إتمام طلب سيظهر هنا.",
+      "browseFrames": "تصفّح الإطارات"
+    },
+    "placed": "تم الطلب في {{date}}",
+    "total": "الإجمالي",
+    "dimensions": "{{width}}×{{height}} سم",
+    "matLabel": "الباسبارتو: {{name}}",
+    "mdfLabel": "MDF: {{name}}",
+    "qtyLabel": "الكمية {{qty}}",
+    "status": {
+      "pending": "قيد الانتظار",
+      "processing": "قيد المعالجة",
+      "shipped": "تم الشحن",
+      "delivered": "تم التوصيل",
+      "cancelled": "ملغى"
+    }
+  },
+  "profile": {
+    "title": "إعدادات الملف الشخصي",
+    "subtitle": "حدّث معلومات التواصل والشحن الخاصة بك.",
+    "firstName": "الاسم الأول",
+    "lastName": "اسم العائلة",
+    "email": "البريد الإلكتروني",
+    "emailHelp": "لا يمكن تغيير البريد الإلكتروني.",
+    "phone": "الهاتف",
+    "address": "العنوان",
+    "zipcode": "الرمز البريدي",
+    "save": "حفظ التغييرات",
+    "validation": {
+      "required": "مطلوب"
+    }
+  }
+}

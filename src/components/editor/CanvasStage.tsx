@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useCallback, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import * as PIXI from 'pixi.js'
 import {
   useEditorStore,
@@ -232,6 +233,12 @@ interface CanvasStageProps {
 export default function CanvasStage({
   frameOverride = null,
 }: CanvasStageProps = {}) {
+  const { t } = useTranslation('editor')
+  // The PIXI layer tree is built once (mount effect) and render() is a stable
+  // useCallback, so both capture `t` via a ref that always points at the latest
+  // translator — this lets the canvas text follow a live language switch.
+  const tRef = useRef(t)
+  tRef.current = t
   const mountRef = useRef<HTMLDivElement>(null)
   const containerRef = useCanvasSize()
   const appRef = useRef<PIXI.Application | null>(null)
@@ -356,7 +363,7 @@ export default function CanvasStage({
       // Single-line caption under the icon. Style is finalised in render
       // (fontSize scales with the opening).
       const overlayLabel = new PIXI.Text({
-        text: 'Upload image',
+        text: tRef.current('canvas.uploadImage'),
         style: new PIXI.TextStyle({
           fontFamily: 'DM Sans, sans-serif',
           fontSize: 13,
@@ -625,7 +632,7 @@ export default function CanvasStage({
       L.bgSprite.height = bgSceneH * bgScale
     }
 
-    // Brand watermark — centred, ~45% of the smaller canvas dimension, shown
+    // Brand watermark — top-centred, ~45% of the smaller canvas dimension, shown
     // only in plain mode (a scene image would otherwise cover it anyway).
     {
       const wm = L.watermark
@@ -634,8 +641,11 @@ export default function CanvasStage({
       if (wm.visible) {
         const k = (Math.min(W, H) * 0.45) / wm.texture.width
         wm.scale.set(k)
+        // Anchored at its centre → offset y by half its scaled height so it
+        // sits just below the top edge with a small padding.
+        const topPad = Math.max(24, H * 0.04)
         wm.x = cx
-        wm.y = cy
+        wm.y = topPad + (wm.texture.height * k) / 2
       }
     }
 
@@ -1387,14 +1397,14 @@ export default function CanvasStage({
             className="text-xs font-medium tracking-wide"
             style={{ color: 'var(--ed-fg-muted)' }}
           >
-            Loading frame…
+            {t('canvas.loadingFrame')}
           </p>
         </div>
       </div>
 
       <div className="absolute inset-x-0 bottom-5 flex justify-center pointer-events-none">
         <div className="bg-black/75 backdrop-blur-md border border-white/15 rounded-full px-4 py-1.5 text-xs font-medium text-white/95 shadow-lg">
-          Scroll over picture = zoom picture · Scroll outside = zoom frame · Drag to reposition
+          {t('canvas.hint')}
         </div>
       </div>
     </div>

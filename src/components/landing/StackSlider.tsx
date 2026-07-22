@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { EffectCards, Keyboard, Mousewheel } from 'swiper/modules'
 import { cn } from '@/lib/utils'
+import { useDirection } from '@/hooks/useDirection'
 
 import 'swiper/css'
 import 'swiper/css/effect-cards'
@@ -23,6 +24,7 @@ export default function StackSlider({
   className,
 }: StackSliderProps) {
   const [activeIdx, setActiveIdx] = useState(0)
+  const dir = useDirection()
 
   if (slides.length === 0) return null
   const active = slides[activeIdx]
@@ -30,6 +32,8 @@ export default function StackSlider({
   return (
     <div className={cn('w-full', className)}>
       <Swiper
+        key={dir}
+        dir={dir}
         modules={[EffectCards, Keyboard, Mousewheel]}
         effect="cards"
         grabCursor

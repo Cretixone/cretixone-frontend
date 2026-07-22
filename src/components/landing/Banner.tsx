@@ -1,10 +1,15 @@
 import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import Navbar from '@/components/landing/Navbar'
 import { Button } from '@/components/ui/button'
+import { useLangStore } from '@/store/langStore'
 
 const HERO_IMAGE = '/images/webp/banner.webp'
 
 export default function Banner() {
+  const { t } = useTranslation('landing')
+  const isRtl = useLangStore((s) => s.isRtl)
+
   return (
     <section
       aria-labelledby="hero-title"
@@ -27,7 +32,9 @@ export default function Banner() {
         className="absolute inset-0 -z-10 pointer-events-none"
         style={{
           background:
-            'linear-gradient(to right, rgba(243,239,232,0.92) 0%, rgba(243,239,232,0.72) 38%, rgba(243,239,232,0.12) 65%, rgba(243,239,232,0) 100%)',
+            isRtl
+              ? 'linear-gradient(to left, rgba(243,239,232,0.92) 0%, rgba(243,239,232,0.72) 38%, rgba(243,239,232,0.12) 65%, rgba(243,239,232,0) 100%)'
+              : 'linear-gradient(to right, rgba(243,239,232,0.92) 0%, rgba(243,239,232,0.72) 38%, rgba(243,239,232,0.12) 65%, rgba(243,239,232,0) 100%)'
         }}
       />
 
@@ -70,8 +77,8 @@ export default function Banner() {
               show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: 'easeOut' } },
             }}
           >
-            Your Legacy,
-            <span className="block text-foreground lg:text-[60px] mt-3">Archived in Elegance.</span>
+            {t('banner.title.line1')}
+            <span className="block text-foreground lg:text-[60px] mt-3">{t('banner.title.line2')}</span>
           </motion.h1>
 
           <motion.p
@@ -81,9 +88,7 @@ export default function Banner() {
               show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
             }}
           >
-            We combine museum-grade materials with modern design to create
-            custom frames that don&apos;t just protect your art—they elevate it
-            to gallery status.
+            {t('banner.description')}
           </motion.p>
 
           <motion.div
@@ -98,7 +103,7 @@ export default function Banner() {
               size="pill"
               className="h-12 px-10 text-xs font-semibold uppercase tracking-[0.08em] shadow-lg shadow-brand-gold/30 hover:shadow-xl hover:shadow-brand-gold/40"
             >
-              Buy Your Design
+              {t('banner.cta')}
             </Button>
           </motion.div>
         </motion.div>

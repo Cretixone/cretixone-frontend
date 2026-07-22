@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { ChevronRight, Home, Loader2, Minus, Plus, Trash2, X } from 'lucide-react'
 import Navbar, { PillNav } from '@/components/landing/Navbar'
@@ -16,8 +17,10 @@ import { useAuthStore } from '@/store/authStore'
 import { useAuthUiStore } from '@/store/authUiStore'
 import { ordersApi, type CreateOrderPayload } from '@/api/orders.api'
 import { OrderSuccess } from '@/components/OrderSuccess'
+import { PhoneField } from '@/components/auth/PhoneField'
 
 export default function CartPage() {
+  const { t } = useTranslation('cart')
   const navigate = useNavigate()
   const items = useCartStore((s) => s.items)
   const setQty = useCartStore((s) => s.setQty)
@@ -105,22 +108,22 @@ export default function CartPage() {
       <main className="mx-auto max-w-[1200px] px-5 pt-28 pb-20 md:px-8 md:pt-32 lg:px-10 lg:pt-40">
         {/* Breadcrumb */}
         <nav
-          aria-label="Breadcrumb"
+          aria-label={t('breadcrumb.label')}
           className="flex items-center gap-2 text-xs text-foreground/60 md:text-[13px]"
         >
-          <Link to="/" aria-label="Home" className="inline-flex items-center hover:text-brand-navy">
+          <Link to="/" aria-label={t('breadcrumb.home')} className="inline-flex items-center hover:text-brand-navy">
             <Home className="h-3.5 w-3.5" strokeWidth={2} />
           </Link>
           <ChevronRight className="h-3 w-3 text-foreground/40" />
-          <span className="text-foreground/70">Cart</span>
+          <span className="text-foreground/70">{t('cartPage.breadcrumb')}</span>
         </nav>
 
         <div className="mt-3 flex items-end justify-between">
           <h1 className="text-3xl font-semibold tracking-tight text-brand-navy md:text-[40px]">
-            Cart
+            {t('cartPage.title')}
           </h1>
           <span className="pb-1 text-sm text-foreground/55">
-            ({count} {count === 1 ? 'Product' : 'Products'})
+            ({count} {count === 1 ? t('cartPage.productSingular') : t('cartPage.productPlural')})
           </span>
         </div>
 
@@ -145,12 +148,10 @@ export default function CartPage() {
               {/* Note */}
               <div className="mt-8 rounded-xl border border-brand-gold/30 bg-brand-gold/[0.06] px-5 py-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/70">
-                  Note for image optimization
+                  {t('cartPage.note.title')}
                 </p>
                 <p className="mt-1.5 text-[13px] leading-relaxed text-foreground/60">
-                  Image optimization is activated for one or more of your photos. If you
-                  did not intend to utilize this feature, you can deactivate it from the
-                  editor.
+                  {t('cartPage.note.body')}
                 </p>
               </div>
 
@@ -161,14 +162,14 @@ export default function CartPage() {
                   onClick={() => navigate('/')}
                   className="flex-1 border-brand-gold/50 bg-transparent text-brand-gold hover:bg-brand-gold/10"
                 >
-                  Back to home page
+                  {t('cartPage.actions.backHome')}
                 </Button>
                 <Button
                   variant="gold"
                   onClick={() => navigate('/products')}
                   className="flex-1"
                 >
-                  Create a new product
+                  {t('cartPage.actions.createProduct')}
                 </Button>
               </div>
             </div>
@@ -176,25 +177,25 @@ export default function CartPage() {
             {/* Purchase summary */}
             <div className="lg:sticky lg:top-28 lg:self-start">
               <div className="rounded-2xl border border-black/10 p-6 shadow-[0_20px_50px_-30px_rgba(0,35,101,0.3)]">
-                <h2 className="text-lg font-semibold text-brand-navy">Purchase Summary</h2>
+                <h2 className="text-lg font-semibold text-brand-navy">{t('cartPage.summary.title')}</h2>
 
                 <div className="mt-5 space-y-3 text-sm">
-                  <Row label="Subtotal" value={formatOMR(subtotal)} />
-                  <Row label="Standard Shipping" value={formatOMR(shipping)} />
+                  <Row label={t('cartPage.summary.subtotal')} value={formatOMR(subtotal)} />
+                  <Row label={t('cartPage.summary.shipping')} value={formatOMR(shipping)} />
                 </div>
 
                 <div className="my-4 h-px bg-black/[0.08]" />
 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-foreground">Total</span>
+                  <span className="text-sm font-medium text-foreground">{t('cartPage.summary.total')}</span>
                   <span className="text-lg font-bold tabular-nums text-brand-navy">
                     {formatOMR(total)}
                   </span>
                 </div>
                 <p className="mt-1 text-[11px] leading-snug text-foreground/45">
-                  Sales tax not included
+                  {t('cartPage.summary.taxLine1')}
                   <br />
-                  Sales tax may apply
+                  {t('cartPage.summary.taxLine2')}
                 </p>
 
                 <Button
@@ -202,13 +203,12 @@ export default function CartPage() {
                   onClick={onCheckoutClick}
                   className="mt-5 w-full"
                 >
-                  {isAuthenticated ? 'Go to checkout' : 'Log in to checkout'}
+                  {isAuthenticated ? t('cartPage.summary.goToCheckout') : t('cartPage.summary.loginToCheckout')}
                 </Button>
               </div>
 
               <p className="mt-4 text-[11px] leading-relaxed text-foreground/45">
-                Pricing policy: The full list price is a price at which we have offered the
-                product for sale; however, we may not have sold the item at that price.
+                {t('cartPage.summary.pricingPolicy')}
               </p>
             </div>
           </div>
@@ -255,6 +255,7 @@ function CartRow({
   onEdit: () => void
   onRemove: () => void
 }) {
+  const { t } = useTranslation('cart')
   const lineTotal = item.pricePerItem * item.qty
   return (
     <div className="flex gap-4 py-6 first:pt-0">
@@ -276,13 +277,13 @@ function CartRow({
         <p className="mt-0.5 text-[12px] text-foreground/50">{item.subtitle}</p>
         <dl className="mt-2.5 space-y-1 text-[12px] text-foreground/70">
           <div className="flex gap-2">
-            <dt className="w-24 font-medium text-foreground/80">Finished Size:</dt>
+            <dt className="w-24 font-medium text-foreground/80">{t('cartPage.row.finishedSize')}</dt>
             <dd>
-              {item.widthCm.toFixed(1)} × {item.heightCm.toFixed(1)} cm
+              {t('cartPage.row.dimensions', { w: item.widthCm.toFixed(1), h: item.heightCm.toFixed(1) })}
             </dd>
           </div>
           <div className="flex gap-2">
-            <dt className="w-24 font-medium text-foreground/80">Frame SKU:</dt>
+            <dt className="w-24 font-medium text-foreground/80">{t('cartPage.row.frameSku')}</dt>
             <dd>CF-{Math.abs(item.frameId)}</dd>
           </div>
         </dl>
@@ -292,7 +293,7 @@ function CartRow({
           onClick={onEdit}
           className="mt-3 rounded-lg border border-brand-navy/30 px-4 py-1.5 text-[13px] font-medium text-brand-navy transition hover:bg-brand-navy/5"
         >
-          Edit
+          {t('cartPage.row.edit')}
         </button>
       </div>
 
@@ -303,14 +304,14 @@ function CartRow({
             {formatOMR(lineTotal)}
           </p>
           <p className="mt-0.5 text-[11px] text-foreground/50">
-            {formatOMR(item.pricePerItem)} per item
+            {t('cartPage.row.perItem', { price: formatOMR(item.pricePerItem) })}
           </p>
         </div>
 
         <div className="my-3 flex items-center gap-3 rounded-full border border-black/15 px-2 py-1">
           <button
             type="button"
-            aria-label={item.qty <= 1 ? 'Remove item' : 'Decrease quantity'}
+            aria-label={item.qty <= 1 ? t('cartPage.row.removeItem') : t('cartPage.row.decreaseQty')}
             onClick={() => (item.qty <= 1 ? onRemove() : onQty(item.qty - 1))}
             className="flex h-6 w-6 items-center justify-center rounded-full text-foreground/70 hover:bg-black/5"
           >
@@ -321,7 +322,7 @@ function CartRow({
           </span>
           <button
             type="button"
-            aria-label="Increase quantity"
+            aria-label={t('cartPage.row.increaseQty')}
             onClick={() => onQty(item.qty + 1)}
             className="flex h-6 w-6 items-center justify-center rounded-full text-foreground/70 hover:bg-black/5"
           >
@@ -331,7 +332,7 @@ function CartRow({
 
         <button
           type="button"
-          aria-label="Remove item"
+          aria-label={t('cartPage.row.removeItem')}
           onClick={onRemove}
           className="text-foreground/40 transition hover:text-red-500"
         >
@@ -352,14 +353,15 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 function EmptyCart({ onBrowse }: { onBrowse: () => void }) {
+  const { t } = useTranslation('cart')
   return (
     <div className="mt-12 flex flex-col items-center justify-center rounded-2xl border border-black/[0.07] py-20 text-center">
-      <p className="text-base font-medium text-brand-navy">Your cart is empty</p>
+      <p className="text-base font-medium text-brand-navy">{t('cartPage.empty.title')}</p>
       <p className="mt-1 text-sm text-foreground/55">
-        Pick a frame and design it to add it here.
+        {t('cartPage.empty.subtitle')}
       </p>
       <Button variant="gold" onClick={onBrowse} className="mt-5">
-        Browse frames
+        {t('cartPage.empty.browse')}
       </Button>
     </div>
   )
@@ -383,6 +385,7 @@ function CheckoutModal({
   onSubmit: (details: CheckoutDetails) => Promise<void>
   prefill: CheckoutDetails
 }) {
+  const { t } = useTranslation('cart')
   const [fullName, setFullName] = useState(prefill.fullName)
   const [email, setEmail] = useState(prefill.email)
   const [phone, setPhone] = useState(prefill.phone)
@@ -422,27 +425,27 @@ function CheckoutModal({
     <>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
         <button
-          aria-label="Close"
+          aria-label={t('checkoutModal.close')}
           onClick={onClose}
           className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         />
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Checkout details"
+          aria-label={t('checkoutModal.dialogLabel')}
           className="relative z-10 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
         >
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-brand-navy">Checkout details</h2>
+              <h2 className="text-lg font-semibold text-brand-navy">{t('checkoutModal.title')}</h2>
               <p className="mt-0.5 text-[13px] text-foreground/55">
-                Tell us where to send your order.
+                {t('checkoutModal.subtitle')}
               </p>
             </div>
             <button
               type="button"
               onClick={onClose}
-              aria-label="Close"
+              aria-label={t('checkoutModal.close')}
               className="rounded-md p-1 text-foreground/50 hover:bg-black/5"
             >
               <X className="h-5 w-5" />
@@ -450,60 +453,58 @@ function CheckoutModal({
           </div>
 
           <form onSubmit={submit} className="mt-5 space-y-3.5" noValidate>
-            <Field label="Full name" required error={touched && !fullName.trim() ? 'Required' : ''}>
+            <Field label={t('checkoutModal.fields.fullName')} required error={touched && !fullName.trim() ? t('checkoutModal.errors.required') : ''}>
               <input
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 className={inputCls}
-                placeholder="Jane Doe"
+                placeholder={t('checkoutModal.fields.fullNamePlaceholder')}
               />
             </Field>
             <Field
-              label="Email address"
+              label={t('checkoutModal.fields.email')}
               required
-              error={touched && !emailOk ? 'Enter a valid email' : ''}
+              error={touched && !emailOk ? t('checkoutModal.errors.invalidEmail') : ''}
             >
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className={inputCls}
-                placeholder="jane@example.com"
+                placeholder={t('checkoutModal.fields.emailPlaceholder')}
               />
             </Field>
-            <Field label="Phone number" optional>
-              <input
-                type="tel"
+            <Field label={t('checkoutModal.fields.phone')} optional>
+              <PhoneField
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className={inputCls}
-                placeholder="+968 …"
+                onChange={(v) => setPhone(v ?? '')}
+                placeholder={t('checkoutModal.fields.phonePlaceholder')}
               />
             </Field>
-            <Field label="Address" required error={touched && !address.trim() ? 'Required' : ''}>
+            <Field label={t('checkoutModal.fields.address')} required error={touched && !address.trim() ? t('checkoutModal.errors.required') : ''}>
               <input
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 className={inputCls}
-                placeholder="Street, building, area"
+                placeholder={t('checkoutModal.fields.addressPlaceholder')}
               />
             </Field>
-            <Field label="Zip code" required error={touched && !zip.trim() ? 'Required' : ''}>
+            <Field label={t('checkoutModal.fields.zip')} required error={touched && !zip.trim() ? t('checkoutModal.errors.required') : ''}>
               <input
                 value={zip}
                 onChange={(e) => setZip(e.target.value)}
                 className={inputCls}
-                placeholder="100"
+                placeholder={t('checkoutModal.fields.zipPlaceholder')}
               />
             </Field>
 
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" onClick={onClose} disabled={submitting} className="flex-1 border-black/15 bg-transparent text-foreground hover:bg-black/5">
-                Cancel
+                {t('checkoutModal.cancel')}
               </Button>
               <Button type="submit" variant="navy" disabled={submitting} className="flex-1">
                 {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                Place order
+                {t('checkoutModal.placeOrder')}
               </Button>
             </div>
           </form>
@@ -537,11 +538,12 @@ function Field({
   error?: string
   children: React.ReactNode
 }) {
+  const { t } = useTranslation('cart')
   return (
     <label className="block">
       <span className="text-[13px] font-medium text-foreground/80">
         {label}
-        {optional && <span className="font-normal text-foreground/40"> (optional)</span>}
+        {optional && <span className="font-normal text-foreground/40">{' '}{t('checkoutModal.fields.optional')}</span>}
       </span>
       <div className="mt-1">{children}</div>
       {required && error && <span className="mt-1 block text-[11px] text-red-500">{error}</span>}

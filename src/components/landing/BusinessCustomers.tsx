@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { motion, type Variants } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,6 +28,7 @@ const fadeUp: Variants = {
 }
 
 export default function BusinessCustomers() {
+  const { t } = useTranslation('landingSections')
   const [form, setForm] = useState<FormState>(INITIAL)
 
   const update = (key: keyof FormState) => (
@@ -63,16 +65,15 @@ export default function BusinessCustomers() {
               className="text-3xl tracking-tight text-brand-navy font-medium md:text-5xl"
               variants={fadeUp}
             >
-              Cretix for Business
+              {t('business.titleLine1')}
               <br />
-              Customers
+              {t('business.titleLine2')}
             </motion.h2>
             <motion.p
               className="my-8 max-w-md text-sm leading-relaxed text-foreground/75 md:text-base"
               variants={fadeUp}
             >
-              Partnering with galleries, designers, and businesses to deliver
-              exceptional framing solutions.
+              {t('business.description')}
             </motion.p>
 
             <motion.blockquote
@@ -80,12 +81,10 @@ export default function BusinessCustomers() {
               variants={fadeUp}
             >
               <p className="text-[14px] italic font-normal font-liberation text-foreground/80">
-                "The Curator Lab is the only lab we trust with our limited
-                edition series. Their attention to detail is simply
-                unmatched."
+                &ldquo;{t('business.quote')}&rdquo;
               </p>
               <footer className="mt-4 text-sm font-semibold text-foreground">
-                — Director, NYC Modern Gallery
+                {t('business.quoteAuthor')}
               </footer>
             </motion.blockquote>
           </motion.div>
@@ -95,7 +94,7 @@ export default function BusinessCustomers() {
           <motion.form
             onSubmit={onSubmit}
             className="rounded-[33px] bg-[#EEF1FF] px-10 p-6 md:p-8 lg:p-10 md:max-w-[560px] md:ml-auto"
-            aria-label="Request partnership"
+            aria-label={t('business.form.ariaLabel')}
             initial={{ opacity: 0, y: 32 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-80px' }}
@@ -104,28 +103,28 @@ export default function BusinessCustomers() {
             <div className="grid grid-cols-1 gap-5">
               <Field
                 id="bc-company"
-                label="Company Name"
+                label={t('business.form.companyName')}
                 value={form.company}
                 onChange={update('company')}
                 required
               />
               <Field
                 id="bc-fullname"
-                label="Full Name"
+                label={t('business.form.fullName')}
                 value={form.fullName}
                 onChange={update('fullName')}
                 required
               />
               <Field
                 id="bc-phone"
-                label="Phone Number"
+                label={t('business.form.phoneNumber')}
                 type="tel"
                 value={form.phone}
                 onChange={update('phone')}
               />
               <Field
                 id="bc-email"
-                label="Email"
+                label={t('business.form.email')}
                 type="email"
                 value={form.email}
                 onChange={update('email')}
@@ -133,7 +132,7 @@ export default function BusinessCustomers() {
               />
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="bc-message">Message</Label>
+                <Label htmlFor="bc-message">{t('business.form.message')}</Label>
                 <Textarea
                   id="bc-message"
                   rows={4}
@@ -151,7 +150,7 @@ export default function BusinessCustomers() {
                 size="sm"
                 className="h-10 rounded-md px-6 text-xs font-medium tracking-wide"
               >
-                Request Partnership
+                {t('business.form.submit')}
               </Button>
             </div>
           </motion.form>

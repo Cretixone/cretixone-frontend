@@ -15,6 +15,7 @@ import {
   LogOut,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -27,13 +28,48 @@ import {
 import { cn } from '@/lib/utils'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCartStore, cartCount } from '@/store/cartStore'
+import { useLangStore } from '@/store/langStore'
 import { useAuthStore } from '@/store/authStore'
 import { useAuthUiStore } from '@/store/authUiStore'
 import { authApi } from '@/api/auth.api'
 import { useUploadPhoto } from '@/hooks/useUploadPhoto'
 
+function LanguageSwitcher() {
+  const { t } = useTranslation('common')
+  const isRtl = useLangStore((s) => s.isRtl)
+  const setLang = useLangStore((s) => s.setLang)
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="flex h-7 w-7 border border-[#B5C9F1] items-center justify-center rounded-full text-white bg-[#4169E2]"
+          aria-label={t('actions.language')}
+        >
+          <Languages className="h-4 w-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-40 bg-background border-0">
+        <DropdownMenuItem
+          onClick={() => setLang('en')}
+          className={cn('bg-background hover:text-brand-gold', !isRtl && 'font-semibold text-brand-gold')}
+        >
+          English
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => setLang('ar')}
+          className={cn('bg-background hover:text-brand-gold', isRtl && 'font-semibold text-brand-gold')}
+        >
+          العربية
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 function AccountButton() {
   const navigate = useNavigate()
+  const { t } = useTranslation('common')
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const user = useAuthStore((s) => s.user)
   const clear = useAuthStore((s) => s.clear)
@@ -43,7 +79,7 @@ function AccountButton() {
     return (
       <button
         type="button"
-        aria-label="Log in"
+        aria-label={t('actions.login')}
         onClick={() => openAuth('login')}
         className="flex h-7 w-7 items-center justify-center rounded-full border border-[#B5C9F1] bg-[#4169E2] text-white"
       >
@@ -77,27 +113,28 @@ function AccountButton() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator className="border-t" />
         <DropdownMenuItem className="bg-background hover:text-brand-gold" onClick={() => navigate('/dashboard/profile')}>
-          <UserIcon className="mr-2 h-4 w-4" /> My account
+          <UserIcon className="mr-2 h-4 w-4" /> {t('actions.myAccount')}
         </DropdownMenuItem>
         <DropdownMenuItem className="bg-background hover:text-brand-gold" onClick={() => navigate('/dashboard/orders')}>
-          <Package className="mr-2 h-4 w-4" /> My orders
+          <Package className="mr-2 h-4 w-4" /> {t('actions.myOrders')}
         </DropdownMenuItem>
         <DropdownMenuSeparator className="border-t" />
         <DropdownMenuItem onClick={logout} className="text-red-500">
-          <LogOut className="mr-2 h-4 w-4" /> Log out
+          <LogOut className="mr-2 h-4 w-4" /> {t('actions.logout')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
 }
 
+// `key` resolves against the `common` namespace at render time.
 const NAV_LINKS = [
-  { label: 'All Frames', href: '/products' },
-  { label: 'Custom Prints', href: '/custom-prints' },
-  { label: 'Stock Photo', href: '#stock' },
-  { label: 'Custom Mirror', href: '/custom-mirrors' },
-  { label: 'Gifts', href: '#gifts' },
-  { label: 'About', href: '/about' },
+  { key: 'nav.allFrames', href: '/products' },
+  { key: 'nav.customPrints', href: '/custom-prints' },
+  { key: 'nav.stockPhoto', href: '#stock' },
+  { key: 'nav.customMirror', href: '/custom-mirrors' },
+  { key: 'nav.gifts', href: '#gifts' },
+  { key: 'nav.about', href: '/about' },
 ]
 
 const SOCIALS = [
@@ -132,6 +169,7 @@ function CretixoneLogo({ className }: CretixoneLogoProps) {
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const navigate = useNavigate()
+  const { t } = useTranslation('common')
   const cartItemCount = useCartStore((s) => cartCount(s.items))
   const onUploadPhoto = useUploadPhoto()
 
@@ -166,16 +204,10 @@ export default function Navbar() {
 
           {/* Right utilities */}
           <div className="flex items-center gap-4">
+            <LanguageSwitcher />
             <button
               type="button"
-              className='flex h-7 w-7 border border-[#B5C9F1] items-center justify-center rounded-full text-white bg-[#4169E2]'
-              aria-label="Language"
-            >
-              <Languages className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              aria-label="Cart"
+              aria-label={t('actions.cart')}
               onClick={() => navigate('/cart')}
               className="relative text-[#4169E2]"
             >
@@ -216,13 +248,13 @@ export default function Navbar() {
           >
             <ul className="flex flex-col">
               {NAV_LINKS.map((l) => (
-                <li key={l.label}>
+                <li key={l.key}>
                   <a
                     href={l.href}
                     onClick={() => setMobileOpen(false)}
                     className="block rounded-lg px-4 py-2.5 text-sm font-medium text-white/95 hover:bg-white/15"
                   >
-                    {l.label}
+                    {t(l.key)}
                   </a>
                 </li>
               ))}
@@ -237,7 +269,7 @@ export default function Navbar() {
                   }}
                 >
                   <ImagePlus className="h-4 w-4" />
-                  Upload Photo
+                  {t('actions.uploadPhoto')}
                 </Button>
               </li>
             </ul>
@@ -251,8 +283,10 @@ export default function Navbar() {
 export function PillNav() {
   const [pillTop, setPillTop] = useState(HEADER_H)
   const [stuck, setStuck] = useState(false)
+  const { t } = useTranslation('common')
   const onUploadPhoto = useUploadPhoto()
-
+  const isRtl = useLangStore((s) => s.isRtl)
+  
   useEffect(() => {
     const onScroll = () => {
       const y = window.scrollY
@@ -282,12 +316,12 @@ export function PillNav() {
       >
         <ul className="flex items-center gap-1 pr-2">
           {NAV_LINKS.map((l) => (
-            <li key={l.label}>
+            <li key={l.key}>
               <Link
                 to={l.href}
                 className="rounded-full px-4 py-2 text-sm font-medium text-white/95 transition hover:bg-white/15"
               >
-                {l.label}
+                {t(l.key)}
               </Link>
             </li>
           ))}
@@ -295,11 +329,17 @@ export function PillNav() {
         <Button
           variant="navy"
           size="pill"
-          className="ml-1 gap-2 shadow-sm"
+          className={cn(
+            "ml-1 gap-2 shadow-sm",
+            {
+              'mr-1': isRtl,
+              'ml-1': !isRtl,
+            }
+          )}
           onClick={onUploadPhoto}
         >
           <ImagePlus className="h-4 w-4" />
-          Upload Photo
+          {t('actions.uploadPhoto')}
         </Button>
       </div>
     </motion.nav>

@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { formatOMR } from '@/lib/format'
 import { Button } from '@/components/ui/button'
 
@@ -14,6 +15,7 @@ interface Props {
  * ripple → ring draw → circle fill pop → checkmark stroke → content fade-in.
  */
 export function OrderSuccess({ orderNumber, total, onViewOrders, onContinue }: Props) {
+  const { t } = useTranslation('cart')
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
       <motion.div
@@ -70,32 +72,32 @@ export function OrderSuccess({ orderNumber, total, onViewOrders, onContinue }: P
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7, duration: 0.4 }}
         >
-          <h2 className="mt-4 text-2xl font-bold tracking-tight text-brand-navy">Order placed!</h2>
+          <h2 className="mt-4 text-2xl font-bold tracking-tight text-brand-navy">{t('success.title')}</h2>
           <p className="mt-1.5 text-sm text-foreground/60">
-            Thank you — we've emailed your confirmation. Your order is now being processed.
+            {t('success.message')}
           </p>
 
           <div className="mt-5 rounded-2xl bg-black/[0.03] px-4 py-3 text-left">
             <div className="flex items-center justify-between">
-              <span className="text-[12px] text-foreground/50">Order number</span>
+              <span className="text-[12px] text-foreground/50">{t('success.orderNumber')}</span>
               <span className="font-semibold tracking-wide text-brand-navy">{orderNumber}</span>
             </div>
             <div className="mt-1.5 flex items-center justify-between">
-              <span className="text-[12px] text-foreground/50">Total</span>
+              <span className="text-[12px] text-foreground/50">{t('success.total')}</span>
               <span className="font-bold tabular-nums text-brand-navy">{formatOMR(total)}</span>
             </div>
           </div>
 
           <div className="mt-6 flex flex-col gap-2.5">
             <Button variant="navy" className="w-full" onClick={onViewOrders}>
-              View my orders
+              {t('success.viewOrders')}
             </Button>
             <Button
               variant="outline"
               className="w-full border-black/15 bg-transparent text-foreground hover:bg-black/5"
               onClick={onContinue}
             >
-              Continue shopping
+              {t('success.continue')}
             </Button>
           </div>
         </motion.div>

@@ -1,0 +1,46 @@
+{
+  "aria": {
+    "breadcrumb": "مسار التنقل",
+    "viewImage": "عرض الصورة {{number}}",
+    "viewFullscreen": "عرض بملء الشاشة"
+  },
+  "breadcrumb": {
+    "canvasPrints": "مطبوعات الكانفاس"
+  },
+  "gallery": {
+    "previewAlt": "معاينة المنتج"
+  },
+  "services": {
+    "frameOnly": {
+      "title": "الإطار فقط",
+      "desc": "أطّرها بنفسك بكل سهولة."
+    },
+    "printFrame": {
+      "title": "طباعة + تأطير",
+      "desc": "مطبوعة ومؤطرة وجاهزة للتعليق."
+    }
+  },
+  "buyPanel": {
+    "chooseService": "اختر خدمتك",
+    "frameSize": "مقاس الإطار",
+    "customSizes": "تُحدَّد المقاسات المخصصة في المحرر",
+    "uploadPreview": "ارفع صورة للمعاينة",
+    "addToCart": "أضف إلى السلة"
+  },
+  "sizePicker": {
+    "moreSizes": "مقاسات أكثر"
+  },
+  "description": {
+    "heading": "وصف المنتج"
+  },
+  "details": {
+    "heading": "تفاصيل المنتج"
+  },
+  "toast": {
+    "addedToCart": "تمت إضافة المنتج إلى السلة بنجاح"
+  },
+  "fallback": {
+    "pictureFrame": "إطار صورة",
+    "customPictureFrame": "إطار صورة مخصص"
+  }
+}

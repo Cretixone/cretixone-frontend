@@ -15,7 +15,9 @@ export const SelectTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       'flex h-9 w-full items-center justify-between gap-2 rounded-md border px-2.5 text-[12px] transition-colors focus:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50',
-      'border-[var(--ed-border-strong)] bg-[var(--ed-panel)] text-[var(--ed-fg)]',
+      // --ed-* tokens exist only inside the editor shell; the fallbacks keep the
+      // control correctly themed anywhere else (e.g. the products page).
+      'border-[var(--ed-border-strong,#d4cebd)] bg-[var(--ed-panel,#ffffff)] text-[var(--ed-fg,#002365)]',
       '[&>span]:line-clamp-1',
       className,
     )}
@@ -39,7 +41,8 @@ export const SelectContent = React.forwardRef<
       position={position}
       className={cn(
         'relative z-[120] max-h-72 min-w-[8rem] overflow-hidden rounded-md border shadow-lg',
-        'border-[var(--ed-border)] bg-[var(--ed-panel)] text-[var(--ed-fg)]',
+        // Fallbacks so the popup isn't transparent/black-bordered outside the editor.
+        'border-[var(--ed-border,#e6e2d6)] bg-[var(--ed-panel,#ffffff)] text-[var(--ed-fg,#002365)]',
         position === 'popper' &&
           'data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1',
         className,
@@ -68,7 +71,7 @@ export const SelectItem = React.forwardRef<
     ref={ref}
     className={cn(
       'relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-7 pr-2 text-[12px] outline-none',
-      'focus:bg-[var(--ed-hover)] data-[state=checked]:text-[var(--ed-accent)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      'focus:bg-[var(--ed-hover,rgba(0,35,101,0.05))] data-[state=checked]:text-[var(--ed-accent,#C08C40)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
       className,
     )}
     {...props}

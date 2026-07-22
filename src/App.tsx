@@ -6,8 +6,10 @@ import ToolRail from '@/components/layout/ToolRail'
 import ToolPanel from '@/components/layout/ToolPanel'
 import RightInspector from '@/components/layout/RightInspector'
 import StatusBar from '@/components/layout/StatusBar'
+import { DirectionProvider } from '@radix-ui/react-direction'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthDialog } from '@/components/auth/AuthDialog'
+import { useLangStore } from '@/store/langStore'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { useEditorStore } from '@/store/editorStore'
 import { useAuthStore } from '@/store/authStore'
@@ -79,6 +81,9 @@ export default function App() {
   // on load (the axios interceptor silently refreshes / clears on failure).
   const accessToken = useAuthStore((s) => s.accessToken)
   const setUser = useAuthStore((s) => s.setUser)
+  // Feeds the active direction to ALL Radix components (Tabs, Select, dropdowns…)
+  // so they stop forcing dir="ltr" on their roots in Arabic.
+  const dir = useLangStore((s) => s.dir)
   useEffect(() => {
     if (!accessToken) return
     authApi.getMe().then(setUser).catch(() => { /* handled by interceptor */ })
@@ -86,6 +91,7 @@ export default function App() {
   }, [])
 
   return (
+    <DirectionProvider dir={dir}>
     <Suspense fallback={<FullPageLoader />}>
       <ScrollToTop />
       <Routes>
@@ -122,6 +128,7 @@ export default function App() {
       <AuthDialog />
       <Toaster position="top-center" richColors closeButton />
     </Suspense>
+    </DirectionProvider>
   )
 }
 

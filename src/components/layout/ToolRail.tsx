@@ -1,4 +1,5 @@
 import { LayoutGrid, Home, Mountain, Square, Layers3, Sparkles } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '@/store/editorStore'
 import {
   Tooltip,
@@ -8,15 +9,16 @@ import {
 import { cn } from '@/lib/utils'
 
 const TOOLS = [
-  { id: 'frames',    label: 'Frames',    icon: LayoutGrid },
-  { id: 'interiors', label: 'Interiors', icon: Home },
-  { id: 'scenery',   label: 'Scenery',   icon: Mountain },
-  { id: 'mat',       label: 'Mat',       icon: Square },
-  { id: 'mdf',       label: 'MDF',       icon: Layers3 },
-  { id: 'effect',    label: 'Effects',   icon: Sparkles },
+  { id: 'frames',    labelKey: 'rail.frames',    icon: LayoutGrid },
+  { id: 'interiors', labelKey: 'rail.interiors', icon: Home },
+  { id: 'scenery',   labelKey: 'rail.scenery',   icon: Mountain },
+  { id: 'mat',       labelKey: 'rail.mat',       icon: Square },
+  { id: 'mdf',       labelKey: 'rail.mdf',       icon: Layers3 },
+  { id: 'effect',    labelKey: 'rail.effects',   icon: Sparkles },
 ] as const
 
 export default function ToolRail() {
+  const { t } = useTranslation('editor')
   const activeSidebarTab = useEditorStore((s) => s.activeSidebarTab)
   const setActiveSidebarTab = useEditorStore((s) => s.setActiveSidebarTab)
   const setToolPanelCollapsed = useEditorStore((s) => s.setToolPanelCollapsed)
@@ -28,9 +30,10 @@ export default function ToolRail() {
         background: 'var(--ed-panel)',
         borderColor: 'var(--ed-border)',
       }}
-      aria-label="Editor tools"
+      aria-label={t('rail.ariaLabel')}
     >
-      {TOOLS.map(({ id, label, icon: Icon }) => {
+      {TOOLS.map(({ id, labelKey, icon: Icon }) => {
+        const label = t(labelKey)
         const active = activeSidebarTab === id
         return (
           <Tooltip key={id}>
