@@ -377,8 +377,6 @@ export const {
   useFetchFacetsQuery,
   useFetchFrameTypesPublicQuery,
   useFetchFrameColorsPublicQuery,
-  useFetchFrameTypesPublicQuery,
-  useFetchFrameColorsPublicQuery,
   useFetchFrameSizesQuery,
   useFetchInteriorsQuery,
   useFetchSceneryQuery,
