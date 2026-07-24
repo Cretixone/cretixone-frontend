@@ -20,6 +20,7 @@ import { Separator } from '@/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useLangStore } from '@/store/langStore'
+import { pickLocalized } from '@/lib/localized'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -93,6 +94,8 @@ function FrameThumb({ item, selected, onClick }: {
   item: ApiFrame; selected: boolean; onClick: () => void
 }) {
   const { t } = useTranslation('editor')
+  const isRtl = useLangStore((s) => s.isRtl)
+  const frameName = pickLocalized(item.name, item.nameAr, isRtl)
   return (
     <div className="flex flex-col">
       <button
@@ -133,10 +136,22 @@ function FrameThumb({ item, selected, onClick }: {
           </div>
         )}
       </button>
-      {/* Per-cm price under each frame */}
+      {/* Frame name + per-cm price under each frame */}
+      {frameName && (
+        <span
+          className="mt-1.5 truncate text-center text-[11px] font-medium leading-tight"
+          style={{ color: selected ? 'var(--ed-accent)' : 'var(--ed-fg)' }}
+          title={frameName}
+        >
+          {frameName}
+        </span>
+      )}
       <span
-        className="mt-1.5 text-center text-[11px] font-semibold leading-tight tabular-nums"
-        style={{ color: selected ? 'var(--ed-accent)' : 'var(--ed-fg)' }}
+        className={cn(
+          'text-center text-[10px] leading-tight tabular-nums',
+          !frameName && 'mt-1.5',
+        )}
+        style={{ color: 'var(--ed-fg-muted)' }}
       >
         {item.pricePerCm > 0 ? `${formatOMR(item.pricePerCm)}/cm` : '—'}
       </span>

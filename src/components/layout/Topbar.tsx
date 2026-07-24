@@ -3,6 +3,8 @@ import { ArrowLeft, ChevronDown, Download, ImagePlus, Moon, Sun } from 'lucide-r
 import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '@/store/editorStore'
 import { useImageUpload } from '@/hooks/useImageUpload'
+import { useIsRtl } from '@/store/langStore'
+import { pickLocalized } from '@/lib/localized'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,6 +55,11 @@ function IconButton({
 export default function Topbar() {
   const { t } = useTranslation('editor')
   const navigate = useNavigate()
+  const isRtl = useIsRtl()
+  const selectedFrame = useEditorStore((s) => s.selectedFrame)
+  const frameName = selectedFrame
+    ? pickLocalized(selectedFrame.name, selectedFrame.nameAr, isRtl)
+    : ''
   const artworkImageUrl = useEditorStore((s) => s.artworkImageUrl)
   const editorTheme = useEditorStore((s) => s.editorTheme)
   const toggleEditorTheme = useEditorStore((s) => s.toggleEditorTheme)
@@ -80,14 +87,18 @@ export default function Topbar() {
           <img src="/images/svg/logo.svg" alt="Cretixone" className="h-6 w-auto" />
         </Link>
 
-        <div className="ml-2 hidden h-4 w-px md:block" style={{ background: 'var(--ed-border)' }} />
-
-        <span
-          className="ml-2 hidden text-xs font-medium md:inline"
-          style={{ color: 'var(--ed-fg-muted)' }}
-        >
-          {t('topbar.untitledDesign')}
-        </span>
+        {frameName && (
+          <>
+            <div className="ml-2 hidden h-4 w-px md:block" style={{ background: 'var(--ed-border)' }} />
+            <span
+              className="ml-2 hidden max-w-[240px] truncate text-xs font-medium md:inline"
+              style={{ color: 'var(--ed-fg)' }}
+              title={frameName}
+            >
+              {frameName}
+            </span>
+          </>
+        )}
       </div>
 
       {/* Right cluster: theme · change image · export */}
