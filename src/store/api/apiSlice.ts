@@ -61,6 +61,7 @@ const routingBaseQuery: BaseQueryFn<
 interface CretixFrameDto {
   id: string
   name: string
+  nameAr: string | null
   categoryId: string | null
   category: { id: string; name: string; slug: string } | null
   isVip: boolean
@@ -76,6 +77,7 @@ interface CretixFrameDto {
   sizeTo: number
   sortOrder: number
   description: string | null
+  descriptionAr: string | null
   gallery: string[]
   specifications: Record<string, string>
 }
@@ -139,6 +141,7 @@ const resolveBackendUrl = (url: string | null | undefined): string => {
 const mapCretixFrame = (f: CretixFrameDto): ApiFrame => ({
   id: hashIdToNumber(f.id),
   name: f.name,
+  nameAr: f.nameAr ?? null,
   categoryId: f.categoryId,
   categorySlug: f.category?.slug ?? null,
   isVip: f.isVip,
@@ -152,6 +155,7 @@ const mapCretixFrame = (f: CretixFrameDto): ApiFrame => ({
   sizeFrom: f.sizeFrom ?? 0,
   sizeTo: f.sizeTo ?? 0,
   description: f.description ?? null,
+  descriptionAr: f.descriptionAr ?? null,
   gallery: (f.gallery ?? []).map((g) => resolveBackendUrl(g)),
   specifications: f.specifications ?? {},
 })

@@ -554,6 +554,11 @@ export default function CanvasStage({
 
     const s = useEditorStore.getState()
     const frame: ApiFrame | null = frameOverrideRef.current ?? s.selectedFrame
+    // Stretcher category: never show the moulding — the picture fills the whole
+    // frame (gallery-wrap canvas), before and after an image is uploaded. Only
+    // applies to the "stretcher" category.
+    const stretcherHideFrame =
+      (frame?.categorySlug ?? '').toLowerCase() === 'stretcher'
     const interior: ApiScene | null = s.selectedInterior
     const scenery: ApiScene | null = s.selectedScenery
     const matSizeItem = s.selectedMatSize
@@ -757,8 +762,11 @@ export default function CanvasStage({
     // HTML loader overlay (frame select / swap / ratio switch). When no
     // frame is selected there's nothing to wait on.
     const readyUrl = frame ? pickFrameAssetUrl(frame, orientation) : ''
+    // Stretcher never draws the frame, so it needs none of its assets — treat it
+    // as ready immediately (otherwise the loader waits forever for a texture we
+    // never load).
     const frameReady =
-      !frame || (!!texCache.get(readyUrl) && !!getCachedFrameAsset(readyUrl))
+      !frame || stretcherHideFrame || (!!texCache.get(readyUrl) && !!getCachedFrameAsset(readyUrl))
     const needLoading = !frameReady
     if (loadingRef.current !== needLoading) {
       loadingRef.current = needLoading
@@ -857,6 +865,16 @@ export default function CanvasStage({
       contentH = outerH * 0.6
     }
 
+    // Stretcher (with artwork): the image is the whole surface — expand the
+    // content area to the full frame bounds so it fills edge-to-edge with no
+    // moulding opening.
+    if (stretcherHideFrame) {
+      contentX = frameX0
+      contentY = frameY0
+      contentW = outerW
+      contentH = outerH
+    }
+
     // Mat border from the selected mat size's width in cm. The opening
     // (contentW × contentH px) represents the frame's real size in cm — the
     // same basis the price calc uses — so px-per-cm = contentW / wCm. The
@@ -875,12 +893,12 @@ export default function CanvasStage({
             : s.customWidthCm
     const pxPerCm = matWCm > 0 ? contentW / matWCm : 0
     const matBorder =
-      matWidthCm > 0
-        ? Math.min(
+      stretcherHideFrame || matWidthCm <= 0
+        ? 0
+        : Math.min(
             Math.round(matWidthCm * pxPerCm),
             Math.floor(Math.min(contentW, contentH) * 0.45),
           )
-        : 0
 
     const matX = contentX
     const matY = contentY
@@ -900,7 +918,10 @@ export default function CanvasStage({
     // opening as-is (picture fills it). When falling back to the
     // landscape PNG we fit a 1:1 picture rect inside the opening with
     // mat filling the side gap.
-    const needsSquareInsideFit = wantSquare && !hasDedicatedSquare
+    // Stretcher fills the whole frame edge-to-edge (no square inset), so the
+    // picture rect always spans the full bounds — which also makes the picture
+    // the entire hover area for wheel zoom.
+    const needsSquareInsideFit = wantSquare && !hasDedicatedSquare && !stretcherHideFrame
 
     let openX: number, openY: number, openW: number, openH: number
     if (needsSquareInsideFit) {
@@ -933,7 +954,11 @@ export default function CanvasStage({
     // ── 4. Frame rendering ───────────────────────────────────────────────
     L.frameCont.removeChildren()
 
-    if (frame) {
+    if (frame && stretcherHideFrame) {
+      // Stretcher with artwork — no moulding is drawn; the full-bounds image
+      // (rendered below) is the visible surface.
+      L.loadedFrameId = frame.id
+    } else if (frame) {
       // ── Full-frame single-sprite render ──
       // The chosen full-frame PNG (landscape or portrait) is drawn at the
       // texture's native aspect using a UNIFORM scale — assigning

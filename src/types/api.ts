@@ -16,6 +16,8 @@ export interface ApiFrame {
   id: number                              // hashed-uuid number so it can coexist with frameit ids
   name: string
   categoryId: string | null
+  nameAr?: string | null
+  descriptionAr?: string | null
   categorySlug: string | null
   isVip: boolean
   isNew: boolean

@@ -21,6 +21,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { formatOMR, formatOMRRate } from '@/lib/format'
+import { pickLocalized } from '@/lib/localized'
+import { useIsRtl } from '@/store/langStore'
 import type { ApiFrame } from '@/types/api'
 
 const PAGE_SIZE = 12
@@ -455,6 +457,7 @@ function ProductGrid({ frames, minPerimeter }: { frames: ApiFrame[]; minPerimete
 function ProductCard({ frame, minPerimeter }: { frame: ApiFrame; minPerimeter: number }) {
   const { t } = useTranslation('products')
   const navigate = useNavigate()
+  const isRtl = useIsRtl()
   // Show the square thumbnail first (imgUrl = thumbnailUrl), then fall back.
   const img = frame.imgUrl || frame.portraitUrl || frame.landscapeUrl
 
@@ -501,7 +504,7 @@ function ProductCard({ frame, minPerimeter }: { frame: ApiFrame; minPerimeter: n
       {/* Meta */}
       <div className="mt-3">
         <h3 className="truncate text-sm font-semibold leading-snug text-foreground">
-          {frame.name}
+          {pickLocalized(frame.name, frame.nameAr, isRtl)}
         </h3>
         <p className="mt-1 truncate text-[11px] capitalize leading-tight text-foreground/50">
           {subtitle}

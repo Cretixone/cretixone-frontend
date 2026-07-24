@@ -6,10 +6,20 @@ import { toast } from 'sonner'
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { Lightbox } from '@/components/Lightbox'
+import { InquiryDialog } from '@/components/InquiryDialog'
 import { ReviewsSection } from '@/components/ReviewsSection'
 import { useEditorStore } from '@/store/editorStore'
 import { useCartStore } from '@/store/cartStore'
+import { useIsRtl } from '@/store/langStore'
+import { pickLocalized } from '@/lib/localized'
 import { useFetchFrameByIdQuery, useFetchFrameSizesQuery } from '@/store/api/apiSlice'
 import { formatOMR, formatOMRRate } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -39,14 +49,22 @@ const SERVICES = [
   },
 ] as const
 
+// Sentinel value for the "Custom size" entry in the size dropdown.
+const CUSTOM_SIZE = '__custom__'
+
 export default function ProductDetailPage() {
   const { t } = useTranslation('productDetail')
   const { id } = useParams()
   const navigate = useNavigate()
+  const isRtl = useIsRtl()
 
   // Fetch just this frame by its hashed URL id (single API call, no full list).
   const { data: frame } = useFetchFrameByIdQuery(id ? Number(id) : 0, { skip: !id })
   const { data: frameSizes } = useFetchFrameSizesQuery()
+
+  // Arabic name/description when in Arabic mode (falls back to English).
+  const localizedTitle = pickLocalized(frame?.name, frame?.nameAr, isRtl)
+  const localizedDescription = pickLocalized(frame?.description, frame?.descriptionAr, isRtl)
 
   // Gallery rule:
   //  • gallery has images → show them (thumbnail strip + 1st as the main image)
@@ -85,6 +103,16 @@ export default function ProductDetailPage() {
 
   const [service, setService] = useState<string>(SERVICES[0].id)
   const [size, setSize] = useState<string>('')
+  // Custom size entered via the "Custom size" dropdown option → tiny dialog.
+  const [customW, setCustomW] = useState(0)
+  const [customH, setCustomH] = useState(0)
+  const [customOpen, setCustomOpen] = useState(false)
+  // Draft dims edited inside the dialog — only committed to customW/H on Confirm
+  // (Cancel or closing the popup discards them).
+  const [draftW, setDraftW] = useState(0)
+  const [draftH, setDraftH] = useState(0)
+  // Request-inquiry form (custom / out-of-range sizes) — opens over the page.
+  const [inquiryOpen, setInquiryOpen] = useState(false)
 
   // Default the selected size to the first preset once they load.
   useEffect(() => {
@@ -97,6 +125,35 @@ export default function ProductDetailPage() {
     () => (frameSizes ?? []).find((s) => `${s.name} · ${s.widthCm}×${s.lengthCm} cm` === size),
     [frameSizes, size],
   )
+
+  // Effective dimensions + manufacturability — same rule as the editor's
+  // "Checkout vs Request Inquiry": both sides within the frame's [sizeFrom,
+  // sizeTo] range → Add to cart; otherwise → Custom order (inquiry).
+  const isCustom = size === CUSTOM_SIZE
+  const effW = isCustom ? customW : selectedFrameSize?.widthCm ?? 0
+  const effH = isCustom ? customH : selectedFrameSize?.lengthCm ?? 0
+  const hasSize = isCustom ? customW > 0 && customH > 0 : !!selectedFrameSize
+  const inRange =
+    !!frame && frame.sizeTo > 0 &&
+    effW >= frame.sizeFrom && effW <= frame.sizeTo &&
+    effH >= frame.sizeFrom && effH <= frame.sizeTo
+  // Label shown in the size box: preset label, or "Custom · W×H cm".
+  const sizeDisplay = isCustom
+    ? hasSize
+      ? `${t('sizePicker.customSize')} · ${effW}×${effH} cm`
+      : t('sizePicker.customSize')
+    : size
+
+  // Live draft price/range shown inside the dialog while editing (pre-Confirm).
+  const draftHasSize = draftW > 0 && draftH > 0
+  const draftInRange =
+    !!frame && frame.sizeTo > 0 &&
+    draftW >= frame.sizeFrom && draftW <= frame.sizeTo &&
+    draftH >= frame.sizeFrom && draftH <= frame.sizeTo
+  const draftPriceLabel =
+    frame && frame.pricePerCm > 0 && draftHasSize
+      ? formatOMR(frame.pricePerCm * (draftW + draftH) * 2)
+      : '—'
   // Price label:
   //  • a size preset is chosen → the total for that size (pricePerCm × perimeter)
   //  • no preset selectable (e.g. none exist yet) → the per-cm rate, so a
@@ -104,10 +161,7 @@ export default function ProductDetailPage() {
   //  • frame isn't priced → em dash
   const priceLabel = (() => {
     if (!frame || frame.pricePerCm <= 0) return '—'
-    if (selectedFrameSize) {
-      const total = frame.pricePerCm * (selectedFrameSize.widthCm + selectedFrameSize.lengthCm) * 2
-      return formatOMR(total)
-    }
+    if (hasSize) return formatOMR(frame.pricePerCm * (effW + effH) * 2)
     return `${formatOMRRate(frame.pricePerCm)} / cm`
   })()
 
@@ -117,9 +171,7 @@ export default function ProductDetailPage() {
   const oldPriceLabel = (() => {
     const old = frame?.oldPricePerCm ?? 0
     if (!frame || old <= 0 || old <= frame.pricePerCm) return null
-    if (selectedFrameSize) {
-      return formatOMR(old * (selectedFrameSize.widthCm + selectedFrameSize.lengthCm) * 2)
-    }
+    if (hasSize) return formatOMR(old * (effW + effH) * 2)
     return `${formatOMRRate(old)} / cm`
   })()
 
@@ -135,23 +187,33 @@ export default function ProductDetailPage() {
     navigate(id ? `/editor?frame=${id}` : '/editor')
   }
 
-  // Add-to-cart needs a concrete, priced size preset to compute the line's
-  // dimensions + price (same formula as the editor: pricePerCm × perimeter × 2).
   const addItem = useCartStore((s) => s.addItem)
-  const canAddToCart = !!frame && frame.pricePerCm > 0 && !!selectedFrameSize
+  const priced = !!frame && frame.pricePerCm > 0
 
+  // Picking "Custom size" opens the dialog seeded with the current custom size
+  // (or a default). The size isn't applied until the user hits Confirm.
+  const handleSelectSize = (v: string) => {
+    if (v === CUSTOM_SIZE) {
+      const seed = Math.max(1, Math.round(frame?.sizeFrom || 20))
+      setDraftW(customW || seed)
+      setDraftH(customH || seed)
+      setCustomOpen(true)
+    } else {
+      setSize(v)
+    }
+  }
+
+  // In-range (preset or custom) → add to cart. Price = pricePerCm × perimeter ×2.
   const handleAddToCart = () => {
-    if (!frame || !selectedFrameSize || frame.pricePerCm <= 0) return
-    const w = selectedFrameSize.widthCm
-    const h = selectedFrameSize.lengthCm
+    if (!frame || !priced || !hasSize) return
     addItem({
       frameId: frame.id,
       name: frame.name || t('fallback.pictureFrame'),
-      subtitle: selectedFrameSize.name,
+      subtitle: isCustom ? `${effW}×${effH} cm` : selectedFrameSize?.name ?? '',
       thumbnail: frame.imgUrl || gallery[0],
-      widthCm: w,
-      heightCm: h,
-      pricePerItem: frame.pricePerCm * (w + h) * 2,
+      widthCm: effW,
+      heightCm: effH,
+      pricePerItem: frame.pricePerCm * (effW + effH) * 2,
       // No mat/MDF chosen from the product page — those are editor-only options.
       matSizeId: null,
       matSizeName: null,
@@ -164,6 +226,16 @@ export default function ProductDetailPage() {
     })
     toast.success(t('toast.addedToCart'))
   }
+
+  // Out-of-range / custom size → open the inquiry form (frame + size are
+  // carried in read-only). Submitting records it and emails the platform inbox.
+  const handleCustomOrder = () => {
+    if (!frame || !hasSize) return
+    setInquiryOpen(true)
+  }
+
+  // Numeric estimate stored on the inquiry (0 when the frame isn't priced).
+  const inquiryUnitPrice = priced && hasSize ? frame!.pricePerCm * (effW + effH) * 2 : 0
 
   return (
     <div className="min-h-screen w-full bg-white font-sans text-[#000000]">
@@ -191,7 +263,7 @@ export default function ProductDetailPage() {
         <div className="mt-5 flex flex-col gap-8 lg:flex-row lg:gap-12">
           <Gallery images={gallery} className="lg:w-[56%]" />
           <BuyPanel
-            title={frame?.name ?? t('fallback.pictureFrame')}
+            title={localizedTitle || t('fallback.pictureFrame')}
             subtitle={frame?.categorySlug ? frame.categorySlug.replace(/-/g, ' ') : t('fallback.customPictureFrame')}
             sizes={sizes}
             priceLabel={priceLabel}
@@ -200,21 +272,111 @@ export default function ProductDetailPage() {
             service={service}
             onService={setService}
             size={size}
-            onSize={setSize}
+            sizeDisplay={sizeDisplay}
+            onSize={handleSelectSize}
             onUpload={openEditor}
             onAddToCart={handleAddToCart}
-            canAddToCart={canAddToCart}
+            onCustomOrder={handleCustomOrder}
+            onOpenCustom={() => setCustomOpen(true)}
+            priced={priced}
+            hasSize={hasSize}
+            outOfRange={hasSize && !inRange}
+            isCustom={isCustom}
             className="lg:flex-1"
           />
         </div>
 
+        {/* Custom size dialog — enter W×H, then Confirm to apply (Cancel or
+            closing discards). The Add-to-cart / Custom-order action lives on the
+            main button once a size is applied. */}
+        <Dialog open={customOpen} onOpenChange={setCustomOpen}>
+          <DialogContent dir={isRtl ? 'rtl' : 'ltr'} className="max-w-sm">
+            <DialogHeader className="border-b p-6">
+              <DialogTitle>{t('customDialog.title')}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 p-6">
+              {frame && frame.sizeTo > 0 && (
+                <p className="text-[13px] text-foreground/60">
+                  {t('customDialog.range', { from: frame.sizeFrom, to: frame.sizeTo })}
+                </p>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="text-sm font-medium text-foreground">{t('customDialog.width')}</span>
+                  <input
+                    type="number"
+                    min={1}
+                    inputMode="decimal"
+                    value={draftW || ''}
+                    onChange={(e) => setDraftW(Math.max(0, Number(e.target.value) || 0))}
+                    className="mt-1.5 w-full rounded-lg border border-black/15 bg-white px-3 py-2 text-sm text-foreground outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/30"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-foreground">{t('customDialog.height')}</span>
+                  <input
+                    type="number"
+                    min={1}
+                    inputMode="decimal"
+                    value={draftH || ''}
+                    onChange={(e) => setDraftH(Math.max(0, Number(e.target.value) || 0))}
+                    className="mt-1.5 w-full rounded-lg border border-black/15 bg-white px-3 py-2 text-sm text-foreground outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/30"
+                  />
+                </label>
+              </div>
+              {draftHasSize && (
+                <div className="flex items-center justify-between rounded-lg bg-black/[0.03] px-3.5 py-2.5">
+                  <span className="text-sm text-foreground/70">{t('customDialog.price')}</span>
+                  <span className="text-base font-bold text-brand-navy tabular-nums">{draftPriceLabel}</span>
+                </div>
+              )}
+              {draftHasSize && !draftInRange && (
+                <p className="text-[12px] leading-relaxed text-amber-600">{t('customDialog.outOfRange')}</p>
+              )}
+            </div>
+            <DialogFooter className="border-t bg-background p-4 sm:p-6">
+              <Button type="button" variant="ghost" onClick={() => setCustomOpen(false)}>
+                {t('customDialog.cancel')}
+              </Button>
+              <Button
+                type="button"
+                variant="navy"
+                disabled={!(frame && frame.pricePerCm > 0) || !draftHasSize}
+                onClick={() => {
+                  if (!draftHasSize) return
+                  setCustomW(draftW)
+                  setCustomH(draftH)
+                  setSize(CUSTOM_SIZE)
+                  setCustomOpen(false)
+                }}
+              >
+                {t('customDialog.confirm')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Request-inquiry form — frame + size are read-only (carried in from the
+            current selection); only contact details are editable. */}
+        <InquiryDialog
+          open={inquiryOpen}
+          onOpenChange={setInquiryOpen}
+          frameName={frame?.name || t('fallback.pictureFrame')}
+          displayName={localizedTitle || t('fallback.pictureFrame')}
+          thumbnail={frame?.imgUrl || gallery[0]}
+          widthCm={effW}
+          heightCm={effH}
+          unitPrice={inquiryUnitPrice}
+          priceLabel={priceLabel}
+        />
+
         {/* Description */}
-        {frame?.description?.trim() && (
+        {localizedDescription.trim() && (
           <section className="mt-12 max-w-4xl">
             <h2 className="text-xl font-semibold text-brand-navy">{t('description.heading')}</h2>
             {/* whitespace-pre-wrap preserves the line breaks + spacing the admin typed */}
             <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground/75">
-              {frame.description}
+              {localizedDescription}
             </p>
           </section>
         )}
@@ -339,6 +501,7 @@ function BuyPanel({
   title,
   subtitle,
   sizes,
+  sizeDisplay,
   priceLabel,
   oldPriceLabel,
   service,
@@ -347,13 +510,19 @@ function BuyPanel({
   onSize,
   onUpload,
   onAddToCart,
-  canAddToCart,
+  onCustomOrder,
+  onOpenCustom,
+  priced,
+  hasSize,
+  outOfRange,
+  isCustom,
   showService,
   className,
 }: {
   title: string
   subtitle: string
   sizes: string[]
+  sizeDisplay: string
   priceLabel: string
   oldPriceLabel: string | null
   service: string
@@ -362,7 +531,12 @@ function BuyPanel({
   onSize: (s: string) => void
   onUpload: () => void
   onAddToCart: () => void
-  canAddToCart: boolean
+  onCustomOrder: () => void
+  onOpenCustom: () => void
+  priced: boolean
+  hasSize: boolean
+  outOfRange: boolean
+  isCustom: boolean
   showService: boolean
   className?: string
 }) {
@@ -421,16 +595,13 @@ function BuyPanel({
         </>
       )}
 
-      {/* Size + upload */}
-      <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold text-foreground">{t('buyPanel.frameSize')}</p>
-          {sizes.length > 0 ? (
-            <SizePicker sizes={sizes} value={size} onChange={onSize} />
-          ) : (
-            <p className="mt-2 text-sm text-foreground/55">{t('buyPanel.customSizes')}</p>
-          )}
-        </div>
+      {/* Size */}
+      <div className="mt-6">
+        <p className="text-sm font-semibold text-foreground">{t('buyPanel.frameSize')}</p>
+        <SizePicker sizes={sizes} value={size} displayValue={sizeDisplay} onChange={onSize} />
+      </div>
+      {/* Upload — shown under the frame size */}
+      <div className="mt-4">
         <Button
           variant="outline"
           onClick={onUpload}
@@ -453,15 +624,30 @@ function BuyPanel({
             </del>
           )}
         </div>
-        <Button
-          variant="navy"
-          size="lg"
-          onClick={onAddToCart}
-          disabled={!canAddToCart}
-          className="min-w-[140px] rounded-lg"
-        >
-          {t('buyPanel.addToCart')}
-        </Button>
+        {isCustom && !hasSize ? (
+          <Button variant="navy" size="lg" onClick={onOpenCustom} className="min-w-[140px] rounded-lg">
+            {t('buyPanel.enterCustomSize')}
+          </Button>
+        ) : outOfRange ? (
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={onCustomOrder}
+            className="min-w-[140px] rounded-lg border-brand-navy/40 text-brand-navy hover:bg-brand-navy/5"
+          >
+            {t('buyPanel.customOrder')}
+          </Button>
+        ) : (
+          <Button
+            variant="navy"
+            size="lg"
+            onClick={onAddToCart}
+            disabled={!priced || !hasSize}
+            className="min-w-[140px] rounded-lg"
+          >
+            {t('buyPanel.addToCart')}
+          </Button>
+        )}
       </div>
     </div>
   )
@@ -470,10 +656,12 @@ function BuyPanel({
 function SizePicker({
   sizes,
   value,
+  displayValue,
   onChange,
 }: {
   sizes: string[]
   value: string
+  displayValue: string
   onChange: (s: string) => void
 }) {
   const { t } = useTranslation('productDetail')
@@ -482,7 +670,7 @@ function SizePicker({
     <>
       <div className="mt-2 flex items-center gap-3">
         <span className="rounded-lg border border-black/15 bg-white px-4 py-2 text-sm font-medium text-foreground">
-          {value}
+          {displayValue || t('sizePicker.selectSize')}
         </span>
         <div className="relative">
           <button
@@ -535,6 +723,24 @@ function SizePicker({
                     </li>
                   )
                 })}
+                {/* Custom size — opens the size dialog */}
+                <li className={cn(sizes.length > 0 && 'mt-1 border-t border-black/10 pt-1')}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={value === CUSTOM_SIZE}
+                    onClick={() => {
+                      onChange(CUSTOM_SIZE)
+                      setOpen(false)
+                    }}
+                    className={cn(
+                      'block w-full rounded-md px-3 py-1.5 text-left text-sm transition hover:bg-black/[0.05]',
+                      value === CUSTOM_SIZE ? 'font-semibold text-brand-gold' : 'text-foreground/80',
+                    )}
+                  >
+                    {t('sizePicker.customSize')}
+                  </button>
+                </li>
               </ul>
             </>
           )}

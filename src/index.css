@@ -174,28 +174,28 @@
 /* ── Liberation Serif (self-hosted) ─────────────────────────────────────── */
 @font-face {
   font-family: 'Liberation Serif';
-  src: url('/fonts/liberation-serif/LiberationSerif-Regular.ttf') format('truetype');
+  src: url('/fonts/liberation_serif/LiberationSerif-Regular.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'Liberation Serif';
-  src: url('/fonts/liberation-serif/LiberationSerif-Italic.ttf') format('truetype');
+  src: url('/fonts/liberation_serif/LiberationSerif-Italic.ttf') format('truetype');
   font-weight: 400;
   font-style: italic;
   font-display: swap;
 }
 @font-face {
   font-family: 'Liberation Serif';
-  src: url('/fonts/liberation-serif/LiberationSerif-Bold.ttf') format('truetype');
+  src: url('/fonts/liberation_serif/LiberationSerif-Bold.ttf') format('truetype');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'Liberation Serif';
-  src: url('/fonts/liberation-serif/LiberationSerif-BoldItalic.ttf') format('truetype');
+  src: url('/fonts/liberation_serif/LiberationSerif-BoldItalic.ttf') format('truetype');
   font-weight: 700;
   font-style: italic;
   font-display: swap;

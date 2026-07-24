@@ -25,10 +25,15 @@
     "frameSize": "مقاس الإطار",
     "customSizes": "تُحدَّد المقاسات المخصصة في المحرر",
     "uploadPreview": "ارفع صورة للمعاينة",
-    "addToCart": "أضف إلى السلة"
+    "addToCart": "أضف إلى السلة",
+    "customOrder": "طلب استفسار",
+    "enterCustomSize": "أدخل المقاس المخصص"
   },
   "sizePicker": {
-    "moreSizes": "مقاسات أكثر"
+    "moreSizes": "مقاسات أكثر",
+    "customSize": "مقاس مخصص",
+    "custom": "مخصص",
+    "selectSize": "اختر المقاس"
   },
   "description": {
     "heading": "وصف المنتج"
@@ -42,5 +47,38 @@
   "fallback": {
     "pictureFrame": "إطار صورة",
     "customPictureFrame": "إطار صورة مخصص"
+  },
+  "customDialog": {
+    "title": "مقاس مخصص",
+    "range": "النطاق القابل للتصنيع: {{from}}–{{to}} سم",
+    "width": "العرض (سم)",
+    "height": "الارتفاع (سم)",
+    "price": "السعر",
+    "outOfRange": "هذا المقاس خارج نطاقنا القياسي. قدّم طلبًا مخصصًا وسنتواصل معك.",
+    "cancel": "إلغاء",
+    "confirm": "تأكيد"
+  },
+  "inquiry": {
+    "title": "طلب استفسار",
+    "subtitle": "أخبرنا بكيفية التواصل معك وسنعود إليك بعرض سعر لهذا المقاس المخصص.",
+    "summaryLabel": "اختيارك",
+    "frame": "الإطار",
+    "size": "المقاس",
+    "estimate": "السعر التقديري",
+    "name": "الاسم الكامل",
+    "namePlaceholder": "اسمك",
+    "email": "البريد الإلكتروني",
+    "emailPlaceholder": "you@example.com",
+    "phone": "الهاتف",
+    "message": "الرسالة",
+    "messagePlaceholder": "هل من شيء آخر يجب أن نعرفه؟ (اختياري)",
+    "optional": "اختياري",
+    "cancel": "إلغاء",
+    "submit": "إرسال الاستفسار",
+    "submitting": "جارٍ الإرسال…",
+    "success": "تم إرسال الاستفسار — سنتواصل معك قريبًا.",
+    "error": "تعذّر إرسال استفسارك. يرجى المحاولة مرة أخرى.",
+    "invalidName": "يرجى إدخال اسمك.",
+    "invalidEmail": "يرجى إدخال بريد إلكتروني صحيح."
   }
 }

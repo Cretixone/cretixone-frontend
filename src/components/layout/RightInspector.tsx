@@ -29,6 +29,9 @@ import { formatOMR } from '@/lib/format'
 import { useCartStore } from '@/store/cartStore'
 import { useFetchFrameSizesQuery } from '@/store/api/apiSlice'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { InquiryDialog } from '@/components/InquiryDialog'
+import { useIsRtl } from '@/store/langStore'
+import { pickLocalized } from '@/lib/localized'
 
 // ── Field row ─────────────────────────────────────────────────────────────
 
@@ -403,6 +406,8 @@ function ShadowPanel() {
 function CheckoutFooter() {
   const { t } = useTranslation('editor')
   const navigate = useNavigate()
+  const isRtl = useIsRtl()
+  const [inquiryOpen, setInquiryOpen] = useState(false)
   const [searchParams] = useSearchParams()
   const editId = searchParams.get('edit')
   const addItem = useCartStore((s) => s.addItem)
@@ -506,7 +511,7 @@ function CheckoutFooter() {
       ) : (
         <button
           type="button"
-          onClick={() => navigate('/checkout?inquiry=1')}
+          onClick={() => setInquiryOpen(true)}
           className="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ed-ring)]"
           style={{
             border: '1.5px solid var(--ed-accent)',
@@ -517,6 +522,20 @@ function CheckoutFooter() {
           {t('inspector.checkout.requestInquiry')}
         </button>
       )}
+
+      {/* Request-inquiry form — frame + size are read-only (carried in from the
+          current editor selection); only contact details are editable. */}
+      <InquiryDialog
+        open={inquiryOpen}
+        onOpenChange={setInquiryOpen}
+        frameName={selectedFrame.name || 'Custom Frame'}
+        displayName={pickLocalized(selectedFrame.name, selectedFrame.nameAr, isRtl) || selectedFrame.name}
+        thumbnail={selectedFrame.imgUrl}
+        widthCm={w}
+        heightCm={h}
+        unitPrice={price}
+        priceLabel={formatOMR(price)}
+      />
     </div>
   )
 }
