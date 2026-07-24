@@ -787,7 +787,18 @@ export default function CanvasStage({
       : undefined
     const fallbackAspect = orientation === 'portrait' ? 2 / 3 : 3 / 2
     let aspectRatio: number
-    if (cachedFrameTex && cachedFrameTex.width > 0 && cachedFrameTex.height > 0) {
+    if (stretcherHideFrame) {
+      // No moulding is drawn, so there's no PNG aspect to preserve — the outer
+      // shape is driven purely by the chosen ratio / custom cm. This makes
+      // Landscape, Portrait, Square and Custom actually resize the surface
+      // (like a real frame would) instead of being locked to a PNG aspect.
+      // Custom uses the true width:height so entered sizes change the shape.
+      aspectRatio = isCustom
+        ? s.customWidthCm > 0 && s.customHeightCm > 0
+          ? s.customWidthCm / s.customHeightCm
+          : fallbackAspect
+        : getAspectRatioValue(s.frameAspectRatio)
+    } else if (cachedFrameTex && cachedFrameTex.width > 0 && cachedFrameTex.height > 0) {
       aspectRatio = cachedFrameTex.width / cachedFrameTex.height
     } else if (frameAsset && frameAsset.width > 0 && frameAsset.height > 0) {
       aspectRatio = frameAsset.width / frameAsset.height
