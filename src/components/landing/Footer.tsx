@@ -156,6 +156,26 @@ export default function Footer() {
               </Link>
             </div>
           </div>
+
+          {/* Attribution — brand name kept literal (never translated). The
+              logo is a full wordmark, so no separate "codersandco" text. */}
+          <div className="mt-6 flex items-center justify-center gap-2 text-xs text-foreground/80 md:text-[13px]">
+            <span>Design &amp; developed by</span>
+            <a
+              href="https://codersandco.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Design & developed by codersandco"
+              className="inline-flex items-center transition-opacity hover:opacity-80"
+            >
+              <img
+                src="/images/svg/codersandco-logo.svg"
+                alt="codersandco"
+                className="h-4 w-auto md:h-[18px]"
+                loading="lazy"
+              />
+            </a>
+          </div>
         </motion.div>
       </div>
     </footer>
