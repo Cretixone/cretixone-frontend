@@ -80,6 +80,28 @@ interface CretixFrameDto {
   descriptionAr: string | null
   gallery: string[]
   specifications: Record<string, string>
+  // Allow-listed catalog values — present only on the single-frame detail
+  // fetch (fetchFrameById), absent (undefined) on list/grid endpoints.
+  frameSizes?: CretixFrameSizeDto[]
+  paperTypes?: CretixOptionDto[]
+  mdfBoards?: CretixMdfDto[]
+  laminations?: CretixOptionDto[]
+  glassTypes?: CretixGlassOptionDto[]
+}
+
+// Shared shape for Paper Type / Lamination (Glass Type additionally carries
+// thicknessMm — see CretixGlassOptionDto).
+interface CretixOptionDto {
+  id: string
+  name: string
+  imageUrl: string | null
+  pricePerCm: number
+  isActive: boolean
+  sortOrder: number
+}
+
+interface CretixGlassOptionDto extends CretixOptionDto {
+  thicknessMm: number
 }
 
 interface CretixFrameSizeDto {
@@ -158,6 +180,48 @@ const mapCretixFrame = (f: CretixFrameDto): ApiFrame => ({
   descriptionAr: f.descriptionAr ?? null,
   gallery: (f.gallery ?? []).map((g) => resolveBackendUrl(g)),
   specifications: f.specifications ?? {},
+  frameSizes: (f.frameSizes ?? []).map((s) => ({
+    id: s.id,
+    name: s.name,
+    widthCm: s.widthCm,
+    lengthCm: s.lengthCm,
+    isActive: s.isActive,
+    sortOrder: s.sortOrder,
+  })),
+  paperTypes: (f.paperTypes ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    imgUrl: resolveBackendUrl(p.imageUrl),
+    pricePerCm: p.pricePerCm ?? 0,
+    isActive: p.isActive,
+    sortOrder: p.sortOrder,
+  })),
+  mdfBoards: (f.mdfBoards ?? []).map((m) => ({
+    id: m.id,
+    name: m.name,
+    thicknessMm: m.thicknessMm,
+    imgUrl: resolveBackendUrl(m.imageUrl),
+    pricePerCm: m.pricePerCm ?? 0,
+    isActive: m.isActive,
+    sortOrder: m.sortOrder,
+  })),
+  laminations: (f.laminations ?? []).map((l) => ({
+    id: l.id,
+    name: l.name,
+    imgUrl: resolveBackendUrl(l.imageUrl),
+    pricePerCm: l.pricePerCm ?? 0,
+    isActive: l.isActive,
+    sortOrder: l.sortOrder,
+  })),
+  glassTypes: (f.glassTypes ?? []).map((g) => ({
+    id: g.id,
+    name: g.name,
+    thicknessMm: g.thicknessMm,
+    imgUrl: resolveBackendUrl(g.imageUrl),
+    pricePerCm: g.pricePerCm ?? 0,
+    isActive: g.isActive,
+    sortOrder: g.sortOrder,
+  })),
 })
 
 // ─── RTK Query API ───────────────────────────────────────────────────────────

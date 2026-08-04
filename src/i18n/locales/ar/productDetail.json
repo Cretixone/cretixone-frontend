@@ -27,7 +27,11 @@
     "uploadPreview": "ارفع صورة للمعاينة",
     "addToCart": "أضف إلى السلة",
     "customOrder": "طلب استفسار",
-    "enterCustomSize": "أدخل المقاس المخصص"
+    "enterCustomSize": "أدخل المقاس المخصص",
+    "paperType": "نوع الورق",
+    "mdfType": "اختر نوع MDF",
+    "lamination": "التلمّع",
+    "glassType": "نوع الزجاج"
   },
   "sizePicker": {
     "moreSizes": "مقاسات أكثر",

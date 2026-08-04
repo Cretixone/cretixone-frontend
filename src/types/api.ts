@@ -32,6 +32,13 @@ export interface ApiFrame {
   description: string | null              // product description (whitespace preserved)
   gallery: string[]                       // extra product images (resolved URLs)
   specifications: Record<string, string>  // spec sheet { label: value }
+  // Allow-listed catalog values this frame offers (product detail page only —
+  // empty on the list/grid endpoints). Empty array → that section is hidden.
+  frameSizes: ApiFrameSize[]
+  paperTypes: ApiPaperType[]
+  mdfBoards: ApiMdf[]
+  laminations: ApiLamination[]
+  glassTypes: ApiGlassType[]
 }
 
 // ─── Frame size preset (Cretixone backend — admin-managed) ───────────────────
@@ -115,6 +122,40 @@ export interface ApiMdf {
   thicknessMm: number      // board thickness (mm) — spec/label only
   imgUrl: string           // board photo (resolved absolute URL)
   pricePerCm: number       // price per cm² of frame face
+  isActive: boolean
+  sortOrder: number
+}
+
+// ─── Paper type / Lamination / Glass type (Cretixone backend — admin-managed,
+// allow-listed per frame) ──────────────────────────────────────────────────
+//
+// Same pricing shape as MDF: price = pricePerCm × (frameWidthCm × frameLengthCm).
+// Only the values the admin assigned to a given frame are ever returned for it.
+
+export interface ApiPaperType {
+  id: string
+  name: string
+  imgUrl: string
+  pricePerCm: number
+  isActive: boolean
+  sortOrder: number
+}
+
+export interface ApiLamination {
+  id: string
+  name: string
+  imgUrl: string
+  pricePerCm: number
+  isActive: boolean
+  sortOrder: number
+}
+
+export interface ApiGlassType {
+  id: string
+  name: string
+  thicknessMm: number
+  imgUrl: string
+  pricePerCm: number
   isActive: boolean
   sortOrder: number
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronDown, Home, Maximize2, Upload } from 'lucide-react'
+import { ChevronRight, Home, Maximize2, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
@@ -20,7 +20,7 @@ import { useEditorStore } from '@/store/editorStore'
 import { useCartStore } from '@/store/cartStore'
 import { useIsRtl } from '@/store/langStore'
 import { pickLocalized } from '@/lib/localized'
-import { useFetchFrameByIdQuery, useFetchFrameSizesQuery } from '@/store/api/apiSlice'
+import { useFetchFrameByIdQuery } from '@/store/api/apiSlice'
 import { formatOMR, formatOMRRate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -60,7 +60,6 @@ export default function ProductDetailPage() {
 
   // Fetch just this frame by its hashed URL id (single API call, no full list).
   const { data: frame } = useFetchFrameByIdQuery(id ? Number(id) : 0, { skip: !id })
-  const { data: frameSizes } = useFetchFrameSizesQuery()
 
   // Arabic name/description when in Arabic mode (falls back to English).
   const localizedTitle = pickLocalized(frame?.name, frame?.nameAr, isRtl)
@@ -77,10 +76,11 @@ export default function ProductDetailPage() {
     return FALLBACK_GALLERY
   }, [frame])
 
-  // Size presets from the admin (shown in the "More sizes" dropdown by default).
+  // Size presets allow-listed for this frame by the admin (frame add/edit
+  // form) — shown as quick pills + the "More sizes" dropdown.
   const sizes = useMemo(
-    () => (frameSizes ?? []).map((s) => `${s.name} · ${s.widthCm}×${s.lengthCm} cm`),
-    [frameSizes],
+    () => (frame?.frameSizes ?? []).map((s) => `${s.name} · ${s.widthCm}×${s.lengthCm} cm`),
+    [frame],
   )
 
   // Spec sheet — these labels are intentionally hidden from the storefront.
@@ -103,6 +103,14 @@ export default function ProductDetailPage() {
 
   const [service, setService] = useState<string>(SERVICES[0].id)
   const [size, setSize] = useState<string>('')
+  // Paper Type / MDF / Lamination / Glass Type — allow-listed per frame by
+  // the admin (frame add/edit form). A section only renders when the frame
+  // has at least one assigned value; selection is display-only for now (no
+  // pricing wired in yet).
+  const [paperTypeId, setPaperTypeId] = useState<string | null>(null)
+  const [mdfBoardId, setMdfBoardId] = useState<string | null>(null)
+  const [laminationId, setLaminationId] = useState<string | null>(null)
+  const [glassTypeId, setGlassTypeId] = useState<string | null>(null)
   // Custom size entered via the "Custom size" dropdown option → tiny dialog.
   const [customW, setCustomW] = useState(0)
   const [customH, setCustomH] = useState(0)
@@ -119,11 +127,25 @@ export default function ProductDetailPage() {
     if (!size && sizes.length) setSize(sizes[0])
   }, [sizes, size])
 
+  // Default each option to its first allowed value once the frame loads.
+  useEffect(() => {
+    if (!paperTypeId && frame?.paperTypes.length) setPaperTypeId(frame.paperTypes[0].id)
+  }, [frame, paperTypeId])
+  useEffect(() => {
+    if (!mdfBoardId && frame?.mdfBoards.length) setMdfBoardId(frame.mdfBoards[0].id)
+  }, [frame, mdfBoardId])
+  useEffect(() => {
+    if (!laminationId && frame?.laminations.length) setLaminationId(frame.laminations[0].id)
+  }, [frame, laminationId])
+  useEffect(() => {
+    if (!glassTypeId && frame?.glassTypes.length) setGlassTypeId(frame.glassTypes[0].id)
+  }, [frame, glassTypeId])
+
   // Resolve the chosen size preset → real price.
   // Frame Price = pricePerCm × (width + length) × 2 (same formula as the editor).
   const selectedFrameSize = useMemo(
-    () => (frameSizes ?? []).find((s) => `${s.name} · ${s.widthCm}×${s.lengthCm} cm` === size),
-    [frameSizes, size],
+    () => (frame?.frameSizes ?? []).find((s) => `${s.name} · ${s.widthCm}×${s.lengthCm} cm` === size),
+    [frame, size],
   )
 
   // Effective dimensions + manufacturability — same rule as the editor's
@@ -261,7 +283,7 @@ export default function ProductDetailPage() {
 
         {/* Gallery + buy panel */}
         <div className="mt-5 flex flex-col gap-8 lg:flex-row lg:gap-12">
-          <Gallery images={gallery} className="lg:w-[56%]" />
+          <Gallery images={gallery} className="lg:w-[calc(56%+10px)]" />
           <BuyPanel
             title={localizedTitle || t('fallback.pictureFrame')}
             subtitle={frame?.categorySlug ? frame.categorySlug.replace(/-/g, ' ') : t('fallback.customPictureFrame')}
@@ -274,6 +296,18 @@ export default function ProductDetailPage() {
             size={size}
             sizeDisplay={sizeDisplay}
             onSize={handleSelectSize}
+            paperTypes={frame?.paperTypes ?? []}
+            paperTypeId={paperTypeId}
+            onPaperType={setPaperTypeId}
+            mdfBoards={frame?.mdfBoards ?? []}
+            mdfBoardId={mdfBoardId}
+            onMdfBoard={setMdfBoardId}
+            laminations={frame?.laminations ?? []}
+            laminationId={laminationId}
+            onLamination={setLaminationId}
+            glassTypes={frame?.glassTypes ?? []}
+            glassTypeId={glassTypeId}
+            onGlassType={setGlassTypeId}
             onUpload={openEditor}
             onAddToCart={handleAddToCart}
             onCustomOrder={handleCustomOrder}
@@ -420,7 +454,7 @@ function Gallery({
 
   return (
     <div className={cn('min-w-0', className)}>
-      <div className="flex flex-col-reverse gap-3 sm:flex-row">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row lg:h-full">
         {/* Thumbnails — shown only when there's more than one image. Horizontal
             scroll on mobile, vertical scroll column on ≥sm. */}
         {images.length > 1 && (
@@ -428,6 +462,12 @@ function Gallery({
             className={cn(
               'flex shrink-0 gap-2.5 overflow-x-auto pb-1',
               'sm:max-h-[480px] sm:w-[84px] sm:flex-col sm:overflow-x-hidden sm:overflow-y-auto sm:pb-0 sm:pr-1',
+              // min-h-0 overrides the flex-item default min-height:auto, which
+              // otherwise forces this column to grow to fit all thumbnails
+              // instead of respecting h-full + scrolling — that growth was
+              // what made the main image (which mirrors this column's full
+              // height) taller than the buy panel.
+              'lg:h-full lg:min-h-0 lg:max-h-none',
               '[scrollbar-width:thin]',
             )}
           >
@@ -465,13 +505,18 @@ function Gallery({
         )}
 
         {/* Main image — static (no hover zoom); expand icon opens the lightbox */}
-        <div className="relative min-w-0 flex-1">
-          <div className="group relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-[#EDE6D6] sm:aspect-auto sm:h-[420px] lg:h-[480px]">
+        <div className="relative min-w-0 flex-1 lg:h-full">
+          <div className="group relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-[#EDE6D6] sm:aspect-auto sm:h-[420px] lg:h-full">
+            {/* absolute + inset-0 takes the img out of the flow entirely —
+                otherwise its percentage height against this box (itself
+                percentage-sized during flex stretch) falls back to the
+                photo's intrinsic aspect ratio, inflating this whole column
+                taller than the buy panel. */}
             <img
               src={src}
               alt={t('gallery.previewAlt')}
               draggable={false}
-              className="h-full w-full object-contain"
+              className="absolute inset-0 h-full w-full object-contain"
             />
             <button
               type="button"
@@ -508,6 +553,18 @@ function BuyPanel({
   onService,
   size,
   onSize,
+  paperTypes,
+  paperTypeId,
+  onPaperType,
+  mdfBoards,
+  mdfBoardId,
+  onMdfBoard,
+  laminations,
+  laminationId,
+  onLamination,
+  glassTypes,
+  glassTypeId,
+  onGlassType,
   onUpload,
   onAddToCart,
   onCustomOrder,
@@ -529,6 +586,18 @@ function BuyPanel({
   onService: (id: string) => void
   size: string
   onSize: (s: string) => void
+  paperTypes: { id: string; name: string }[]
+  paperTypeId: string | null
+  onPaperType: (id: string) => void
+  mdfBoards: { id: string; name: string }[]
+  mdfBoardId: string | null
+  onMdfBoard: (id: string) => void
+  laminations: { id: string; name: string }[]
+  laminationId: string | null
+  onLamination: (id: string) => void
+  glassTypes: { id: string; name: string }[]
+  glassTypeId: string | null
+  onGlassType: (id: string) => void
   onUpload: () => void
   onAddToCart: () => void
   onCustomOrder: () => void
@@ -600,6 +669,20 @@ function BuyPanel({
         <p className="text-sm font-semibold text-foreground">{t('buyPanel.frameSize')}</p>
         <SizePicker sizes={sizes} value={size} displayValue={sizeDisplay} onChange={onSize} />
       </div>
+
+      {/* Paper Type / MDF / Lamination / Glass Type — only the values the
+          admin assigned to this frame; a section is hidden entirely when
+          none are assigned (e.g. lamination & glass don't apply to stretched
+          canvas frames). MDF + Lamination sit side by side when both exist. */}
+      <OptionPillGroup label={t('buyPanel.paperType')} items={paperTypes} value={paperTypeId} onChange={onPaperType} />
+      {(mdfBoards.length > 0 || laminations.length > 0) && (
+        <div className="grid grid-cols-2 gap-6">
+          <OptionPillGroup label={t('buyPanel.mdfType')} items={mdfBoards} value={mdfBoardId} onChange={onMdfBoard} />
+          <OptionPillGroup label={t('buyPanel.lamination')} items={laminations} value={laminationId} onChange={onLamination} />
+        </div>
+      )}
+      <OptionPillGroup label={t('buyPanel.glassType')} items={glassTypes} value={glassTypeId} onChange={onGlassType} />
+
       {/* Upload — shown under the frame size */}
       <div className="mt-4">
         <Button
@@ -613,7 +696,7 @@ function BuyPanel({
       </div>
 
       {/* Price + add to cart */}
-      <div className="mt-7 flex flex-wrap items-center justify-between gap-4 border-t border-black/[0.07] pt-6">
+      <div className="mt-7 flex flex-wrap items-center justify-between gap-4 border-y border-black/[0.07] py-6">
         <div className="flex items-baseline gap-2.5">
           <span className="text-2xl font-bold text-brand-navy tabular-nums">
             {priceLabel}
@@ -653,6 +736,49 @@ function BuyPanel({
   )
 }
 
+// A labelled row of pill buttons for a single-choice option (Paper Type, MDF,
+// Lamination, Glass Type). Renders nothing when the frame has no assigned
+// values for this catalog.
+function OptionPillGroup({
+  label,
+  items,
+  value,
+  onChange,
+}: {
+  label: string
+  items: { id: string; name: string }[]
+  value: string | null
+  onChange: (id: string) => void
+}) {
+  if (!items.length) return null
+  return (
+    <div className="mt-6">
+      <p className="text-sm font-semibold text-foreground">{label}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {items.map((item) => {
+          const selected = item.id === value
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onChange(item.id)}
+              aria-pressed={selected}
+              className={cn(
+                'rounded-full px-4 py-1 text-sm font-medium transition',
+                selected
+                  ? 'bg-brand-gold text-white'
+                  : 'bg-black/[0.04] text-foreground/80 hover:bg-black/[0.07]',
+              )}
+            >
+              {item.name}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function SizePicker({
   sizes,
   value,
@@ -666,23 +792,49 @@ function SizePicker({
 }) {
   const { t } = useTranslation('productDetail')
   const [open, setOpen] = useState(false)
+  // Quick-pick pills for the first few presets; anything else lives behind
+  // "More sizes". If the active selection isn't one of the quick pills (an
+  // overflow preset, or a custom size), show it as its own highlighted pill
+  // so the current choice is never hidden behind the dropdown.
+  const QUICK_COUNT = 3
+  const quickSizes = sizes.slice(0, QUICK_COUNT)
+  const hasOverflowSelection = !!value && !quickSizes.includes(value)
   return (
     <>
-      <div className="mt-2 flex items-center gap-3">
-        <span className="rounded-lg border border-black/15 bg-white px-4 py-2 text-sm font-medium text-foreground">
-          {displayValue || t('sizePicker.selectSize')}
-        </span>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {quickSizes.map((s) => {
+          const selected = s === value
+          return (
+            <button
+              key={s}
+              type="button"
+              onClick={() => onChange(s)}
+              aria-pressed={selected}
+              className={cn(
+                'rounded-full px-4 py-1 text-sm font-medium transition',
+                selected ? 'bg-brand-gold text-white' : 'bg-black/[0.04] text-foreground/80 hover:bg-black/[0.07]',
+              )}
+            >
+              {s}
+            </button>
+          )
+        })}
+        {hasOverflowSelection && (
+          <span className="rounded-full bg-brand-gold px-4 py-1 text-sm font-medium text-white">
+            {displayValue || t('sizePicker.selectSize')}
+          </span>
+        )}
         <div className="relative">
           <button
             type="button"
             onClick={() => setOpen((o) => !o)}
             aria-haspopup="listbox"
             aria-expanded={open}
-            className="inline-flex items-center gap-1 rounded-lg border border-black/15 bg-white px-3 py-2 text-sm text-foreground/70 transition hover:border-brand-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/40"
+            className="inline-flex items-center gap-1 rounded-full bg-black/[0.04] px-4 py-1 text-sm font-medium text-foreground/70 transition hover:bg-black/[0.07] focus-visible:outline-none"
           >
             {t('sizePicker.moreSizes')}
-            <ChevronDown
-              className={cn('h-4 w-4 transition-transform', open && 'rotate-180')}
+            <ChevronRight
+              className={cn('h-4 w-4 transition-transform', open && 'rotate-90')}
             />
           </button>
           {open && (

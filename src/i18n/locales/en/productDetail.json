@@ -27,7 +27,11 @@
     "uploadPreview": "Upload a preview image",
     "addToCart": "Add to cart",
     "customOrder": "Request inquiry",
-    "enterCustomSize": "Enter custom size"
+    "enterCustomSize": "Enter custom size",
+    "paperType": "Paper Type",
+    "mdfType": "Select MDF Type",
+    "lamination": "Lamination",
+    "glassType": "Glass Type"
   },
   "sizePicker": {
     "moreSizes": "More sizes",
