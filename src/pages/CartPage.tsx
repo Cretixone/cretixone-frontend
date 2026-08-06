@@ -82,6 +82,9 @@ export default function CartPage() {
         matSizeName: i.matSizeName ?? null,
         matColorName: i.matColorName ?? null,
         mdfName: i.mdfName ?? null,
+        paperTypeName: i.paperTypeName ?? null,
+        laminationName: i.laminationName ?? null,
+        glassTypeName: i.glassTypeName ?? null,
       })),
       customerName: details.fullName,
       customerEmail: details.email,
@@ -286,6 +289,30 @@ function CartRow({
             <dt className="w-24 font-medium text-foreground/80">{t('cartPage.row.frameSku')}</dt>
             <dd>CF-{Math.abs(item.frameId)}</dd>
           </div>
+          {item.paperTypeName && (
+            <div className="flex gap-2">
+              <dt className="w-24 font-medium text-foreground/80">{t('cartPage.row.paperType')}</dt>
+              <dd>{item.paperTypeName}</dd>
+            </div>
+          )}
+          {item.mdfName && (
+            <div className="flex gap-2">
+              <dt className="w-24 font-medium text-foreground/80">{t('cartPage.row.mdfType')}</dt>
+              <dd>{item.mdfName}</dd>
+            </div>
+          )}
+          {item.laminationName && (
+            <div className="flex gap-2">
+              <dt className="w-24 font-medium text-foreground/80">{t('cartPage.row.lamination')}</dt>
+              <dd>{item.laminationName}</dd>
+            </div>
+          )}
+          {item.glassTypeName && (
+            <div className="flex gap-2">
+              <dt className="w-24 font-medium text-foreground/80">{t('cartPage.row.glassType')}</dt>
+              <dd>{item.glassTypeName}</dd>
+            </div>
+          )}
         </dl>
 
         <button

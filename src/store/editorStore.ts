@@ -1,5 +1,15 @@
 import { create } from 'zustand'
-import type { ApiFrame, ApiScene, ApiMatSize, ApiMatColor, ApiMdf, ApiEffectItem } from '@/types/api'
+import type {
+  ApiFrame,
+  ApiScene,
+  ApiMatSize,
+  ApiMatColor,
+  ApiMdf,
+  ApiPaperType,
+  ApiLamination,
+  ApiGlassType,
+  ApiEffectItem,
+} from '@/types/api'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -61,8 +71,15 @@ export type EditorState = {
   selectedMatSize: ApiMatSize | null         // Size tab → border width (cm) + price
   selectedMatColor: ApiMatColor | null       // Color tab → solid color
 
-  // MDF backing board — admin-managed; adds pricePerCm × (w × h) to the total
+  // MDF backing board — admin-managed; adds pricePerCm × (w × h) to the total.
+  // These four (MDF/Paper Type/Lamination/Glass Type) are frame-scoped: each
+  // only offers the values the admin allow-listed for the selected frame
+  // (selectedFrame.mdfBoards/paperTypes/laminations/glassTypes) — empty for
+  // a frame means the tab doesn't apply and stays hidden.
   selectedMdf: ApiMdf | null
+  selectedPaperType: ApiPaperType | null
+  selectedLamination: ApiLamination | null
+  selectedGlassType: ApiGlassType | null
 
   // Sub-tabs
   activeMatTab: string
@@ -122,6 +139,9 @@ export type EditorState = {
   setSelectedMatSize: (item: ApiMatSize | null) => void
   setSelectedMatColor: (item: ApiMatColor | null) => void
   setSelectedMdf: (item: ApiMdf | null) => void
+  setSelectedPaperType: (item: ApiPaperType | null) => void
+  setSelectedLamination: (item: ApiLamination | null) => void
+  setSelectedGlassType: (item: ApiGlassType | null) => void
   setActiveMatTab: (tab: string) => void
   setActiveEffectTab: (tab: string) => void
   setActiveFrameCategorySlug: (slug: string | null) => void
@@ -157,6 +177,9 @@ export const useEditorStore = create<EditorState>((set) => ({
   selectedMatSize: null,
   selectedMatColor: null,
   selectedMdf: null,
+  selectedPaperType: null,
+  selectedLamination: null,
+  selectedGlassType: null,
 
   activeMatTab: 'Size',
   activeEffectTab: 'Light effect',
@@ -195,7 +218,19 @@ export const useEditorStore = create<EditorState>((set) => ({
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
-  setSelectedFrame: (frame) => set({ selectedFrame: frame }),
+  // Called both when the user actually switches frames AND when the
+  // deep-link/detail-fetch effect (App.tsx) upgrades the just-selected
+  // frame's lean list shape into its full per-frame detail — those two
+  // calls share the same frame id. Only clear the frame-scoped selections
+  // (MDF/Paper Type/Lamination/Glass Type) on a genuine id change, so the
+  // detail upgrade never wipes an option the user just picked.
+  setSelectedFrame: (frame) =>
+    set((state) => ({
+      selectedFrame: frame,
+      ...(state.selectedFrame?.id !== frame?.id
+        ? { selectedMdf: null, selectedPaperType: null, selectedLamination: null, selectedGlassType: null }
+        : {}),
+    })),
 
   setSelectedInterior: (scene) => set({
     selectedInterior: scene,
@@ -217,6 +252,9 @@ export const useEditorStore = create<EditorState>((set) => ({
   setSelectedMatSize: (item) => set({ selectedMatSize: item }),
   setSelectedMatColor: (item) => set({ selectedMatColor: item }),
   setSelectedMdf: (item) => set({ selectedMdf: item }),
+  setSelectedPaperType: (item) => set({ selectedPaperType: item }),
+  setSelectedLamination: (item) => set({ selectedLamination: item }),
+  setSelectedGlassType: (item) => set({ selectedGlassType: item }),
 
   setActiveMatTab: (tab) => set({ activeMatTab: tab }),
   setActiveEffectTab: (tab) => set({ activeEffectTab: tab }),

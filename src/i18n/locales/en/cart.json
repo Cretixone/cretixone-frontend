@@ -35,6 +35,10 @@
     "row": {
       "finishedSize": "Finished Size:",
       "frameSku": "Frame SKU:",
+      "paperType": "Paper Type:",
+      "mdfType": "MDF Type:",
+      "lamination": "Lamination:",
+      "glassType": "Glass Type:",
       "edit": "Edit",
       "dimensions": "{{w}} × {{h}} cm",
       "perItem": "{{price}} per item",

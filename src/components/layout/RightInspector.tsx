@@ -313,6 +313,9 @@ function StylePanel() {
   const selectedMatSize = useEditorStore((s) => s.selectedMatSize)
   const selectedMatColor = useEditorStore((s) => s.selectedMatColor)
   const selectedMdf = useEditorStore((s) => s.selectedMdf)
+  const selectedPaperType = useEditorStore((s) => s.selectedPaperType)
+  const selectedLamination = useEditorStore((s) => s.selectedLamination)
+  const selectedGlassType = useEditorStore((s) => s.selectedGlassType)
 
   const none = t('inspector.style.none')
   const list = [
@@ -321,6 +324,9 @@ function StylePanel() {
     { label: t('inspector.style.matPrice'), value: selectedMatSize && selectedMatSize.price > 0 ? formatOMR(selectedMatSize.price) : '—' },
     { label: t('inspector.style.matColor'), value: selectedMatColor ? selectedMatColor.name : none },
     { label: t('inspector.style.mdf'), value: selectedMdf ? selectedMdf.name : none },
+    { label: t('inspector.style.paperType'), value: selectedPaperType ? selectedPaperType.name : none },
+    { label: t('inspector.style.lamination'), value: selectedLamination ? selectedLamination.name : none },
+    { label: t('inspector.style.glassType'), value: selectedGlassType ? selectedGlassType.name : none },
   ]
 
   return (
@@ -416,6 +422,9 @@ function CheckoutFooter() {
   const selectedMatSize = useEditorStore((s) => s.selectedMatSize)
   const selectedMatColor = useEditorStore((s) => s.selectedMatColor)
   const selectedMdf = useEditorStore((s) => s.selectedMdf)
+  const selectedPaperType = useEditorStore((s) => s.selectedPaperType)
+  const selectedLamination = useEditorStore((s) => s.selectedLamination)
+  const selectedGlassType = useEditorStore((s) => s.selectedGlassType)
   const frameAspectRatio = useEditorStore((s) => s.frameAspectRatio)
   const customWidthCm = useEditorStore((s) => s.customWidthCm)
   const customHeightCm = useEditorStore((s) => s.customHeightCm)
@@ -434,9 +443,13 @@ function CheckoutFooter() {
   const framePrice = selectedFrame.pricePerCm * (w + h) * 2
   // Mat size adds a flat price (admin-managed); colour is free.
   const matPrice = selectedMatSize?.price ?? 0
-  // MDF backing — price scales with the frame face: rate × width × length (cm).
+  // MDF backing / Paper Type / Lamination / Glass Type — each scales with the
+  // frame face: rate × width × length (cm), same formula as the storefront.
   const mdfPrice = selectedMdf ? selectedMdf.pricePerCm * w * h : 0
-  const price = framePrice + matPrice + mdfPrice
+  const paperTypePrice = selectedPaperType ? selectedPaperType.pricePerCm * w * h : 0
+  const laminationPrice = selectedLamination ? selectedLamination.pricePerCm * w * h : 0
+  const glassTypePrice = selectedGlassType ? selectedGlassType.pricePerCm * w * h : 0
+  const price = framePrice + matPrice + mdfPrice + paperTypePrice + laminationPrice + glassTypePrice
   const { sizeFrom, sizeTo } = selectedFrame
   const inRange =
     sizeTo > 0 &&
@@ -468,6 +481,24 @@ function CheckoutFooter() {
             <span className="tabular-nums" style={{ color: 'var(--ed-fg)' }}>{formatOMR(mdfPrice)}</span>
           </div>
         )}
+        {selectedPaperType && (
+          <div className="flex items-center justify-between text-[11px]">
+            <span style={{ color: 'var(--ed-fg-muted)' }}>{t('inspector.checkout.paperType')}</span>
+            <span className="tabular-nums" style={{ color: 'var(--ed-fg)' }}>{formatOMR(paperTypePrice)}</span>
+          </div>
+        )}
+        {selectedLamination && (
+          <div className="flex items-center justify-between text-[11px]">
+            <span style={{ color: 'var(--ed-fg-muted)' }}>{t('inspector.checkout.lamination')}</span>
+            <span className="tabular-nums" style={{ color: 'var(--ed-fg)' }}>{formatOMR(laminationPrice)}</span>
+          </div>
+        )}
+        {selectedGlassType && (
+          <div className="flex items-center justify-between text-[11px]">
+            <span style={{ color: 'var(--ed-fg-muted)' }}>{t('inspector.checkout.glassType')}</span>
+            <span className="tabular-nums" style={{ color: 'var(--ed-fg)' }}>{formatOMR(glassTypePrice)}</span>
+          </div>
+        )}
       </div>
       {inRange ? (
         <button
@@ -477,6 +508,9 @@ function CheckoutFooter() {
               selectedMatSize ? `Mat: ${selectedMatSize.name}` : null,
               selectedMatColor ? selectedMatColor.name : null,
               selectedMdf ? `MDF: ${selectedMdf.name}` : null,
+              selectedPaperType ? `Paper: ${selectedPaperType.name}` : null,
+              selectedLamination ? `Lamination: ${selectedLamination.name}` : null,
+              selectedGlassType ? `Glass: ${selectedGlassType.name}` : null,
             ].filter(Boolean)
             const subtitle = parts.length ? parts.join(' · ') : 'Picture Frame'
             const content = {
@@ -495,6 +529,15 @@ function CheckoutFooter() {
               mdfId: selectedMdf?.id ?? null,
               mdfName: selectedMdf?.name ?? null,
               mdfPrice,
+              paperTypeId: selectedPaperType?.id ?? null,
+              paperTypeName: selectedPaperType?.name ?? null,
+              paperTypePrice,
+              laminationId: selectedLamination?.id ?? null,
+              laminationName: selectedLamination?.name ?? null,
+              laminationPrice,
+              glassTypeId: selectedGlassType?.id ?? null,
+              glassTypeName: selectedGlassType?.name ?? null,
+              glassTypePrice,
             }
             // Coming from a cart "Edit" → update that line; otherwise add
             // (which increments the qty if the same item is already in cart).

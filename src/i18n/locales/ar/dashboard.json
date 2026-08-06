@@ -21,6 +21,9 @@
     "dimensions": "{{width}}×{{height}} سم",
     "matLabel": "الباسبارتو: {{name}}",
     "mdfLabel": "MDF: {{name}}",
+    "paperTypeLabel": "الورق: {{name}}",
+    "laminationLabel": "التلمّع: {{name}}",
+    "glassTypeLabel": "الزجاج: {{name}}",
     "qtyLabel": "الكمية {{qty}}",
     "status": {
       "pending": "قيد الانتظار",

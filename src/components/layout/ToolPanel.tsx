@@ -9,10 +9,9 @@ import {
   useFetchSceneryQuery,
   useFetchMatSizesQuery,
   useFetchMatColorsQuery,
-  useFetchMdfQuery,
   useFetchEffectsQuery,
 } from '@/store/api/apiSlice'
-import type { ApiFrame, ApiScene, ApiMatColor, ApiMdf, ApiEffectItem } from '@/types/api'
+import type { ApiFrame, ApiScene, ApiMatColor, ApiEffectItem } from '@/types/api'
 import { formatOMR } from '@/lib/format'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -213,8 +212,16 @@ function MatColorThumb({ item, selected, onClick }: {
   )
 }
 
-function MdfThumb({ item, selected, onClick }: {
-  item: ApiMdf; selected: boolean; onClick: () => void
+// Shared square-thumbnail picker for the four frame-scoped "value-add"
+// options (MDF / Paper Type / Lamination / Glass Type) — same photo + name +
+// selection-ring layout, each simply sourced from a different catalog.
+interface ThumbItem {
+  id: string
+  name: string
+  imgUrl: string
+}
+function OptionThumb<T extends ThumbItem>({ item, selected, onClick }: {
+  item: T; selected: boolean; onClick: () => void
 }) {
   const { t } = useTranslation('editor')
   return (
@@ -243,6 +250,69 @@ function MdfThumb({ item, selected, onClick }: {
         {item.name}
       </span>
     </button>
+  )
+}
+
+// Full tab body (header + "None" tile + grid) for one of the four
+// frame-scoped value-add options. `items` is already the frame's own
+// allow-list — an empty list only ever renders here for the brief moment
+// between switching frames and the active-tab reset effect firing.
+function OptionPickerTab<T extends ThumbItem>({
+  header,
+  hint,
+  emptyMessage,
+  items,
+  selected,
+  onSelect,
+}: {
+  header: string
+  hint: string
+  emptyMessage: string
+  items: T[]
+  selected: T | null
+  onSelect: (item: T | null) => void
+}) {
+  const { t } = useTranslation('editor')
+  return (
+    <>
+      <PanelHeader title={header} hint={hint} />
+      <Separator />
+      <ScrollArea className="flex-1">
+        <div className="px-3 py-3">
+          {items.length === 0 ? (
+            <p className="py-10 text-center text-xs" style={{ color: 'var(--ed-fg-subtle)' }}>
+              {emptyMessage}
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => onSelect(null)}
+                className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg text-[10px] font-medium transition-colors"
+                style={{
+                  background: 'var(--ed-canvas)',
+                  color: !selected ? 'var(--ed-accent)' : 'var(--ed-fg-muted)',
+                  outline: !selected
+                    ? '2px solid var(--ed-accent)'
+                    : '1px dashed var(--ed-border-strong)',
+                  outlineOffset: !selected ? '0px' : '-1px',
+                }}
+              >
+                <span className="text-lg leading-none">∅</span>
+                <span>{t('panel.none')}</span>
+              </button>
+              {items.map((item) => (
+                <OptionThumb
+                  key={item.id}
+                  item={item}
+                  selected={selected?.id === item.id}
+                  onClick={() => onSelect(selected?.id === item.id ? null : item)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+    </>
   )
 }
 
@@ -314,13 +384,16 @@ export default function ToolPanel() {
   const { t } = useTranslation('editor')
   const isRtl = useLangStore((s) => s.isRtl)
   const {
-    activeSidebarTab,
+    activeSidebarTab, setActiveSidebarTab,
     selectedFrame, setSelectedFrame,
     selectedInterior, setSelectedInterior,
     selectedScenery, setSelectedScenery,
     selectedMatSize, setSelectedMatSize,
     selectedMatColor, setSelectedMatColor,
     selectedMdf, setSelectedMdf,
+    selectedPaperType, setSelectedPaperType,
+    selectedLamination, setSelectedLamination,
+    selectedGlassType, setSelectedGlassType,
     activeMatTab, setActiveMatTab,
     selectedEffect, setSelectedEffect,
     activeEffectTab, setActiveEffectTab,
@@ -339,8 +412,30 @@ export default function ToolPanel() {
   const sceneryQuery = useFetchSceneryQuery(undefined, { skip: activeSidebarTab !== 'scenery' })
   const matSizesQuery = useFetchMatSizesQuery(undefined, { skip: activeSidebarTab !== 'mat' })
   const matColorsQuery = useFetchMatColorsQuery(undefined, { skip: activeSidebarTab !== 'mat' })
-  const mdfQuery = useFetchMdfQuery(undefined, { skip: activeSidebarTab !== 'mdf' })
   const effectsQuery = useFetchEffectsQuery(undefined, { skip: activeSidebarTab !== 'effect' })
+  // MDF / Paper Type / Lamination / Glass Type are frame-scoped — no query
+  // of their own, just the selected frame's own admin-curated allow-list
+  // (empty when the frame doesn't offer that catalog at all).
+  const mdfItems = selectedFrame?.mdfBoards ?? []
+  const paperTypeItems = selectedFrame?.paperTypes ?? []
+  const laminationItems = selectedFrame?.laminations ?? []
+  const glassTypeItems = selectedFrame?.glassTypes ?? []
+
+  // If the active tab is one of the four above and the newly-selected frame
+  // no longer offers it (its rail button just disappeared), fall back to
+  // the frame picker instead of leaving an orphaned, now-inaccessible tab
+  // open with a stale/empty grid.
+  useEffect(() => {
+    const frameScopedCount: Partial<Record<string, number>> = {
+      mdf: mdfItems.length,
+      paperType: paperTypeItems.length,
+      lamination: laminationItems.length,
+      glassType: glassTypeItems.length,
+    }
+    if (activeSidebarTab in frameScopedCount && frameScopedCount[activeSidebarTab] === 0) {
+      setActiveSidebarTab('frames')
+    }
+  }, [activeSidebarTab, mdfItems.length, paperTypeItems.length, laminationItems.length, glassTypeItems.length, setActiveSidebarTab])
 
   const frameCategories = frameCategoriesQuery.data ?? []
 
@@ -394,8 +489,6 @@ export default function ToolPanel() {
   const matLoading = matSizesQuery.isLoading || matColorsQuery.isLoading
   const matError = matSizesQuery.isError || matColorsQuery.isError
 
-  const mdfItems = mdfQuery.data ?? []
-
   const effectCategories = effectsQuery.data ?? []
   const activeEffectCategory = effectCategories.find((c) => c.englishName === activeEffectTab)
   const effectItems = activeEffectCategory?.list ?? []
@@ -407,6 +500,9 @@ export default function ToolPanel() {
     scenery: t('panel.titles.scenery'),
     mat: t('panel.titles.mat'),
     mdf: t('panel.titles.mdf'),
+    paperType: t('panel.titles.paperType'),
+    lamination: t('panel.titles.lamination'),
+    glassType: t('panel.titles.glassType'),
     effect: t('panel.titles.effect'),
   }
   const panelTitle = PANEL_TITLES[activeSidebarTab] ?? t('panel.library')
@@ -696,51 +792,49 @@ export default function ToolPanel() {
         </>
       )}
 
-      {/* ── MDF ── */}
+      {/* ── MDF / Paper Type / Lamination / Glass Type — frame-scoped ── */}
       {activeSidebarTab === 'mdf' && (
-        <>
-          <PanelHeader title={t('panel.mdf.header')} hint={t('panel.mdf.hint')} />
-          <Separator />
-          <ScrollArea className="flex-1">
-            <div className="px-3 py-3">
-              {mdfQuery.isLoading ? (
-                <SkeletonGrid count={4} cols={2} />
-              ) : mdfQuery.isError ? (
-                <p className="py-4 text-center text-xs text-red-500">{t('panel.mdf.error')}</p>
-              ) : mdfItems.length === 0 ? (
-                <p className="py-10 text-center text-xs" style={{ color: 'var(--ed-fg-subtle)' }}>
-                  {t('panel.mdf.empty')}
-                </p>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => setSelectedMdf(null)}
-                    className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg text-[10px] font-medium transition-colors"
-                    style={{
-                      background: 'var(--ed-canvas)',
-                      color: !selectedMdf ? 'var(--ed-accent)' : 'var(--ed-fg-muted)',
-                      outline: !selectedMdf
-                        ? '2px solid var(--ed-accent)'
-                        : '1px dashed var(--ed-border-strong)',
-                      outlineOffset: !selectedMdf ? '0px' : '-1px',
-                    }}
-                  >
-                    <span className="text-lg leading-none">∅</span>
-                    <span>{t('panel.none')}</span>
-                  </button>
-                  {mdfItems.map((item) => (
-                    <MdfThumb
-                      key={item.id}
-                      item={item}
-                      selected={selectedMdf?.id === item.id}
-                      onClick={() => setSelectedMdf(selectedMdf?.id === item.id ? null : item)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        </>
+        <OptionPickerTab
+          header={t('panel.mdf.header')}
+          hint={t('panel.mdf.hint')}
+          emptyMessage={t('panel.mdf.empty')}
+          items={mdfItems}
+          selected={selectedMdf}
+          onSelect={setSelectedMdf}
+        />
+      )}
+
+      {activeSidebarTab === 'paperType' && (
+        <OptionPickerTab
+          header={t('panel.paperType.header')}
+          hint={t('panel.paperType.hint')}
+          emptyMessage={t('panel.paperType.empty')}
+          items={paperTypeItems}
+          selected={selectedPaperType}
+          onSelect={setSelectedPaperType}
+        />
+      )}
+
+      {activeSidebarTab === 'lamination' && (
+        <OptionPickerTab
+          header={t('panel.lamination.header')}
+          hint={t('panel.lamination.hint')}
+          emptyMessage={t('panel.lamination.empty')}
+          items={laminationItems}
+          selected={selectedLamination}
+          onSelect={setSelectedLamination}
+        />
+      )}
+
+      {activeSidebarTab === 'glassType' && (
+        <OptionPickerTab
+          header={t('panel.glassType.header')}
+          hint={t('panel.glassType.hint')}
+          emptyMessage={t('panel.glassType.empty')}
+          items={glassTypeItems}
+          selected={selectedGlassType}
+          onSelect={setSelectedGlassType}
+        />
       )}
 
       {/* ── Effect ── */}

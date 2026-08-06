@@ -14,7 +14,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { useEditorStore } from '@/store/editorStore'
 import { useAuthStore } from '@/store/authStore'
 import { authApi } from '@/api/auth.api'
-import { useFetchFramesQuery } from '@/store/api/apiSlice'
+import { useFetchFrameByIdQuery, useFetchFramesQuery } from '@/store/api/apiSlice'
 import { fetchAccessToken } from '@/store/api/axiosInstance'
 
 const CanvasStage = lazy(() => import('@/components/editor/CanvasStage'))
@@ -158,6 +158,19 @@ function EditorApp() {
         useEditorStore.getState().setActiveFrameCategorySlug(match.categorySlug)
     }
   }, [searchParams, frames])
+
+  // The frame-picker grid (and the deep-link resolution above) only carries
+  // the lean list shape — paperTypes/mdfBoards/laminations/glassTypes are
+  // always empty there. Once a frame is selected (by id, however it got
+  // selected), fetch its full detail and swap it in so those admin-curated
+  // allow-lists become available to the MDF/Paper/Lamination/Glass tabs.
+  const selectedFrameId = useEditorStore((s) => s.selectedFrame?.id)
+  const { data: selectedFrameDetail } = useFetchFrameByIdQuery(selectedFrameId ?? 0, {
+    skip: !selectedFrameId,
+  })
+  useEffect(() => {
+    if (selectedFrameDetail) useEditorStore.getState().setSelectedFrame(selectedFrameDetail)
+  }, [selectedFrameDetail])
 
   // Scope the editor's body bg + theme class so landing/about/terms
   // aren't affected, AND so Radix portals (tooltips, dropdowns) — which

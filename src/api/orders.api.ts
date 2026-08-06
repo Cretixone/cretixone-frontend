@@ -33,6 +33,9 @@ export interface OrderItem {
   matSizeName?: string | null
   matColorName?: string | null
   mdfName?: string | null
+  paperTypeName?: string | null
+  laminationName?: string | null
+  glassTypeName?: string | null
 }
 
 export interface Order {

@@ -20,6 +20,9 @@
     "scenery": "Scenery",
     "mat": "Mat",
     "mdf": "MDF",
+    "paperType": "Paper Type",
+    "lamination": "Lamination",
+    "glassType": "Glass Type",
     "effects": "Effects"
   },
   "panel": {
@@ -39,6 +42,9 @@
       "scenery": "Scenery",
       "mat": "Mat",
       "mdf": "MDF",
+      "paperType": "Paper Type",
+      "lamination": "Lamination",
+      "glassType": "Glass Type",
       "effect": "Effects"
     },
     "frames": {
@@ -69,9 +75,23 @@
     "mdf": {
       "header": "MDF backing",
       "hint": "Price scales with the frame size — added to the total",
-      "error": "Failed to load MDF options",
-      "empty": "No MDF options yet.",
+      "empty": "MDF isn't offered for this frame.",
       "noPhoto": "No photo"
+    },
+    "paperType": {
+      "header": "Paper Type",
+      "hint": "Price scales with the frame size — added to the total",
+      "empty": "No paper types for this frame."
+    },
+    "lamination": {
+      "header": "Lamination",
+      "hint": "Price scales with the frame size — added to the total",
+      "empty": "Lamination isn't offered for this frame."
+    },
+    "glassType": {
+      "header": "Glass Type",
+      "hint": "Price scales with the frame size — added to the total",
+      "empty": "Glass isn't offered for this frame."
     },
     "effect": {
       "header": "Effects",
@@ -109,6 +129,9 @@
       "matPrice": "Mat price",
       "matColor": "Mat color",
       "mdf": "MDF",
+      "paperType": "Paper Type",
+      "lamination": "Lamination",
+      "glassType": "Glass Type",
       "none": "None",
       "hint": "Switch tools on the left rail to change Frame · Mat · Effects."
     },
@@ -122,6 +145,9 @@
       "frame": "Frame",
       "mat": "Mat",
       "mdf": "MDF",
+      "paperType": "Paper Type",
+      "lamination": "Lamination",
+      "glassType": "Glass Type",
       "addToCart": "Add to cart",
       "requestInquiry": "Request Inquiry"
     }

@@ -35,6 +35,10 @@
     "row": {
       "finishedSize": "المقاس النهائي:",
       "frameSku": "رمز الإطار:",
+      "paperType": "نوع الورق:",
+      "mdfType": "نوع MDF:",
+      "lamination": "التلمّع:",
+      "glassType": "نوع الزجاج:",
       "edit": "تعديل",
       "dimensions": "{{w}} × {{h}} سم",
       "perItem": "{{price}} لكل قطعة",

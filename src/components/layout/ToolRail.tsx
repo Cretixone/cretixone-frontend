@@ -1,4 +1,4 @@
-import { LayoutGrid, Home, Mountain, Square, Layers3, Sparkles } from 'lucide-react'
+import { LayoutGrid, Home, Mountain, Square, Layers3, FileImage, Shield, SquareStack, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '@/store/editorStore'
 import {
@@ -8,13 +8,20 @@ import {
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
+// MDF/Paper Type/Lamination/Glass Type are frame-scoped — each tool only
+// shows once a frame is selected AND that frame's admin-curated allow-list
+// for it is non-empty (e.g. Lamination/Glass Type stay hidden for a
+// stretcher-category frame, matching the storefront and admin editor).
 const TOOLS = [
-  { id: 'frames',    labelKey: 'rail.frames',    icon: LayoutGrid },
-  { id: 'interiors', labelKey: 'rail.interiors', icon: Home },
-  { id: 'scenery',   labelKey: 'rail.scenery',   icon: Mountain },
-  { id: 'mat',       labelKey: 'rail.mat',       icon: Square },
-  { id: 'mdf',       labelKey: 'rail.mdf',       icon: Layers3 },
-  { id: 'effect',    labelKey: 'rail.effects',   icon: Sparkles },
+  { id: 'frames',      labelKey: 'rail.frames',      icon: LayoutGrid },
+  { id: 'interiors',   labelKey: 'rail.interiors',   icon: Home },
+  { id: 'scenery',     labelKey: 'rail.scenery',     icon: Mountain },
+  { id: 'mat',         labelKey: 'rail.mat',         icon: Square },
+  { id: 'mdf',         labelKey: 'rail.mdf',         icon: Layers3, frameOption: 'mdfBoards' },
+  { id: 'paperType',   labelKey: 'rail.paperType',   icon: FileImage, frameOption: 'paperTypes' },
+  { id: 'lamination',  labelKey: 'rail.lamination',  icon: Shield, frameOption: 'laminations' },
+  { id: 'glassType',   labelKey: 'rail.glassType',   icon: SquareStack, frameOption: 'glassTypes' },
+  { id: 'effect',      labelKey: 'rail.effects',     icon: Sparkles },
 ] as const
 
 export default function ToolRail() {
@@ -22,6 +29,11 @@ export default function ToolRail() {
   const activeSidebarTab = useEditorStore((s) => s.activeSidebarTab)
   const setActiveSidebarTab = useEditorStore((s) => s.setActiveSidebarTab)
   const setToolPanelCollapsed = useEditorStore((s) => s.setToolPanelCollapsed)
+  const selectedFrame = useEditorStore((s) => s.selectedFrame)
+
+  const tools = TOOLS.filter(
+    (tool) => !('frameOption' in tool) || (selectedFrame?.[tool.frameOption]?.length ?? 0) > 0,
+  )
 
   return (
     <nav
@@ -32,7 +44,7 @@ export default function ToolRail() {
       }}
       aria-label={t('rail.ariaLabel')}
     >
-      {TOOLS.map(({ id, labelKey, icon: Icon }) => {
+      {tools.map(({ id, labelKey, icon: Icon }) => {
         const label = t(labelKey)
         const active = activeSidebarTab === id
         return (

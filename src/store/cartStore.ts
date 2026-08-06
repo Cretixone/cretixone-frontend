@@ -27,6 +27,18 @@ export interface CartItem {
   mdfId?: string | null
   mdfName?: string | null
   mdfPrice?: number
+  // Paper Type / Lamination / Glass Type — allow-listed per frame, picked on
+  // the product page. pricePerItem already folds each *Price in; kept here
+  // for display in the cart/order and line dedup.
+  paperTypeId?: string | null
+  paperTypeName?: string | null
+  paperTypePrice?: number
+  laminationId?: string | null
+  laminationName?: string | null
+  laminationPrice?: number
+  glassTypeId?: string | null
+  glassTypeName?: string | null
+  glassTypePrice?: number
 }
 
 // Flat standard shipping (OMR). Placeholder until a shipping engine exists.
@@ -53,7 +65,10 @@ const sameLine = (a: CartItemContent, b: CartItem) =>
   Math.abs(a.heightCm - b.heightCm) < 0.05 &&
   (a.matSizeId ?? null) === (b.matSizeId ?? null) &&
   (a.matColorId ?? null) === (b.matColorId ?? null) &&
-  (a.mdfId ?? null) === (b.mdfId ?? null)
+  (a.mdfId ?? null) === (b.mdfId ?? null) &&
+  (a.paperTypeId ?? null) === (b.paperTypeId ?? null) &&
+  (a.laminationId ?? null) === (b.laminationId ?? null) &&
+  (a.glassTypeId ?? null) === (b.glassTypeId ?? null)
 
 const uid = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto

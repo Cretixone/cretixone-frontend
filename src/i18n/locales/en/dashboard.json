@@ -21,6 +21,9 @@
     "dimensions": "{{width}}×{{height}} cm",
     "matLabel": "Mat: {{name}}",
     "mdfLabel": "MDF: {{name}}",
+    "paperTypeLabel": "Paper: {{name}}",
+    "laminationLabel": "Lamination: {{name}}",
+    "glassTypeLabel": "Glass: {{name}}",
     "qtyLabel": "Qty {{qty}}",
     "status": {
       "pending": "Pending",

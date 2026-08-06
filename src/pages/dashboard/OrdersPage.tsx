@@ -115,6 +115,9 @@ export default function OrdersPage() {
                     {t('orders.dimensions', { width: it.widthCm, height: it.heightCm })}
                     {it.matSizeName ? ` · ${t('orders.matLabel', { name: it.matSizeName })}` : ''}
                     {it.mdfName ? ` · ${t('orders.mdfLabel', { name: it.mdfName })}` : ''}
+                    {it.paperTypeName ? ` · ${t('orders.paperTypeLabel', { name: it.paperTypeName })}` : ''}
+                    {it.laminationName ? ` · ${t('orders.laminationLabel', { name: it.laminationName })}` : ''}
+                    {it.glassTypeName ? ` · ${t('orders.glassTypeLabel', { name: it.glassTypeName })}` : ''}
                     {` · ${t('orders.qtyLabel', { qty: it.qty })}`}
                   </p>
                 </div>

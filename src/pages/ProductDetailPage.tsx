@@ -141,6 +141,32 @@ export default function ProductDetailPage() {
     if (!glassTypeId && frame?.glassTypes.length) setGlassTypeId(frame.glassTypes[0].id)
   }, [frame, glassTypeId])
 
+  // Resolve each selected option id → its catalog record (for pricePerCm).
+  const selectedPaperType = useMemo(
+    () => (frame?.paperTypes ?? []).find((p) => p.id === paperTypeId) ?? null,
+    [frame, paperTypeId],
+  )
+  const selectedMdfBoard = useMemo(
+    () => (frame?.mdfBoards ?? []).find((m) => m.id === mdfBoardId) ?? null,
+    [frame, mdfBoardId],
+  )
+  const selectedLamination = useMemo(
+    () => (frame?.laminations ?? []).find((l) => l.id === laminationId) ?? null,
+    [frame, laminationId],
+  )
+  const selectedGlassType = useMemo(
+    () => (frame?.glassTypes ?? []).find((g) => g.id === glassTypeId) ?? null,
+    [frame, glassTypeId],
+  )
+  // Combined area rate (OMR/cm²) from every selected value-add option — each
+  // contributes pricePerCm × width × length, same formula as the frame's own
+  // MDF/Paper/Lamination/Glass Type comment in the schema.
+  const optionsPricePerCm =
+    (selectedPaperType?.pricePerCm ?? 0) +
+    (selectedMdfBoard?.pricePerCm ?? 0) +
+    (selectedLamination?.pricePerCm ?? 0) +
+    (selectedGlassType?.pricePerCm ?? 0)
+
   // Resolve the chosen size preset → real price.
   // Frame Price = pricePerCm × (width + length) × 2 (same formula as the editor).
   const selectedFrameSize = useMemo(
@@ -174,16 +200,18 @@ export default function ProductDetailPage() {
     draftH >= frame.sizeFrom && draftH <= frame.sizeTo
   const draftPriceLabel =
     frame && frame.pricePerCm > 0 && draftHasSize
-      ? formatOMR(frame.pricePerCm * (draftW + draftH) * 2)
+      ? formatOMR(frame.pricePerCm * (draftW + draftH) * 2 + optionsPricePerCm * draftW * draftH)
       : '—'
   // Price label:
-  //  • a size preset is chosen → the total for that size (pricePerCm × perimeter)
+  //  • a size preset is chosen → the total for that size — frame (pricePerCm
+  //    × perimeter) plus each selected Paper Type / MDF / Lamination / Glass
+  //    Type (pricePerCm × width × length)
   //  • no preset selectable (e.g. none exist yet) → the per-cm rate, so a
   //    meaningful price always shows instead of a misleading 1 cm minimum
   //  • frame isn't priced → em dash
   const priceLabel = (() => {
     if (!frame || frame.pricePerCm <= 0) return '—'
-    if (hasSize) return formatOMR(frame.pricePerCm * (effW + effH) * 2)
+    if (hasSize) return formatOMR(frame.pricePerCm * (effW + effH) * 2 + optionsPricePerCm * effW * effH)
     return `${formatOMRRate(frame.pricePerCm)} / cm`
   })()
 
@@ -193,7 +221,7 @@ export default function ProductDetailPage() {
   const oldPriceLabel = (() => {
     const old = frame?.oldPricePerCm ?? 0
     if (!frame || old <= 0 || old <= frame.pricePerCm) return null
-    if (hasSize) return formatOMR(old * (effW + effH) * 2)
+    if (hasSize) return formatOMR(old * (effW + effH) * 2 + optionsPricePerCm * effW * effH)
     return `${formatOMRRate(old)} / cm`
   })()
 
@@ -225,9 +253,12 @@ export default function ProductDetailPage() {
     }
   }
 
-  // In-range (preset or custom) → add to cart. Price = pricePerCm × perimeter ×2.
+  // In-range (preset or custom) → add to cart. Price = frame (pricePerCm ×
+  // perimeter) + each selected Paper Type / MDF / Lamination / Glass Type
+  // (pricePerCm × width × length).
   const handleAddToCart = () => {
     if (!frame || !priced || !hasSize) return
+    const area = effW * effH
     addItem({
       frameId: frame.id,
       name: frame.name || t('fallback.pictureFrame'),
@@ -235,16 +266,25 @@ export default function ProductDetailPage() {
       thumbnail: frame.imgUrl || gallery[0],
       widthCm: effW,
       heightCm: effH,
-      pricePerItem: frame.pricePerCm * (effW + effH) * 2,
-      // No mat/MDF chosen from the product page — those are editor-only options.
+      pricePerItem: frame.pricePerCm * (effW + effH) * 2 + optionsPricePerCm * area,
+      // No mat chosen from the product page — mat is an editor-only option.
       matSizeId: null,
       matSizeName: null,
       matPrice: 0,
       matColorId: null,
       matColorName: null,
-      mdfId: null,
-      mdfName: null,
-      mdfPrice: 0,
+      mdfId: mdfBoardId,
+      mdfName: selectedMdfBoard?.name ?? null,
+      mdfPrice: (selectedMdfBoard?.pricePerCm ?? 0) * area,
+      paperTypeId,
+      paperTypeName: selectedPaperType?.name ?? null,
+      paperTypePrice: (selectedPaperType?.pricePerCm ?? 0) * area,
+      laminationId,
+      laminationName: selectedLamination?.name ?? null,
+      laminationPrice: (selectedLamination?.pricePerCm ?? 0) * area,
+      glassTypeId,
+      glassTypeName: selectedGlassType?.name ?? null,
+      glassTypePrice: (selectedGlassType?.pricePerCm ?? 0) * area,
     })
     toast.success(t('toast.addedToCart'))
   }
@@ -257,7 +297,8 @@ export default function ProductDetailPage() {
   }
 
   // Numeric estimate stored on the inquiry (0 when the frame isn't priced).
-  const inquiryUnitPrice = priced && hasSize ? frame!.pricePerCm * (effW + effH) * 2 : 0
+  const inquiryUnitPrice =
+    priced && hasSize ? frame!.pricePerCm * (effW + effH) * 2 + optionsPricePerCm * effW * effH : 0
 
   return (
     <div className="min-h-screen w-full bg-white font-sans text-[#000000]">
