@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useEditorStore, OSS_PREFIX } from '@/store/editorStore'
 import {
   useFetchFramesQuery,
-  useFetchFrameCategoriesQuery,
+  useFetchFrameTypesPublicQuery,
   useFetchInteriorsQuery,
   useFetchSceneryQuery,
   useFetchMatSizesQuery,
@@ -397,7 +397,7 @@ export default function ToolPanel() {
     activeMatTab, setActiveMatTab,
     selectedEffect, setSelectedEffect,
     activeEffectTab, setActiveEffectTab,
-    activeFrameCategorySlug, setActiveFrameCategorySlug,
+    activeFrameType, setActiveFrameType,
     toolPanelCollapsed, setToolPanelCollapsed,
   } = useEditorStore()
 
@@ -405,7 +405,7 @@ export default function ToolPanel() {
 
   // ── API queries — lazy by active tab ──────────────────────────────────
   const framesQuery = useFetchFramesQuery(undefined, { skip: activeSidebarTab !== 'frames' })
-  const frameCategoriesQuery = useFetchFrameCategoriesQuery(undefined, {
+  const frameTypesQuery = useFetchFrameTypesPublicQuery(undefined, {
     skip: activeSidebarTab !== 'frames',
   })
   const interiorsQuery = useFetchInteriorsQuery(undefined, { skip: activeSidebarTab !== 'interiors' })
@@ -437,28 +437,28 @@ export default function ToolPanel() {
     }
   }, [activeSidebarTab, mdfItems.length, paperTypeItems.length, laminationItems.length, glassTypeItems.length, setActiveSidebarTab])
 
-  const frameCategories = frameCategoriesQuery.data ?? []
+  const frameTypeTabs = frameTypesQuery.data ?? []
 
   useEffect(() => {
-    if (!frameCategories.length) return
-    if (activeFrameCategorySlug == null) {
-      setActiveFrameCategorySlug(frameCategories[0].slug)
+    if (!frameTypeTabs.length) return
+    if (activeFrameType == null) {
+      setActiveFrameType(frameTypeTabs[0].name)
       return
     }
-    const stillExists = frameCategories.some((c) => c.slug === activeFrameCategorySlug)
-    if (!stillExists) setActiveFrameCategorySlug(frameCategories[0].slug)
-  }, [frameCategories, activeFrameCategorySlug, setActiveFrameCategorySlug])
+    const stillExists = frameTypeTabs.some((t) => t.name === activeFrameType)
+    if (!stillExists) setActiveFrameType(frameTypeTabs[0].name)
+  }, [frameTypeTabs, activeFrameType, setActiveFrameType])
 
   const filteredFrames = useMemo(() => {
     const all = framesQuery.data ?? []
-    if (!activeFrameCategorySlug) return all
-    return all.filter((f) => f.categorySlug === activeFrameCategorySlug)
-  }, [framesQuery.data, activeFrameCategorySlug])
+    if (!activeFrameType) return all
+    return all.filter((f) => f.specifications?.['Frame Type'] === activeFrameType)
+  }, [framesQuery.data, activeFrameType])
 
-  // Auto-select the first frame of the active (first) category when nothing is
-  // selected yet — fresh editor open, a refresh, or an "Upload Photo" from the
-  // navbar. A ?frame= deep-link takes precedence (resolved in EditorApp), so
-  // we skip while that param is present. If the first category has no frames,
+  // Auto-select the first frame of the active (first) Frame Type when nothing
+  // is selected yet — fresh editor open, a refresh, or an "Upload Photo" from
+  // the navbar. A ?frame= deep-link takes precedence (resolved in EditorApp),
+  // so we skip while that param is present. If the first type has no frames,
   // fall back to the first available frame and switch the tab to match.
   useEffect(() => {
     if (selectedFrame) return
@@ -466,8 +466,9 @@ export default function ToolPanel() {
     const first = filteredFrames[0] ?? (framesQuery.data ?? [])[0]
     if (!first) return
     setSelectedFrame(first)
-    if (first.categorySlug && first.categorySlug !== activeFrameCategorySlug) {
-      setActiveFrameCategorySlug(first.categorySlug)
+    const firstType = first.specifications?.['Frame Type']
+    if (firstType && firstType !== activeFrameType) {
+      setActiveFrameType(firstType)
     }
   }, [
     selectedFrame,
@@ -475,8 +476,8 @@ export default function ToolPanel() {
     framesQuery.data,
     searchParams,
     setSelectedFrame,
-    activeFrameCategorySlug,
-    setActiveFrameCategorySlug,
+    activeFrameType,
+    setActiveFrameType,
   ])
 
   const matSizes = matSizesQuery.data ?? []
@@ -579,11 +580,11 @@ export default function ToolPanel() {
         <>
           <PanelHeader title={t('panel.frames.header')} hint={t('panel.frames.hint')} />
           <Separator />
-          {!frameCategoriesQuery.isLoading && frameCategories.length > 0 && (
+          {!frameTypesQuery.isLoading && frameTypeTabs.length > 0 && (
             <PillTabs
-              items={frameCategories.map((c) => ({ id: c.slug, label: c.name }))}
-              value={activeFrameCategorySlug}
-              onChange={(slug) => setActiveFrameCategorySlug(slug)}
+              items={frameTypeTabs.map((t) => ({ id: t.name, label: t.name }))}
+              value={activeFrameType}
+              onChange={(name) => setActiveFrameType(name)}
             />
           )}
           <ScrollArea className="flex-1">

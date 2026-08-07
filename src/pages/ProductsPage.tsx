@@ -39,7 +39,7 @@ const BANNER_IMAGES = [
 ]
 
 // ── Filter configuration — labels + counts mirror the Figma spec ───────────
-type FilterGroupKey = 'material' | 'type' | 'color'
+type FilterGroupKey = 'type' | 'color'
 
 interface FilterOption {
   value: string // stable value sent to the API (category slug or type/colour name)
@@ -71,12 +71,10 @@ export default function ProductsPage() {
     }
   }, [])
 
-  // Footer "Products" links pass ?category=<slug> (server paginates by category).
-  // The landing Frame Types / Frame Colors cards deep-link here with ?type= and
-  // ?color= (comma-separated) — seed those into the selection so the grid opens
-  // pre-filtered.
+  // The landing Frame Types / Frame Colors cards deep-link here with ?type=
+  // and ?color= (comma-separated) — seed those into the selection so the
+  // grid opens pre-filtered.
   const [searchParams] = useSearchParams()
-  const category = searchParams.get('category')
 
   // Selected filter checkboxes — keyed "groupKey::value".
   const [selected, setSelected] = useState<Set<string>>(() => {
@@ -85,7 +83,6 @@ export default function ProductsPage() {
       raw?.split(',').forEach((v) => v.trim() && init.add(`${key}::${v.trim()}`))
     seed('type', searchParams.get('type'))
     seed('color', searchParams.get('color'))
-    seed('material', searchParams.get('material'))
     return init
   })
   const toggle = (id: string) =>
@@ -96,17 +93,12 @@ export default function ProductsPage() {
     })
   const reset = () => setSelected(new Set())
 
-  // Filter facets (categories / frame types / frame colours) with usage counts,
-  // built dynamically from admin-managed data.
+  // Filter facets (frame types / frame colours) with usage counts, built
+  // dynamically from admin-managed data.
   const { data: facets } = useFetchFacetsQuery()
   const filterGroups: FilterGroup[] = useMemo(() => {
     if (!facets) return []
     return [
-      {
-        key: 'material',
-        title: t('filter.groups.material'),
-        options: facets.categories.map((c) => ({ value: c.slug, label: c.name, count: c.count })),
-      },
       {
         key: 'type',
         title: t('filter.groups.type'),
@@ -128,22 +120,17 @@ export default function ProductsPage() {
     [...selected]
       .filter((id) => id.startsWith(`${key}::`))
       .map((id) => id.slice(key.length + 2))
-  const materialSel = pickedFor('material')
   const typeSel = pickedFor('type')
   const colorSel = pickedFor('color')
-  // Sidebar "Frame Material" drives the category filter; otherwise a footer
-  // ?category= link scopes the page.
-  const categorySel = materialSel.length ? materialSel : category ? [category] : []
 
   // Server-side pagination + filtering. Reset to page 1 when any filter changes.
   const [page, setPage] = useState(1)
-  const filterKey = [category, ...[...selected].sort()].join('|')
+  const filterKey = [...selected].sort().join('|')
   useEffect(() => setPage(1), [filterKey])
 
   const { data, isLoading, isError } = useFetchFramesPageQuery({
     page,
     limit: PAGE_SIZE,
-    category: categorySel.length ? categorySel : undefined,
     frameType: typeSel.length ? typeSel : undefined,
     color: colorSel.length ? colorSel : undefined,
   })
@@ -471,9 +458,7 @@ function ProductCard({ frame, minPerimeter }: { frame: ApiFrame; minPerimeter: n
     : hasRealSize
       ? formatOMR(frame.pricePerCm * minPerimeter)
       : `${formatOMRRate(frame.pricePerCm)} / cm`
-  const subtitle = frame.categorySlug
-    ? frame.categorySlug.replace(/-/g, ' ')
-    : t('card.fallbackSubtitle')
+  const subtitle = frame.specifications?.['Frame Type'] ?? t('card.fallbackSubtitle')
 
   // Clicking a product opens its detail page (which in turn links into the
   // editor via "Upload a preview image").

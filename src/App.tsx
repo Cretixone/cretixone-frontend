@@ -31,6 +31,7 @@ const TestimonialsPage = lazy(() => import('@/pages/TestimonialsPage'))
 const CustomMirrorsPage = lazy(() => import('@/pages/CustomMirrorsPage'))
 const CustomPrintsPage = lazy(() => import('@/pages/CustomPrintsPage'))
 const CheckoutPage = lazy(() => import('@/pages/CheckoutPage'))
+const OrderCompletePage = lazy(() => import('@/pages/OrderCompletePage'))
 const CartPage = lazy(() => import('@/pages/CartPage'))
 
 function LoadingCanvas() {
@@ -102,7 +103,22 @@ export default function App() {
         <Route path="/testimonials" element={<TestimonialsPage />} />
         <Route path="/custom-mirrors" element={<CustomMirrorsPage />} />
         <Route path="/custom-prints" element={<CustomPrintsPage />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route
+          path="/checkout"
+          element={
+            <ProtectedRoute>
+              <CheckoutPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/checkout/complete/:orderId"
+          element={
+            <ProtectedRoute>
+              <OrderCompletePage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/products" element={<ProductsPage />} />
         <Route path="/product" element={<ProductDetailPage />} />
@@ -154,8 +170,8 @@ function EditorApp() {
     const match = frames.find((f) => String(f.id) === frameId)
     if (match) {
       useEditorStore.getState().setSelectedFrame(match)
-      if (match.categorySlug)
-        useEditorStore.getState().setActiveFrameCategorySlug(match.categorySlug)
+      const frameType = match.specifications?.['Frame Type']
+      if (frameType) useEditorStore.getState().setActiveFrameType(frameType)
     }
   }, [searchParams, frames])
 

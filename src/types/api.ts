@@ -15,10 +15,8 @@ export interface ApiResponse<T> {
 export interface ApiFrame {
   id: number                              // hashed-uuid number so it can coexist with frameit ids
   name: string
-  categoryId: string | null
   nameAr?: string | null
   descriptionAr?: string | null
-  categorySlug: string | null
   isVip: boolean
   isNew: boolean
   imgUrl: string                          // sidebar thumbnail
@@ -27,6 +25,7 @@ export interface ApiFrame {
   squareUrl: string | null                // optional 1:1 PNG (falls back to landscape)
   pricePerCm: number                      // price per cm; Frame Price = pricePerCm × (w + h) × 2
   oldPricePerCm: number                   // display-only "was" rate (struck-through); never used in calculations
+  wasteValue: number                      // waste allowance; adds pricePerCm × wasteValue to the frame's size price (not option pricing)
   sizeFrom: number                        // min manufacturable size (cm)
   sizeTo: number                          // max manufacturable size (cm)
   description: string | null              // product description (whitespace preserved)

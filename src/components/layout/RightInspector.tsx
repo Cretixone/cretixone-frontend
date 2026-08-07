@@ -440,7 +440,10 @@ function CheckoutFooter() {
           ? [A4_SHORT_CM, A4_SHORT_CM]
           : [customWidthCm, customHeightCm]
 
-  const framePrice = selectedFrame.pricePerCm * (w + h) * 2
+  // Frame face (perimeter) + the admin-configured waste allowance — never
+  // scaled by size, same as the admin panel's waste calculator. Waste never
+  // applies to MDF / Paper Type / Lamination / Glass Type below.
+  const framePrice = selectedFrame.pricePerCm * (w + h) * 2 + selectedFrame.pricePerCm * (selectedFrame.wasteValue ?? 0)
   // Mat size adds a flat price (admin-managed); colour is free.
   const matPrice = selectedMatSize?.price ?? 0
   // MDF backing / Paper Type / Lamination / Glass Type — each scales with the

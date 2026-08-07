@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Swiper, SwiperSlide } from 'swiper/react'
+import type { Swiper as SwiperType } from 'swiper'
 import { EffectCards, Keyboard, Mousewheel } from 'swiper/modules'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDirection } from '@/hooks/useDirection'
 
@@ -25,6 +27,7 @@ export default function StackSlider({
 }: StackSliderProps) {
   const [activeIdx, setActiveIdx] = useState(0)
   const dir = useDirection()
+  const swiperRef = useRef<SwiperType | null>(null)
 
   if (slides.length === 0) return null
   const active = slides[activeIdx]
@@ -34,6 +37,7 @@ export default function StackSlider({
       <Swiper
         key={dir}
         dir={dir}
+        onSwiper={(s) => { swiperRef.current = s }}
         modules={[EffectCards, Keyboard, Mousewheel]}
         effect="cards"
         grabCursor
@@ -70,14 +74,32 @@ export default function StackSlider({
         ))}
       </Swiper>
 
-      {/* Active label — bottom-left under the slider */}
-      <div className="mt-5 px-2 md:px-4 relative z-10">
+      {/* Active label (left) + prev/next controls (right) under the slider */}
+      <div className="mt-5 flex items-center justify-between px-2 md:px-4 relative z-10">
         <span
           key={active.label}
           className="inline-block animate-[stackFade_400ms_ease-out] font-display font-normal text-2xl tracking-wide text-[#C1B199] md:text-3xl"
         >
           {active.label}
         </span>
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            aria-label="Previous slide"
+            onClick={() => swiperRef.current?.slidePrev()}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-brand-navy shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition hover:bg-brand-navy hover:text-white"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            aria-label="Next slide"
+            onClick={() => swiperRef.current?.slideNext()}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-brand-navy shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition hover:bg-brand-navy hover:text-white"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
       <style>{`

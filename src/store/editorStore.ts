@@ -84,10 +84,12 @@ export type EditorState = {
   // Sub-tabs
   activeMatTab: string
   activeEffectTab: string
-  // Frame category — null = "All", a string = category slug.
-  // Initial value is set on first fetch to the first category's slug
-  // so a category is always active by default.
-  activeFrameCategorySlug: string | null
+  // Frame Type tab — null = "All", a string = the frame type's name.
+  // Initial value is set on first fetch to the first type's name so a
+  // type is always active by default. Drives the editor's Frames-tab
+  // browsing grid (grouping frames by Frame Type, replacing what used
+  // to be Frame Category).
+  activeFrameType: string | null
 
   // Sizing
   frameAspectRatio: FrameAspectRatio
@@ -144,7 +146,7 @@ export type EditorState = {
   setSelectedGlassType: (item: ApiGlassType | null) => void
   setActiveMatTab: (tab: string) => void
   setActiveEffectTab: (tab: string) => void
-  setActiveFrameCategorySlug: (slug: string | null) => void
+  setActiveFrameType: (name: string | null) => void
   setFrameAspectRatio: (r: FrameAspectRatio) => void
   setCustomWidthCm: (w: number) => void
   setCustomHeightCm: (h: number) => void
@@ -183,7 +185,7 @@ export const useEditorStore = create<EditorState>((set) => ({
 
   activeMatTab: 'Size',
   activeEffectTab: 'Light effect',
-  activeFrameCategorySlug: null,
+  activeFrameType: null,
 
   // Default to Square when a frame opens.
   frameAspectRatio: 'square',
@@ -258,7 +260,7 @@ export const useEditorStore = create<EditorState>((set) => ({
 
   setActiveMatTab: (tab) => set({ activeMatTab: tab }),
   setActiveEffectTab: (tab) => set({ activeEffectTab: tab }),
-  setActiveFrameCategorySlug: (slug) => set({ activeFrameCategorySlug: slug }),
+  setActiveFrameType: (name) => set({ activeFrameType: name }),
   // Switching frame ratio resets ALL transient transforms — the canvas
   // zoom (designZoom), the frame pan (frameOffsetX/Y) and the picture's
   // zoom + drag offset (artworkScale, artworkX/Y) — so the new ratio

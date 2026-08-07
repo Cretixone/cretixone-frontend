@@ -47,51 +47,66 @@
       "increaseQty": "Increase quantity"
     }
   },
-  "checkoutModal": {
-    "close": "Close",
-    "title": "Checkout details",
-    "subtitle": "Tell us where to send your order.",
-    "dialogLabel": "Checkout details",
+  "checkoutPage": {
+    "breadcrumbCheckout": "Checkout",
+    "titleCheckout": "Checkout details",
+    "customerInfo": "Customer information",
+    "shippingAddress": "Shipping address",
+    "optional": "(optional)",
+    "billingSameAsShipping": "My billing address is the same as my shipping address.",
+    "backToCart": "Back to cart",
+    "placeOrder": "Place order",
     "fields": {
       "fullName": "Full name",
-      "fullNamePlaceholder": "Jane Doe",
-      "email": "Email address",
-      "emailPlaceholder": "jane@example.com",
-      "phone": "Phone number",
-      "phonePlaceholder": "+968 …",
+      "fullNamePlaceholder": "Enter your full name",
+      "email": "Email",
+      "emailPlaceholder": "Enter your email",
+      "phone": "Phone",
+      "companyName": "Company name",
+      "companyNamePlaceholder": "Enter company name",
       "address": "Address",
-      "addressPlaceholder": "Street, building, area",
-      "zip": "Zip code",
-      "zipPlaceholder": "100",
-      "optional": "(optional)"
+      "locationPlaceholder": "Enter location",
+      "addressPlaceholder": "Enter your address",
+      "country": "Country",
+      "countryPlaceholder": "Select country / region",
+      "houseNumber": "House number",
+      "houseNumberPlaceholder": "Enter house number",
+      "city": "City",
+      "cityPlaceholder": "Enter your city",
+      "orderNotes": "Order notes",
+      "orderNotesPlaceholder": "Notes about your order, e.g. special notes for delivery."
     },
     "errors": {
-      "required": "Required",
-      "invalidEmail": "Enter a valid email"
-    },
-    "cancel": "Cancel",
-    "placeOrder": "Place order"
+      "required": "This field is required",
+      "invalidEmail": "Enter a valid email",
+      "invalidPhone": "Enter a valid phone number"
+    }
   },
-  "checkoutPage": {
-    "breadcrumbInquiry": "Inquiry",
-    "breadcrumbCheckout": "Checkout",
-    "titleInquiry": "Request an Inquiry",
-    "titleCheckout": "Checkout",
-    "selectedFrameAlt": "Selected frame",
-    "customFrame": "Custom frame",
-    "size": "Size: {{w}} × {{h}} cm",
-    "total": "Total",
-    "noItem": "No item selected yet.",
-    "inquiryNote": "This size is outside the frame's standard range — submit an inquiry and our team will get back to you with a custom quote. (Inquiry form coming soon.)",
-    "checkoutNote": "Full checkout + cart is being set up. The order summary above reflects your current selection."
-  },
-  "success": {
-    "title": "Order placed!",
-    "message": "Thank you — we've emailed your confirmation. Your order is now being processed.",
-    "orderNumber": "Order number",
-    "total": "Total",
+  "orderComplete": {
+    "breadcrumb": "Order details",
+    "title": "Order complete",
+    "cashOnDelivery": "Pay with cash upon delivery",
+    "notFound": "We couldn't find that order.",
     "viewOrders": "View my orders",
-    "continue": "Continue shopping"
+    "orderDetails": "Order details",
+    "orderNotes": "Order notes",
+    "downloadInvoice": "Download Invoice",
+    "table": {
+      "product": "Product",
+      "total": "Total",
+      "finishedSize": "Finished Size: {{w}} x {{h}} cm (approx.)",
+      "imageSize": "Image Size: {{w}} x {{h}} cm",
+      "shipping": "Shipping:",
+      "subtotal": "Subtotal",
+      "paymentMethod": "Payment method:",
+      "cashOnDelivery": "Cash on delivery",
+      "totalPayment": "Total payment"
+    },
+    "addressCard": {
+      "title": "Shipping & Billing Address",
+      "deliveryType": "Delivery Type",
+      "standardDelivery": "Standard delivery"
+    }
   },
   "lightbox": {
     "viewer": "Image viewer",

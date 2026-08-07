@@ -45,8 +45,14 @@ export interface Order {
   customerName: string
   customerEmail: string
   customerPhone: string | null
+  companyName: string | null
+  location: string
   address: string
-  zipcode: string
+  country: string
+  houseNumber: string
+  city: string
+  zipcode: string | null
+  orderNotes: string | null
   items: OrderItem[]
   subtotal: number
   shipping: number
@@ -61,8 +67,13 @@ export interface CreateOrderPayload {
   customerName: string
   customerEmail: string
   customerPhone?: string
+  companyName?: string
+  location: string
   address: string
-  zipcode: string
+  country: string
+  houseNumber: string
+  city: string
+  orderNotes?: string
   shipping: number
   currency?: string
 }
@@ -79,5 +90,10 @@ export const ordersApi = {
       { ...({ silent: true } as object) },
     )
     return { items: res.data.data, meta: res.data.meta }
+  },
+
+  async getById(id: string) {
+    const res = await cretixAxios.get<Ok<Order>>(`/orders/${id}`, { ...({ silent: true } as object) })
+    return res.data.data
   },
 }

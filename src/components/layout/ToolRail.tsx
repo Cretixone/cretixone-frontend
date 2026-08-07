@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 // MDF/Paper Type/Lamination/Glass Type are frame-scoped — each tool only
 // shows once a frame is selected AND that frame's admin-curated allow-list
 // for it is non-empty (e.g. Lamination/Glass Type stay hidden for a
-// stretcher-category frame, matching the storefront and admin editor).
+// stretcher Frame Type, matching the storefront and admin editor).
 const TOOLS = [
   { id: 'frames',      labelKey: 'rail.frames',      icon: LayoutGrid },
   { id: 'interiors',   labelKey: 'rail.interiors',   icon: Home },

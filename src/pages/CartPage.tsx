@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
-import { ChevronRight, Home, Loader2, Minus, Plus, Trash2, X } from 'lucide-react'
+import { ChevronRight, Home, Minus, Plus, Trash2 } from 'lucide-react'
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { Button } from '@/components/ui/button'
@@ -15,9 +15,6 @@ import {
 import { formatOMR } from '@/lib/format'
 import { useAuthStore } from '@/store/authStore'
 import { useAuthUiStore } from '@/store/authUiStore'
-import { ordersApi, type CreateOrderPayload } from '@/api/orders.api'
-import { OrderSuccess } from '@/components/OrderSuccess'
-import { PhoneField } from '@/components/auth/PhoneField'
 
 export default function CartPage() {
   const { t } = useTranslation('cart')
@@ -25,14 +22,9 @@ export default function CartPage() {
   const items = useCartStore((s) => s.items)
   const setQty = useCartStore((s) => s.setQty)
   const removeItem = useCartStore((s) => s.removeItem)
-  const clear = useCartStore((s) => s.clear)
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
-  const user = useAuthStore((s) => s.user)
   const openAuth = useAuthUiStore((s) => s.openAuth)
-
-  const [checkoutOpen, setCheckoutOpen] = useState(false)
-  const [success, setSuccess] = useState<{ orderNumber: string; total: number } | null>(null)
 
   useEffect(() => {
     const prevBg = document.body.style.background
@@ -52,53 +44,14 @@ export default function CartPage() {
   const count = cartCount(items)
 
   // Checkout is gated: a logged-out user is sent to the auth dialog first
-  // (returning to /cart after login); a logged-in user opens the details modal.
+  // (returning to /cart after login); a logged-in user goes to the full
+  // checkout-details page.
   const onCheckoutClick = () => {
     if (!isAuthenticated) {
       openAuth('login', '/cart')
       return
     }
-    setCheckoutOpen(true)
-  }
-
-  // Creates the order on the backend, then shows the success animation.
-  const placeOrder = async (details: {
-    fullName: string
-    email: string
-    phone: string
-    address: string
-    zip: string
-  }) => {
-    const payload: CreateOrderPayload = {
-      items: items.map((i) => ({
-        frameId: i.frameId,
-        name: i.name,
-        subtitle: i.subtitle,
-        thumbnail: i.thumbnail,
-        widthCm: i.widthCm,
-        heightCm: i.heightCm,
-        pricePerItem: i.pricePerItem,
-        qty: i.qty,
-        matSizeName: i.matSizeName ?? null,
-        matColorName: i.matColorName ?? null,
-        mdfName: i.mdfName ?? null,
-        paperTypeName: i.paperTypeName ?? null,
-        laminationName: i.laminationName ?? null,
-        glassTypeName: i.glassTypeName ?? null,
-      })),
-      customerName: details.fullName,
-      customerEmail: details.email,
-      customerPhone: details.phone || undefined,
-      address: details.address,
-      zipcode: details.zip,
-      shipping,
-      currency: 'OMR',
-    }
-    const order = await ordersApi.create(payload)
-    clear()
-    setCheckoutOpen(false)
-    setSuccess({ orderNumber: order.orderNumber, total: order.total })
-    window.scrollTo(0, 0)
+    navigate('/checkout')
   }
 
   return (
@@ -133,7 +86,7 @@ export default function CartPage() {
         {items.length === 0 ? (
           <EmptyCart onBrowse={() => navigate('/products')} />
         ) : (
-          <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px] lg:gap-10">
+          <div className="mt-8 grid grid-cols-1 items-start gap-8 lg:grid-cols-[1fr_360px] lg:gap-10">
             {/* Items + note + actions */}
             <div className="min-w-0">
               <div className="divide-y divide-black/[0.08]">
@@ -179,7 +132,7 @@ export default function CartPage() {
 
             {/* Purchase summary */}
             <div className="lg:sticky lg:top-28 lg:self-start">
-              <div className="rounded-2xl border border-black/10 p-6 shadow-[0_20px_50px_-30px_rgba(0,35,101,0.3)]">
+              <div className="rounded-[33px] bg-white p-6 shadow-[0px_0px_21.1px_rgba(0,0,0,0.09)]">
                 <h2 className="text-lg font-semibold text-brand-navy">{t('cartPage.summary.title')}</h2>
 
                 <div className="mt-5 space-y-3 text-sm">
@@ -219,29 +172,6 @@ export default function CartPage() {
       </main>
 
       <Footer />
-
-      {checkoutOpen && (
-        <CheckoutModal
-          onClose={() => setCheckoutOpen(false)}
-          onSubmit={placeOrder}
-          prefill={{
-            fullName: user ? `${user.firstName} ${user.lastName}`.trim() : '',
-            email: user?.email ?? '',
-            phone: user?.phone ?? '',
-            address: user?.address ?? '',
-            zip: user?.zipcode ?? '',
-          }}
-        />
-      )}
-
-      {success && (
-        <OrderSuccess
-          orderNumber={success.orderNumber}
-          total={success.total}
-          onViewOrders={() => navigate('/dashboard/orders')}
-          onContinue={() => navigate('/products')}
-        />
-      )}
     </div>
   )
 }
@@ -391,189 +321,5 @@ function EmptyCart({ onBrowse }: { onBrowse: () => void }) {
         {t('cartPage.empty.browse')}
       </Button>
     </div>
-  )
-}
-
-// ── Checkout details popup ───────────────────────────────────────────────────
-interface CheckoutDetails {
-  fullName: string
-  email: string
-  phone: string
-  address: string
-  zip: string
-}
-
-function CheckoutModal({
-  onClose,
-  onSubmit,
-  prefill,
-}: {
-  onClose: () => void
-  onSubmit: (details: CheckoutDetails) => Promise<void>
-  prefill: CheckoutDetails
-}) {
-  const { t } = useTranslation('cart')
-  const [fullName, setFullName] = useState(prefill.fullName)
-  const [email, setEmail] = useState(prefill.email)
-  const [phone, setPhone] = useState(prefill.phone)
-  const [address, setAddress] = useState(prefill.address)
-  const [zip, setZip] = useState(prefill.zip)
-  const [touched, setTouched] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-
-  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  const valid = fullName.trim() && emailOk && address.trim() && zip.trim()
-
-  const inputCls =
-    'h-10 w-full rounded-lg border border-black/15 px-3 text-sm text-foreground focus:border-brand-gold focus:outline-none focus:ring-2 focus:ring-brand-gold/30'
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setTouched(true)
-    if (!valid || submitting) return
-    setSubmitting(true)
-    try {
-      await onSubmit({ fullName, email, phone, address, zip })
-    } catch {
-      // Error toast is shown globally by the axios interceptor; keep the
-      // modal open so the user can retry.
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
-  return (
-    <>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <button
-          aria-label={t('checkoutModal.close')}
-          onClick={onClose}
-          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        />
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={t('checkoutModal.dialogLabel')}
-          className="relative z-10 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-brand-navy">{t('checkoutModal.title')}</h2>
-              <p className="mt-0.5 text-[13px] text-foreground/55">
-                {t('checkoutModal.subtitle')}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={t('checkoutModal.close')}
-              className="rounded-md p-1 text-foreground/50 hover:bg-black/5"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          <form onSubmit={submit} className="mt-5 space-y-3.5" noValidate>
-            <Field label={t('checkoutModal.fields.fullName')} required error={touched && !fullName.trim() ? t('checkoutModal.errors.required') : ''}>
-              <input
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className={inputCls}
-                placeholder={t('checkoutModal.fields.fullNamePlaceholder')}
-              />
-            </Field>
-            <Field
-              label={t('checkoutModal.fields.email')}
-              required
-              error={touched && !emailOk ? t('checkoutModal.errors.invalidEmail') : ''}
-            >
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={inputCls}
-                placeholder={t('checkoutModal.fields.emailPlaceholder')}
-              />
-            </Field>
-            <Field label={t('checkoutModal.fields.phone')} optional>
-              <PhoneField
-                value={phone}
-                onChange={(v) => setPhone(v ?? '')}
-                placeholder={t('checkoutModal.fields.phonePlaceholder')}
-              />
-            </Field>
-            <Field label={t('checkoutModal.fields.address')} required error={touched && !address.trim() ? t('checkoutModal.errors.required') : ''}>
-              <input
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className={inputCls}
-                placeholder={t('checkoutModal.fields.addressPlaceholder')}
-              />
-            </Field>
-            <Field label={t('checkoutModal.fields.zip')} required error={touched && !zip.trim() ? t('checkoutModal.errors.required') : ''}>
-              <input
-                value={zip}
-                onChange={(e) => setZip(e.target.value)}
-                className={inputCls}
-                placeholder={t('checkoutModal.fields.zipPlaceholder')}
-              />
-            </Field>
-
-            <div className="flex gap-3 pt-2">
-              <Button type="button" variant="outline" onClick={onClose} disabled={submitting} className="flex-1 border-black/15 bg-transparent text-foreground hover:bg-black/5">
-                {t('checkoutModal.cancel')}
-              </Button>
-              <Button type="submit" variant="navy" disabled={submitting} className="flex-1">
-                {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                {t('checkoutModal.placeOrder')}
-              </Button>
-            </div>
-          </form>
-        </div>
-      </div>
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 z-0 -translate-x-1/2 rounded-full"
-        style={{
-          top: '-186px',
-          width: 'min(1560px, 140vw)',
-          height: '270px',
-          background: 'rgba(65, 105, 226, 0.2)',
-          filter: 'blur(130px)',
-        }}
-      />
-    </>
-  )
-}
-
-function Field({
-  label,
-  required,
-  optional,
-  error,
-  children,
-}: {
-  label: string
-  required?: boolean
-  optional?: boolean
-  error?: string
-  children: React.ReactNode
-}) {
-  const { t } = useTranslation('cart')
-  return (
-    <label className="block">
-      <span className="text-[13px] font-medium text-foreground/80">
-        {label}
-        {optional && <span className="font-normal text-foreground/40">{' '}{t('checkoutModal.fields.optional')}</span>}
-      </span>
-      <div className="mt-1">{children}</div>
-      {required && error && <span className="mt-1 block text-[11px] text-red-500">{error}</span>}
-    </label>
   )
 }
