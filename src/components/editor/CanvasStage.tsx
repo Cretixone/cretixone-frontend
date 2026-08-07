@@ -554,12 +554,13 @@ export default function CanvasStage({
 
     const s = useEditorStore.getState()
     const frame: ApiFrame | null = frameOverrideRef.current ?? s.selectedFrame
-    // Stretcher category: never show the moulding — the picture fills the whole
-    // frame (gallery-wrap canvas), before and after an image is uploaded. Any
-    // category whose slug contains "stretcher" (case-insensitive) qualifies, so
-    // variants like "canvas-stretcher" or "stretcher-frames" also match.
+    // Stretcher frame type: never show the moulding — the picture fills the
+    // whole frame (gallery-wrap canvas), before and after an image is
+    // uploaded. Any "Frame Type" spec value containing "stretcher"
+    // (case-insensitive) qualifies, so variants like "Canvas Stretcher" or
+    // "Stretcher Frame" also match.
     const stretcherHideFrame =
-      (frame?.categorySlug ?? '').toLowerCase().includes('stretcher')
+      (frame?.specifications?.['Frame Type'] ?? '').toLowerCase().includes('stretcher')
     const interior: ApiScene | null = s.selectedInterior
     const scenery: ApiScene | null = s.selectedScenery
     const matSizeItem = s.selectedMatSize

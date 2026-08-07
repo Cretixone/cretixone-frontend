@@ -47,51 +47,66 @@
       "increaseQty": "زيادة الكمية"
     }
   },
-  "checkoutModal": {
-    "close": "إغلاق",
-    "title": "تفاصيل الدفع",
-    "subtitle": "أخبرنا بالمكان الذي نرسل إليه طلبك.",
-    "dialogLabel": "تفاصيل الدفع",
+  "checkoutPage": {
+    "breadcrumbCheckout": "الدفع",
+    "titleCheckout": "تفاصيل الدفع",
+    "customerInfo": "معلومات العميل",
+    "shippingAddress": "عنوان الشحن",
+    "optional": "(اختياري)",
+    "billingSameAsShipping": "عنوان الفاتورة مطابق لعنوان الشحن.",
+    "backToCart": "العودة إلى العربة",
+    "placeOrder": "تأكيد الطلب",
     "fields": {
       "fullName": "الاسم الكامل",
-      "fullNamePlaceholder": "محمد أحمد",
+      "fullNamePlaceholder": "أدخل اسمك الكامل",
       "email": "البريد الإلكتروني",
-      "emailPlaceholder": "jane@example.com",
+      "emailPlaceholder": "أدخل بريدك الإلكتروني",
       "phone": "رقم الهاتف",
-      "phonePlaceholder": "+968 …",
+      "companyName": "اسم الشركة",
+      "companyNamePlaceholder": "أدخل اسم الشركة",
       "address": "العنوان",
-      "addressPlaceholder": "الشارع، المبنى، المنطقة",
-      "zip": "الرمز البريدي",
-      "zipPlaceholder": "100",
-      "optional": "(اختياري)"
+      "locationPlaceholder": "أدخل الموقع",
+      "addressPlaceholder": "أدخل عنوانك",
+      "country": "الدولة",
+      "countryPlaceholder": "اختر الدولة / المنطقة",
+      "houseNumber": "رقم المنزل",
+      "houseNumberPlaceholder": "أدخل رقم المنزل",
+      "city": "المدينة",
+      "cityPlaceholder": "أدخل مدينتك",
+      "orderNotes": "ملاحظات الطلب",
+      "orderNotesPlaceholder": "ملاحظات حول طلبك، مثل ملاحظات خاصة بالتوصيل."
     },
     "errors": {
-      "required": "مطلوب",
-      "invalidEmail": "أدخل بريدًا إلكترونيًا صالحًا"
-    },
-    "cancel": "إلغاء",
-    "placeOrder": "تأكيد الطلب"
+      "required": "هذا الحقل مطلوب",
+      "invalidEmail": "أدخل بريدًا إلكترونيًا صالحًا",
+      "invalidPhone": "أدخل رقم هاتف صالحًا"
+    }
   },
-  "checkoutPage": {
-    "breadcrumbInquiry": "استفسار",
-    "breadcrumbCheckout": "الدفع",
-    "titleInquiry": "طلب استفسار",
-    "titleCheckout": "الدفع",
-    "selectedFrameAlt": "الإطار المحدد",
-    "customFrame": "إطار مخصص",
-    "size": "المقاس: {{w}} × {{h}} سم",
-    "total": "الإجمالي",
-    "noItem": "لم يتم تحديد أي عنصر بعد.",
-    "inquiryNote": "هذا المقاس خارج النطاق القياسي للإطار — أرسل استفسارًا وسيتواصل معك فريقنا بعرض سعر مخصص. (نموذج الاستفسار قريبًا.)",
-    "checkoutNote": "يجري إعداد الدفع الكامل وعربة التسوق. يعكس ملخص الطلب أعلاه اختيارك الحالي."
-  },
-  "success": {
-    "title": "تم تقديم الطلب!",
-    "message": "شكرًا لك — لقد أرسلنا تأكيدك عبر البريد الإلكتروني. طلبك الآن قيد المعالجة.",
-    "orderNumber": "رقم الطلب",
-    "total": "الإجمالي",
+  "orderComplete": {
+    "breadcrumb": "تفاصيل الطلب",
+    "title": "اكتمل الطلب",
+    "cashOnDelivery": "الدفع نقدًا عند التسليم",
+    "notFound": "تعذّر العثور على هذا الطلب.",
     "viewOrders": "عرض طلباتي",
-    "continue": "متابعة التسوق"
+    "orderDetails": "تفاصيل الطلب",
+    "orderNotes": "ملاحظات الطلب",
+    "downloadInvoice": "تحميل الفاتورة",
+    "table": {
+      "product": "المنتج",
+      "total": "الإجمالي",
+      "finishedSize": "المقاس النهائي: {{w}} × {{h}} سم (تقريبًا)",
+      "imageSize": "مقاس الصورة: {{w}} × {{h}} سم",
+      "shipping": "الشحن:",
+      "subtotal": "المجموع الفرعي",
+      "paymentMethod": "طريقة الدفع:",
+      "cashOnDelivery": "الدفع عند التسليم",
+      "totalPayment": "إجمالي الدفع"
+    },
+    "addressCard": {
+      "title": "عنوان الشحن والفاتورة",
+      "deliveryType": "نوع التوصيل",
+      "standardDelivery": "توصيل عادي"
+    }
   },
   "lightbox": {
     "viewer": "عارض الصور",

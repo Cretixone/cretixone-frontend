@@ -77,9 +77,10 @@ export default function ProductDetailPage() {
   }, [frame])
 
   // Size presets allow-listed for this frame by the admin (frame add/edit
-  // form) — shown as quick pills + the "More sizes" dropdown.
+  // form) — shown as quick pills + the "More sizes" dropdown. Just the name
+  // (no dimensions) per the size badge.
   const sizes = useMemo(
-    () => (frame?.frameSizes ?? []).map((s) => `${s.name} · ${s.widthCm}×${s.lengthCm} cm`),
+    () => (frame?.frameSizes ?? []).map((s) => s.name),
     [frame],
   )
 
@@ -127,19 +128,8 @@ export default function ProductDetailPage() {
     if (!size && sizes.length) setSize(sizes[0])
   }, [sizes, size])
 
-  // Default each option to its first allowed value once the frame loads.
-  useEffect(() => {
-    if (!paperTypeId && frame?.paperTypes.length) setPaperTypeId(frame.paperTypes[0].id)
-  }, [frame, paperTypeId])
-  useEffect(() => {
-    if (!mdfBoardId && frame?.mdfBoards.length) setMdfBoardId(frame.mdfBoards[0].id)
-  }, [frame, mdfBoardId])
-  useEffect(() => {
-    if (!laminationId && frame?.laminations.length) setLaminationId(frame.laminations[0].id)
-  }, [frame, laminationId])
-  useEffect(() => {
-    if (!glassTypeId && frame?.glassTypes.length) setGlassTypeId(frame.glassTypes[0].id)
-  }, [frame, glassTypeId])
+  // Paper Type / MDF / Lamination / Glass Type start deselected — only the
+  // frame size defaults to its first preset (above); these are opt-in.
 
   // Resolve each selected option id → its catalog record (for pricePerCm).
   const selectedPaperType = useMemo(
@@ -170,7 +160,7 @@ export default function ProductDetailPage() {
   // Resolve the chosen size preset → real price.
   // Frame Price = pricePerCm × (width + length) × 2 (same formula as the editor).
   const selectedFrameSize = useMemo(
-    () => (frame?.frameSizes ?? []).find((s) => `${s.name} · ${s.widthCm}×${s.lengthCm} cm` === size),
+    () => (frame?.frameSizes ?? []).find((s) => s.name === size),
     [frame, size],
   )
 
@@ -200,28 +190,29 @@ export default function ProductDetailPage() {
     draftH >= frame.sizeFrom && draftH <= frame.sizeTo
   const draftPriceLabel =
     frame && frame.pricePerCm > 0 && draftHasSize
-      ? formatOMR(frame.pricePerCm * (draftW + draftH) * 2 + optionsPricePerCm * draftW * draftH)
+      ? formatOMR(frame.pricePerCm * (draftW + draftH) * 2 + frame.pricePerCm * (frame.wasteValue ?? 0) + optionsPricePerCm * draftW * draftH)
       : '—'
   // Price label:
   //  • a size preset is chosen → the total for that size — frame (pricePerCm
-  //    × perimeter) plus each selected Paper Type / MDF / Lamination / Glass
-  //    Type (pricePerCm × width × length)
+  //    × perimeter, plus the admin-configured waste allowance: pricePerCm ×
+  //    wasteValue) plus each selected Paper Type / MDF / Lamination / Glass
+  //    Type (pricePerCm × width × length) — waste never applies to options
   //  • no preset selectable (e.g. none exist yet) → the per-cm rate, so a
   //    meaningful price always shows instead of a misleading 1 cm minimum
   //  • frame isn't priced → em dash
   const priceLabel = (() => {
     if (!frame || frame.pricePerCm <= 0) return '—'
-    if (hasSize) return formatOMR(frame.pricePerCm * (effW + effH) * 2 + optionsPricePerCm * effW * effH)
+    if (hasSize) return formatOMR(frame.pricePerCm * (effW + effH) * 2 + frame.pricePerCm * (frame.wasteValue ?? 0) + optionsPricePerCm * effW * effH)
     return `${formatOMRRate(frame.pricePerCm)} / cm`
   })()
 
   // Display-only "was" price (struck-through). Same formula as the real price
-  // but from oldPricePerCm — never fed into any calculation. Only shown when
-  // it's a genuine higher "was" price.
+  // (including the waste allowance) but from oldPricePerCm — never fed into
+  // any calculation. Only shown when it's a genuine higher "was" price.
   const oldPriceLabel = (() => {
     const old = frame?.oldPricePerCm ?? 0
     if (!frame || old <= 0 || old <= frame.pricePerCm) return null
-    if (hasSize) return formatOMR(old * (effW + effH) * 2 + optionsPricePerCm * effW * effH)
+    if (hasSize) return formatOMR(old * (effW + effH) * 2 + old * (frame.wasteValue ?? 0) + optionsPricePerCm * effW * effH)
     return `${formatOMRRate(old)} / cm`
   })()
 
@@ -254,8 +245,9 @@ export default function ProductDetailPage() {
   }
 
   // In-range (preset or custom) → add to cart. Price = frame (pricePerCm ×
-  // perimeter) + each selected Paper Type / MDF / Lamination / Glass Type
-  // (pricePerCm × width × length).
+  // perimeter + pricePerCm × wasteValue) + each selected Paper Type / MDF /
+  // Lamination / Glass Type (pricePerCm × width × length) — waste never
+  // applies to those options.
   const handleAddToCart = () => {
     if (!frame || !priced || !hasSize) return
     const area = effW * effH
@@ -266,7 +258,7 @@ export default function ProductDetailPage() {
       thumbnail: frame.imgUrl || gallery[0],
       widthCm: effW,
       heightCm: effH,
-      pricePerItem: frame.pricePerCm * (effW + effH) * 2 + optionsPricePerCm * area,
+      pricePerItem: frame.pricePerCm * (effW + effH) * 2 + frame.pricePerCm * (frame.wasteValue ?? 0) + optionsPricePerCm * area,
       // No mat chosen from the product page — mat is an editor-only option.
       matSizeId: null,
       matSizeName: null,
@@ -298,7 +290,9 @@ export default function ProductDetailPage() {
 
   // Numeric estimate stored on the inquiry (0 when the frame isn't priced).
   const inquiryUnitPrice =
-    priced && hasSize ? frame!.pricePerCm * (effW + effH) * 2 + optionsPricePerCm * effW * effH : 0
+    priced && hasSize
+      ? frame!.pricePerCm * (effW + effH) * 2 + frame!.pricePerCm * (frame!.wasteValue ?? 0) + optionsPricePerCm * effW * effH
+      : 0
 
   return (
     <div className="min-h-screen w-full bg-white font-sans text-[#000000]">
@@ -327,7 +321,7 @@ export default function ProductDetailPage() {
           <Gallery images={gallery} className="lg:w-[calc(56%+10px)]" />
           <BuyPanel
             title={localizedTitle || t('fallback.pictureFrame')}
-            subtitle={frame?.categorySlug ? frame.categorySlug.replace(/-/g, ' ') : t('fallback.customPictureFrame')}
+            subtitle={frame?.specifications?.['Frame Type'] ?? t('fallback.customPictureFrame')}
             sizes={sizes}
             priceLabel={priceLabel}
             oldPriceLabel={oldPriceLabel}

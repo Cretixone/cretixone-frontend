@@ -9,7 +9,6 @@
     "heading": "Filter",
     "reset": "Reset",
     "groups": {
-      "material": "Frame Material",
       "type": "Frame Type",
       "color": "Frame Color"
     },
