@@ -133,9 +133,12 @@ export default function CartPage() {
             {/* Purchase summary */}
             <div className="lg:sticky lg:top-28 lg:self-start">
               <div className="rounded-[33px] bg-white p-6 shadow-[0px_0px_21.1px_rgba(0,0,0,0.09)]">
-                <h2 className="text-lg font-semibold text-brand-navy">{t('cartPage.summary.title')}</h2>
+                {/* Manrope: heading + total row. Everything else in the card
+                    stays on Helvetica Neue (`font-sans`) — matches the summary
+                    card on the checkout page. */}
+                <h2 className="font-manrope text-lg font-semibold text-brand-navy">{t('cartPage.summary.title')}</h2>
 
-                <div className="mt-5 space-y-3 text-sm">
+                <div className="mt-5 space-y-3 font-sans text-sm">
                   <Row label={t('cartPage.summary.subtotal')} value={formatOMR(subtotal)} />
                   <Row label={t('cartPage.summary.shipping')} value={formatOMR(shipping)} />
                 </div>
@@ -143,12 +146,12 @@ export default function CartPage() {
                 <div className="my-4 h-px bg-black/[0.08]" />
 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-foreground">{t('cartPage.summary.total')}</span>
-                  <span className="text-lg font-bold tabular-nums text-brand-navy">
+                  <span className="font-manrope text-sm font-medium text-foreground">{t('cartPage.summary.total')}</span>
+                  <span className="font-manrope text-lg font-bold tabular-nums text-brand-navy">
                     {formatOMR(total)}
                   </span>
                 </div>
-                <p className="mt-1 text-[11px] leading-snug text-foreground/45">
+                <p className="mt-1 font-sans text-[11px] leading-snug text-foreground/45">
                   {t('cartPage.summary.taxLine1')}
                   <br />
                   {t('cartPage.summary.taxLine2')}
@@ -163,7 +166,7 @@ export default function CartPage() {
                 </Button>
               </div>
 
-              <p className="mt-4 text-[11px] leading-relaxed text-foreground/45">
+              <p className="mt-4 font-inter text-[11px] leading-relaxed text-foreground/45">
                 {t('cartPage.summary.pricingPolicy')}
               </p>
             </div>

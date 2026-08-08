@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { PhoneField } from '@/components/auth/PhoneField'
+import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton'
 import { authApi, errorCode, type AuthSession } from '@/api/auth.api'
 import { useAuthStore } from '@/store/authStore'
 import { useAuthUiStore } from '@/store/authUiStore'
@@ -53,25 +54,34 @@ type LoginValues = z.infer<ReturnType<typeof makeLoginSchema>>
 
 function LoginForm({
   onSession,
+  onGoogleSession,
   onNeedsVerify,
   onForgot,
 }: {
   onSession: (s: AuthSession) => void
+  /** Same session handling, but redirects to the dashboard afterwards. */
+  onGoogleSession: (s: AuthSession) => void
   onNeedsVerify: (email: string) => void
   onForgot: () => void
 }) {
   const { t } = useTranslation('auth')
   const loginSchema = useMemo(() => makeLoginSchema(t), [t])
+  // Set when the address belongs to a Google-only account: it has no password,
+  // so the form can't succeed and we point at the Google button instead.
+  const [googleOnly, setGoogleOnly] = useState(false)
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   })
   const submit = form.handleSubmit(async (v) => {
+    setGoogleOnly(false)
     try {
       const session = await authApi.login(v.email, v.password)
       onSession(session)
     } catch (err) {
-      if (errorCode(err) === 'EMAIL_NOT_VERIFIED') onNeedsVerify(v.email)
+      const code = errorCode(err)
+      if (code === 'EMAIL_NOT_VERIFIED') onNeedsVerify(v.email)
+      else if (code === 'GOOGLE_ACCOUNT_NO_PASSWORD') setGoogleOnly(true)
     }
   })
   return (
@@ -86,6 +96,25 @@ function LoginForm({
         <Input id="login-password" type="password" placeholder="••••••••" className={cn('mt-1', fieldCls)} {...form.register('password')} />
         <FieldError msg={form.formState.errors.password?.message} />
       </div>
+
+      {/* Google-only account: explain why the password form can't work, and
+          offer the two routes forward (Google button below, or set a password
+          through the existing forgot-password OTP flow). */}
+      {googleOnly && (
+        <div className="rounded-lg border border-brand-gold/40 bg-brand-gold/[0.07] p-3">
+          <p className="text-[12px] leading-relaxed text-foreground/80">
+            {t('google.accountUsesGoogle')}
+          </p>
+          <button
+            type="button"
+            onClick={onForgot}
+            className="mt-1.5 text-[12px] font-semibold text-brand-navy hover:underline"
+          >
+            {t('google.setPassword')}
+          </button>
+        </div>
+      )}
+
       <button type="button" onClick={onForgot} className="text-[12px] font-medium text-brand-navy hover:underline">
         {t('login.forgot')}
       </button>
@@ -93,6 +122,8 @@ function LoginForm({
         {form.formState.isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
         {t('login.submit')}
       </Button>
+
+      <GoogleAuthButton onSession={onGoogleSession} variant="signin" />
     </form>
   )
 }
@@ -116,7 +147,16 @@ const makeRegisterSchema = (t: TFunction) =>
     })
 type RegisterValues = z.infer<ReturnType<typeof makeRegisterSchema>>
 
-function RegisterForm({ onPending }: { onPending: (email: string) => void }) {
+function RegisterForm({
+  onPending,
+  onGoogleSession,
+}: {
+  onPending: (email: string) => void
+  /** Google sign-up returns a live session immediately — Google already
+      verified the address, so there's no OTP step to route through. Lands on
+      the dashboard. */
+  onGoogleSession: (s: AuthSession) => void
+}) {
   const { t } = useTranslation('auth')
   const registerSchema = useMemo(() => makeRegisterSchema(t), [t])
   const form = useForm<RegisterValues>({
@@ -198,6 +238,8 @@ function RegisterForm({ onPending }: { onPending: (email: string) => void }) {
         {form.formState.isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
         {t('register.submit')}
       </Button>
+
+      <GoogleAuthButton onSession={onGoogleSession} variant="signup" />
     </form>
   )
 }
@@ -374,12 +416,24 @@ export function AuthDialog() {
     if (open) setScreen(view === 'register' ? 'register' : view === 'forgot' ? 'forgot' : 'login')
   }, [open, view])
 
-  const onSession = (s: AuthSession) => {
+  /**
+   * @param fallbackTo where to land when nothing else is pending. A
+   *   `redirectTo` set by whoever opened the dialog always wins — someone sent
+   *   here from checkout must return to checkout, not be dumped on the
+   *   dashboard.
+   */
+  const onSession = (s: AuthSession, fallbackTo?: string) => {
     setAuth({ accessToken: s.accessToken, refreshToken: s.refreshToken, user: s.user })
     toast.success(t('toast.welcome', { name: s.user.firstName }))
     close()
-    if (redirectTo) navigate(redirectTo)
+    const dest = redirectTo ?? fallbackTo
+    if (dest) navigate(dest)
   }
+
+  // Signing in or registering with Google lands on the dashboard. Unlike the
+  // email flows there's no separate profile-completion step, so the dashboard
+  // is where a brand-new Google user can fill in phone/address.
+  const onGoogleSession = (s: AuthSession) => onSession(s, '/dashboard')
 
   const titles: Record<Screen, { title: string; desc: string }> = {
     login: { title: t('titles.login.title'), desc: t('titles.login.desc') },
@@ -420,12 +474,16 @@ export function AuthDialog() {
               <TabsContent value="login" className="mt-4">
                 <LoginForm
                   onSession={onSession}
+                  onGoogleSession={onGoogleSession}
                   onNeedsVerify={(email) => { setPendingEmail(email); setScreen('verify') }}
                   onForgot={() => setScreen('forgot')}
                 />
               </TabsContent>
               <TabsContent value="register" className="mt-4">
-                <RegisterForm onPending={(email) => { setPendingEmail(email); setScreen('verify') }} />
+                <RegisterForm
+                  onPending={(email) => { setPendingEmail(email); setScreen('verify') }}
+                  onGoogleSession={onGoogleSession}
+                />
               </TabsContent>
             </Tabs>
           ) : screen === 'verify' ? (

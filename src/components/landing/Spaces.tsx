@@ -2,15 +2,14 @@ import { motion, type Variants } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import StackSlider from '@/components/landing/StackSlider'
 
+// Each label describes what's actually in its photo — StackSlider renders the
+// active one as prominent copy under the slider (and keys slides by it, so
+// they must stay unique).
 const SPACES = [
-  { labelKey: 'spaces.items.bedroom', image: '/images/webp/slide-1.webp' },
-  { labelKey: 'spaces.items.livingRoom', image: '/images/webp/slide-2.webp' },
-  { labelKey: 'spaces.items.office', image: '/images/webp/slide-3.webp' },
-  { labelKey: 'spaces.items.bathroom', image: '/images/webp/slide-4.webp' },
-  { labelKey: 'spaces.items.kitchen', image: '/images/webp/slide-5.webp' },
-  { labelKey: 'spaces.items.hallway', image: '/images/webp/slide-6.webp' },
-  { labelKey: 'spaces.items.lounge', image: '/images/webp/slide-7.webp' },
-  { labelKey: 'spaces.items.dining', image: '/images/webp/slide-8.webp' },
+  { labelKey: 'spaces.items.bedroom', image: '/images/spaces/bedroom.png' },
+  { labelKey: 'spaces.items.livingRoom', image: '/images/spaces/living-room.png' },
+  { labelKey: 'spaces.items.guestRoom', image: '/images/spaces/guest-room.png' },
+  { labelKey: 'spaces.items.lounge', image: '/images/spaces/lounge.png' },
 ]
 
 const fadeUp: Variants = {

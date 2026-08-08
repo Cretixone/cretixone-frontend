@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Secrets — never commit. Google OAuth needs only the public client ID
+# (VITE_GOOGLE_CLIENT_ID in .env); the downloaded client_secret*.json from
+# Google Cloud Console contains a real secret and has no place in a frontend.
+.env
+.env.*
+!.env.example
+client_secret*.json
+
 # Editor directories and files
 .vscode/*
 .claude

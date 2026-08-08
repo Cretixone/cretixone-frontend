@@ -44,11 +44,26 @@
     "whatWeDo": {
       "title": "What We Do",
       "services": {
-        "framing": { "alt": "Art", "label": "Custom framing and art solutions" },
-        "print": { "alt": "Print", "label": "Digital artwork and print production" },
-        "design": { "alt": "Creative", "label": "Creative design and branding solutions" },
-        "corporate": { "alt": "Corporate", "label": "Corporate and bulk creative services" },
-        "development": { "alt": "Development", "label": "Development of digital creative platforms" }
+        "framing": {
+          "alt": "Art",
+          "label": "Custom framing and art solutions"
+        },
+        "print": {
+          "alt": "Print",
+          "label": "Digital artwork and print production"
+        },
+        "design": {
+          "alt": "Creative",
+          "label": "Creative design and branding solutions"
+        },
+        "corporate": {
+          "alt": "Corporate",
+          "label": "Corporate and bulk creative services"
+        },
+        "development": {
+          "alt": "Development",
+          "label": "Development of digital creative platforms"
+        }
       },
       "marketplaceLine1": "Oman's First Creative",
       "marketplaceLine2": "Market Place",
@@ -58,10 +73,22 @@
     },
     "commitment": {
       "title": "Our Commitment",
-      "deliver": { "alt": "Deliver premium", "text": "Deliver premium-quality products and services" },
-      "support": { "alt": "Support", "text": "Support and empower creative talent" },
-      "innovative": { "alt": "Innovative solutions", "text": "Build innovative and sustainable solutions" },
-      "elevate": { "alt": "Elevate globally", "text": "Elevate Oman's creative industry globally" }
+      "deliver": {
+        "alt": "Deliver premium",
+        "text": "Deliver premium-quality products and services"
+      },
+      "support": {
+        "alt": "Support",
+        "text": "Support and empower creative talent"
+      },
+      "innovative": {
+        "alt": "Innovative solutions",
+        "text": "Build innovative and sustainable solutions"
+      },
+      "elevate": {
+        "alt": "Elevate globally",
+        "text": "Elevate Oman's creative industry globally"
+      }
     },
     "promise": {
       "commitmentAlt": "Our commitment",
@@ -104,18 +131,54 @@
     "subtitle": "Read how our users have framed their best moments and elevated their spaces with Cretixone's custom prints and frames.",
     "heartAlt": "Happy Cretixone users",
     "people": {
-      "emily": { "role": "Interior Designer", "quote": "Cretixone's custom framing turned my client's photos into gallery-worthy pieces. The quality and finish exceeded every expectation." },
-      "sarah": { "role": "Home Stylist", "quote": "The range of frame styles and mat options is incredible. I found the perfect match for every room in just minutes." },
-      "olivia": { "role": "Illustrator", "quote": "Being able to sell my artwork and have it printed and framed on demand completely changed how I run my studio." },
-      "ethan": { "role": "Marketing Lead", "quote": "Quick, reliable, and the print quality is exceptional. Cretixone has become our go-to for wall art." },
-      "james": { "role": "Photographer", "quote": "The preview editor let me see exactly how my prints would look before ordering. Zero surprises, beautiful results." },
-      "michael": { "role": "Freelance Designer", "quote": "Cretixone makes framing effortless — upload, choose a style, done. The floater frames are my new favorite." },
-      "david": { "role": "Architect", "quote": "The craftsmanship is outstanding. Natural wood, clean lines — these frames genuinely elevate any space." },
-      "daniel": { "role": "Gallery Curator", "quote": "The variety and quality on Cretixone exceeded our expectations. Perfect for professional presentations." },
-      "laura": { "role": "Art Collector", "quote": "From upload to delivery the whole experience felt premium. My framed prints arrived flawless and ready to hang." },
-      "chris": { "role": "Business Owner", "quote": "I ordered prints in bulk for our office and the consistency was spot on. Great service and fast turnaround." },
-      "mia": { "role": "Content Creator", "quote": "Easy to navigate, beautiful results, and the support team is genuinely helpful. Highly recommended!" },
-      "sophia": { "role": "Interior Architect", "quote": "Every detail, from the mat to the moulding, is considered. The result is timeless and elegant." }
+      "emily": {
+        "role": "Interior Designer",
+        "quote": "Cretixone's custom framing turned my client's photos into gallery-worthy pieces. The quality and finish exceeded every expectation."
+      },
+      "sarah": {
+        "role": "Home Stylist",
+        "quote": "The range of frame styles and mat options is incredible. I found the perfect match for every room in just minutes."
+      },
+      "olivia": {
+        "role": "Illustrator",
+        "quote": "Being able to sell my artwork and have it printed and framed on demand completely changed how I run my studio."
+      },
+      "ethan": {
+        "role": "Marketing Lead",
+        "quote": "Quick, reliable, and the print quality is exceptional. Cretixone has become our go-to for wall art."
+      },
+      "james": {
+        "role": "Photographer",
+        "quote": "The preview editor let me see exactly how my prints would look before ordering. Zero surprises, beautiful results."
+      },
+      "michael": {
+        "role": "Freelance Designer",
+        "quote": "Cretixone makes framing effortless — upload, choose a style, done. The floater frames are my new favorite."
+      },
+      "david": {
+        "role": "Architect",
+        "quote": "The craftsmanship is outstanding. Natural wood, clean lines — these frames genuinely elevate any space."
+      },
+      "daniel": {
+        "role": "Gallery Curator",
+        "quote": "The variety and quality on Cretixone exceeded our expectations. Perfect for professional presentations."
+      },
+      "laura": {
+        "role": "Art Collector",
+        "quote": "From upload to delivery the whole experience felt premium. My framed prints arrived flawless and ready to hang."
+      },
+      "chris": {
+        "role": "Business Owner",
+        "quote": "I ordered prints in bulk for our office and the consistency was spot on. Great service and fast turnaround."
+      },
+      "mia": {
+        "role": "Content Creator",
+        "quote": "Easy to navigate, beautiful results, and the support team is genuinely helpful. Highly recommended!"
+      },
+      "sophia": {
+        "role": "Interior Architect",
+        "quote": "Every detail, from the mat to the moulding, is considered. The result is timeless and elegant."
+      }
     }
   },
   "terms": {
@@ -245,8 +308,12 @@
       "cta": "Buy Your Design"
     },
     "sectionBlurb": "Whether it's family portraits, wedding memories, travel adventures, artwork, or business branding, we provide vibrant colors, sharp details, and long-lasting quality using premium printing materials.",
-    "prints": { "title": "Custom Prints" },
-    "whyChoose": { "title": "Why Choose Us?" },
+    "prints": {
+      "title": "Custom Prints"
+    },
+    "whyChoose": {
+      "title": "Why Choose Us?"
+    },
     "categories": {
       "photoPrints": "Photo Prints",
       "canvasPrints": "Canvas Prints",
@@ -263,7 +330,9 @@
       "fastProduction": "Fast production",
       "professional": "Professional finishing"
     },
-    "ctaSection": { "title": "Bring your ideas to life with custom prints made just for you." }
+    "ctaSection": {
+      "title": "Bring your ideas to life with custom prints made just for you."
+    }
   },
   "customMirrors": {
     "hero": {
@@ -288,6 +357,86 @@
       "title": "Crafted with Precision",
       "text": "Every mirror is manufactured with precision using premium materials for durability and elegance.",
       "cta": "Create a new product"
+    }
+  },
+  "privacy": {
+    "breadcrumb": {
+      "home": "Home",
+      "aria": "Breadcrumb",
+      "current": "Privacy policy"
+    },
+    "title": "Privacy Policy",
+    "company": "Creative One Business SPC (Cretixone).",
+    "lastUpdatedLabel": "Last updated:",
+    "lastUpdatedDate": "8 August 2026",
+    "s1": {
+      "title": "What this policy covers",
+      "p1": "This policy explains what we do with your information when you use cretixone.com. It covers the website, the frame designer, and anything you send us when you place an order or get in touch.",
+      "p2": "Cretixone is operated by Creative One Business SPC, a company registered in the Sultanate of Oman, and that company is responsible for the information described here. If anything below is unclear, write to us and we will explain it properly."
+    },
+    "s2": {
+      "title": "Information you give us",
+      "p1": "When you create an account we ask for your first name, last name, and email address. You can add a phone number and an address later if you want to.",
+      "p2": "When you place an order we ask for the details we need to deliver it. That means your name, email, phone number, country, city, street address, house or building number, and an optional company name. You can also leave a note for our team, for example if the building is hard to find.",
+      "p3": "If you upload a photo in the frame designer, we keep it so we can show you your preview and print the item you ordered. If you write a review or send an enquiry, we keep what you wrote along with your name.",
+      "p4": "We do not ask for and do not want your card details. Orders on this site are paid in cash when the item reaches you."
+    },
+    "s3": {
+      "title": "Information we collect automatically",
+      "p1": "Like most websites, our servers record basic technical details when you visit. That includes your IP address, which pages you opened, and which browser you used. We use this to keep the site working and to spot abuse.",
+      "p2": "We do not build advertising profiles and we do not sell what we collect."
+    },
+    "s4": {
+      "title": "Signing in with Google",
+      "p1": "You can create an account or sign in using your Google account. If you choose this, Google tells us your name, your email address, whether that email is verified, and the picture on your Google profile. We do not receive your Google password and we cannot see anything else in your Google account.",
+      "p2": "We use what Google sends us for one purpose only, which is to create your Cretixone account and let you sign back into it. Your name and email fill in your profile and your order confirmations. Your profile picture is only shown back to you inside your account.",
+      "p3": "We do not use Google account data for advertising, we do not share it with anyone else, and we do not use it to train any kind of model.",
+      "p4": "An account made through Google has no password at first, so it can only be opened with Google. If you would rather sign in with an email and a password as well, use the forgot password link and set one.",
+      "p5": "You can disconnect Cretixone from your Google account at any time in your Google security settings. If you do that, ask us to delete your Cretixone account too, otherwise it stays until you tell us otherwise."
+    },
+    "s5": {
+      "title": "How we use your information",
+      "p1": "We use it to make and deliver what you ordered, to send you the confirmation and any updates when the order status changes, and to answer you when you contact us.",
+      "p2": "We also use it to keep your account working, to show your order history back to you, and to keep records of sales as the law here requires.",
+      "p3": "We will only email you about something other than your order or your account if you have asked us to."
+    },
+    "s6": {
+      "title": "Who we share it with",
+      "p1": "We share your name, phone number, and address with the courier that brings your order. They need it to find you.",
+      "p2": "We use an email provider to send order confirmations and password codes, so your email address passes through their system.",
+      "p3": "We will hand over information if a court or a government authority in Oman formally requires it. Apart from that, we do not give your details to anyone, and we never sell them."
+    },
+    "s7": {
+      "title": "How long we keep it",
+      "p1": "Order records stay with us for as long as the tax and accounting rules require, because we have to be able to show what we sold and to whom.",
+      "p2": "Your account details stay until you ask us to remove them. Photos you uploaded stay while the related order is active, and we clear them out once they are no longer needed."
+    },
+    "s8": {
+      "title": "Your choices",
+      "p1": "You can see and edit most of your details yourself in your account. If you want a copy of what we hold, or you want it corrected or deleted, email us and we will sort it out.",
+      "p2": "If you ask us to delete your account, we will do it, but we may have to keep the order records themselves for the period the law sets. We will tell you if that applies to you."
+    },
+    "s9": {
+      "title": "Cookies and browser storage",
+      "p1": "We keep your sign in token and your cart in your browser storage so that you stay signed in and your cart is still there when you come back. Clearing your browser data removes both.",
+      "p2": "We do not run advertising or tracking cookies from other companies on this site."
+    },
+    "s10": {
+      "title": "Keeping your information safe",
+      "p1": "Traffic to and from the site is encrypted. Passwords are stored as hashes, not as text, so nobody at Cretixone can read them. Access to order data is limited to the people who need it to do their work.",
+      "p2": "No system is perfect, so if something ever goes wrong in a way that affects you, we will tell you."
+    },
+    "s11": {
+      "title": "Children",
+      "p1": "Cretixone sells picture frames and printing, so the site is not aimed at children and we do not market to them. We do not knowingly collect information from a child. If you are a parent or guardian and you believe your child has created an account or sent us their details, write to us and we will remove it."
+    },
+    "s12": {
+      "title": "Changes to this policy",
+      "p1": "If we change how we handle your information, we will update this page and change the date at the top. If the change is significant, we will say so on the site rather than quietly editing the text."
+    },
+    "s13": {
+      "title": "How to reach us",
+      "p1": "For anything about your information or this policy, email us at hello@cretixone.com and we will get back to you."
     }
   }
 }

@@ -49,7 +49,13 @@ function LanguageSwitcher() {
           <Languages className="h-4 w-4" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-40 bg-background border-0">
+      {/* z-[120] because the PillNav below the header is fixed at z-[60] and
+          would otherwise cover this menu (the shared default is z-50).
+          text-brand-navy is explicit on purpose: the shared component's
+          text-[var(--ed-fg)] only resolves inside the editor shell, so out here
+          the menu was inheriting whatever colour the page had set on <body>
+          (navy on the landing page, the editor's light grey on /dashboard). */}
+      <DropdownMenuContent align="end" className="z-[120] w-40 border-0 bg-background text-brand-navy">
         <DropdownMenuItem
           onClick={() => setLang('en')}
           className={cn('bg-background hover:text-brand-gold', !isRtl && 'font-semibold text-brand-gold')}
@@ -106,7 +112,9 @@ function AccountButton() {
           {initials}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52 bg-background border-0">
+      {/* Same z-[120] and explicit text colour as the language menu, so this
+          menu looks identical on every page. */}
+      <DropdownMenuContent align="end" className="z-[120] w-52 border-0 bg-background text-brand-navy">
         <DropdownMenuLabel>
           <div className="truncate">{user?.firstName} {user?.lastName}</div>
           <div className="truncate text-[11px] font-normal lowercase text-foreground/50">{user?.email}</div>

@@ -46,6 +46,16 @@ export const authApi = {
     return res.data.data
   },
 
+  /**
+   * Google Sign-In. Takes the ID token from Google Identity Services and
+   * exchanges it for our own session. Handles sign-up and sign-in in one call —
+   * the backend creates, links, or matches the account as needed.
+   */
+  async google(idToken: string) {
+    const res = await cretixAxios.post<Ok<AuthSession>>('/users/google', { idToken })
+    return res.data.data
+  },
+
   async forgotPassword(email: string) {
     await cretixAxios.post('/users/forgot-password', { email })
   },

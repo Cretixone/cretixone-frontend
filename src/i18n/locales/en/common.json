@@ -40,5 +40,12 @@
     "rightsReserved": "All rights reserved",
     "privacy": "Privacy & Policy",
     "terms": "Terms & Condition"
+  },
+  "cookies": {
+    "aria": "Cookie notice",
+    "message": "We use only the storage this site needs to work, which keeps you signed in and remembers your cart. We do not run advertising or tracking cookies.",
+    "readPolicy": "Read our privacy policy",
+    "accept": "Accept",
+    "reject": "Reject"
   }
 }

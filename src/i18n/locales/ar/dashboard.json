@@ -31,6 +31,19 @@
       "shipped": "تم الشحن",
       "delivered": "تم التوصيل",
       "cancelled": "ملغى"
+    },
+    "viewDetails": "عرض التفاصيل الكاملة",
+    "hideDetails": "إخفاء التفاصيل",
+    "downloadInvoice": "تحميل الفاتورة",
+    "detail": {
+      "deliveryTo": "التوصيل إلى",
+      "notes": "ملاحظات الطلب",
+      "summary": "ملخص الدفع",
+      "subtotal": "المجموع الفرعي",
+      "shipping": "الشحن",
+      "paymentMethod": "طريقة الدفع",
+      "cashOnDelivery": "الدفع عند التسليم",
+      "total": "الإجمالي"
     }
   },
   "profile": {

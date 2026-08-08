@@ -82,6 +82,7 @@ const styles = StyleSheet.create({
   colTotal: { width: '11%', textAlign: 'right' },
   itemName: { fontFamily: 'Helvetica-Bold', fontSize: 10, color: NAVY },
   itemSubtitle: { fontSize: 8.5, color: GRAY, marginTop: 1 },
+  itemOption: { fontSize: 8, color: GRAY, marginTop: 1.5 },
   cellText: { fontSize: 9.5, color: '#333333' },
   totalsBlock: {
     marginTop: 16,
@@ -129,6 +130,19 @@ const styles = StyleSheet.create({
 
 function formatOMR(n: number) {
   return `OMR ${formatAmount(n)}`
+}
+
+/** "Label: value" lines for every option this line was ordered with, skipping
+ *  any the customer didn't select. Mirrors the order-complete page's list. */
+function itemOptions(item: Order['items'][number]): string[] {
+  return [
+    item.matSizeName ? `Mat: ${item.matSizeName}` : null,
+    item.matColorName ? `Mat color: ${item.matColorName}` : null,
+    item.paperTypeName ? `Paper Type: ${item.paperTypeName}` : null,
+    item.mdfName ? `MDF Type: ${item.mdfName}` : null,
+    item.laminationName ? `Lamination: ${item.laminationName}` : null,
+    item.glassTypeName ? `Glass Type: ${item.glassTypeName}` : null,
+  ].filter((v): v is string => !!v)
 }
 
 function formatAddress(order: Order): string {
@@ -193,6 +207,14 @@ export function InvoiceDocument({ order }: { order: Order }) {
               <View style={styles.colProduct}>
                 <Text style={styles.itemName}>{item.name}</Text>
                 {item.subtitle ? <Text style={styles.itemSubtitle}>{item.subtitle}</Text> : null}
+                {/* Options the customer actually chose. Unselected ones are
+                    dropped, so a frame without glass/lamination lists nothing
+                    extra — same rule as the order-complete page. */}
+                {itemOptions(item).map((opt) => (
+                  <Text key={opt} style={styles.itemOption}>
+                    {opt}
+                  </Text>
+                ))}
               </View>
               <Text style={[styles.cellText, styles.colSize]}>
                 {item.widthCm.toFixed(1)} x {item.heightCm.toFixed(1)} cm

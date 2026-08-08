@@ -9,6 +9,9 @@ import StatusBar from '@/components/layout/StatusBar'
 import { DirectionProvider } from '@radix-ui/react-direction'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthDialog } from '@/components/auth/AuthDialog'
+import { GoogleOneTap } from '@/components/auth/GoogleOneTap'
+import { usePageTitle } from '@/hooks/usePageTitle'
+import { CookieConsent } from '@/components/CookieConsent'
 import { useLangStore } from '@/store/langStore'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { useEditorStore } from '@/store/editorStore'
@@ -23,6 +26,7 @@ const ProfilePage = lazy(() => import('@/pages/dashboard/ProfilePage'))
 const OrdersPage = lazy(() => import('@/pages/dashboard/OrdersPage'))
 const LandingPage = lazy(() => import('@/pages/LandingPage'))
 const TermsPage = lazy(() => import('@/pages/TermsPage'))
+const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage'))
 const AboutPage = lazy(() => import('@/pages/AboutPage'))
 const ProductsPage = lazy(() => import('@/pages/ProductsPage'))
 const ProductDetailPage = lazy(() => import('@/pages/ProductDetailPage'))
@@ -85,6 +89,8 @@ export default function App() {
   // Feeds the active direction to ALL Radix components (Tabs, Select, dropdowns…)
   // so they stop forcing dir="ltr" on their roots in Arabic.
   const dir = useLangStore((s) => s.dir)
+  // Keeps the browser tab title in step with the active route.
+  usePageTitle()
   useEffect(() => {
     if (!accessToken) return
     authApi.getMe().then(setUser).catch(() => { /* handled by interceptor */ })
@@ -98,6 +104,9 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/terms" element={<TermsPage />} />
+        {/* Public and unguarded on purpose — Google's OAuth verification
+            review fetches this URL directly. */}
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/team" element={<TeamPage />} />
         <Route path="/testimonials" element={<TestimonialsPage />} />
@@ -142,6 +151,11 @@ export default function App() {
 
       {/* Global auth dialog + toasts (mounted once, available app-wide). */}
       <AuthDialog />
+      {/* Google One Tap — the top-right "Continue as …" prompt. Renders no
+          markup and self-disables once signed in. */}
+      <GoogleOneTap />
+      {/* Cookie notice — shows once until the visitor accepts or rejects. */}
+      <CookieConsent />
       <Toaster position="top-center" richColors closeButton />
     </Suspense>
     </DirectionProvider>

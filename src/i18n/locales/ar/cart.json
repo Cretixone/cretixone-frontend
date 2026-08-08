@@ -44,7 +44,9 @@
       "perItem": "{{price}} لكل قطعة",
       "removeItem": "إزالة العنصر",
       "decreaseQty": "تقليل الكمية",
-      "increaseQty": "زيادة الكمية"
+      "increaseQty": "زيادة الكمية",
+      "matSize": "الباسبارتو:",
+      "matColor": "لون الباسبارتو:"
     }
   },
   "checkoutPage": {
@@ -94,13 +96,13 @@
     "table": {
       "product": "المنتج",
       "total": "الإجمالي",
-      "finishedSize": "المقاس النهائي: {{w}} × {{h}} سم (تقريبًا)",
-      "imageSize": "مقاس الصورة: {{w}} × {{h}} سم",
       "shipping": "الشحن:",
       "subtotal": "المجموع الفرعي",
       "paymentMethod": "طريقة الدفع:",
       "cashOnDelivery": "الدفع عند التسليم",
-      "totalPayment": "إجمالي الدفع"
+      "totalPayment": "إجمالي الدفع:",
+      "finishedSizeLabel": "المقاس النهائي:",
+      "finishedSizeValue": "{{w}} × {{h}} سم (تقريبًا)"
     },
     "addressCard": {
       "title": "عنوان الشحن والفاتورة",

@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { Loader2, Package } from 'lucide-react'
+import { ChevronDown, FileText, Loader2, Package } from 'lucide-react'
 import { ordersApi, type Order, type OrderStatus, type PageMeta } from '@/api/orders.api'
 import { formatOMR } from '@/lib/format'
+import { getCountryName } from '@/lib/countries'
+import { downloadInvoice } from '@/lib/invoice'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import { Pagination } from '@/components/ui/pagination'
 
 const PAGE_SIZE = 6
@@ -84,7 +87,48 @@ export default function OrdersPage() {
   return (
     <div className="space-y-4">
       {paged.map((o) => (
-        <div key={o.id} className="rounded-2xl border border-black/[0.07] bg-white p-5 shadow-sm md:p-6">
+        <OrderCard key={o.id} order={o} />
+      ))}
+      <Pagination page={current} pageCount={pageCount} onPage={setPage} className="pt-2" />
+    </div>
+  )
+}
+
+/** Joins the order's address fields into one line for the detail panel. */
+function formatAddress(order: Order): string {
+  return [
+    order.houseNumber ? `Building Number ${order.houseNumber}` : null,
+    order.location,
+    order.address,
+    order.city,
+    getCountryName(order.country),
+  ]
+    .filter(Boolean)
+    .join(', ')
+}
+
+/**
+ * One order. Collapsed it shows the summary plus its line items; expanding
+ * reveals the full detail (delivery address, notes and the money breakdown)
+ * without leaving the page.
+ */
+function OrderCard({ order: o }: { order: Order }) {
+  const { t } = useTranslation('dashboard')
+  const [open, setOpen] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+
+  const handleDownload = async () => {
+    if (downloading) return
+    setDownloading(true)
+    try {
+      await downloadInvoice(o)
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  return (
+        <div className="rounded-2xl border border-black/[0.07] bg-white p-5 shadow-sm md:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2.5">
@@ -127,9 +171,87 @@ export default function OrdersPage() {
               </div>
             ))}
           </div>
+
+          {/* Actions: expand for the rest of the detail, or pull the invoice. */}
+          <div className="mt-4 flex flex-col gap-3 border-t border-black/[0.06] pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              aria-expanded={open}
+              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-navy transition hover:opacity-80"
+            >
+              {open ? t('orders.hideDetails') : t('orders.viewDetails')}
+              <ChevronDown className={cn('h-4 w-4 transition-transform', open && 'rotate-180')} />
+            </button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDownload}
+              disabled={downloading}
+              className="w-full gap-2 border-brand-gold/50 bg-transparent text-brand-gold hover:bg-brand-gold/10 sm:w-auto"
+            >
+              {downloading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4" />
+              )}
+              {t('orders.downloadInvoice')}
+            </Button>
+          </div>
+
+          {open && (
+            <div className="mt-4 grid grid-cols-1 gap-6 border-t border-black/[0.06] pt-4 sm:grid-cols-2">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground/45">
+                  {t('orders.detail.deliveryTo')}
+                </p>
+                <p className="mt-2 break-words text-sm font-medium text-brand-navy">{o.customerName}</p>
+                <p className="mt-0.5 break-words text-[13px] leading-relaxed text-foreground/60">
+                  {formatAddress(o)}
+                </p>
+                {o.customerPhone && (
+                  <p className="mt-1 text-[13px] text-foreground/60">{o.customerPhone}</p>
+                )}
+                <p className="break-words text-[13px] text-foreground/60">{o.customerEmail}</p>
+
+                {o.orderNotes && (
+                  <>
+                    <p className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-foreground/45">
+                      {t('orders.detail.notes')}
+                    </p>
+                    <p className="mt-1.5 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-foreground/60">
+                      {o.orderNotes}
+                    </p>
+                  </>
+                )}
+              </div>
+
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground/45">
+                  {t('orders.detail.summary')}
+                </p>
+                <dl className="mt-2 space-y-1.5 text-[13px]">
+                  <SummaryRow label={t('orders.detail.subtotal')} value={formatOMR(o.subtotal)} />
+                  <SummaryRow label={t('orders.detail.shipping')} value={formatOMR(o.shipping)} />
+                  <SummaryRow label={t('orders.detail.paymentMethod')} value={t('orders.detail.cashOnDelivery')} />
+                  <div className="flex items-center justify-between border-t border-black/[0.06] pt-2">
+                    <dt className="font-semibold text-brand-navy">{t('orders.detail.total')}</dt>
+                    <dd className="font-bold tabular-nums text-brand-navy">{formatOMR(o.total)}</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          )}
         </div>
-      ))}
-      <Pagination page={current} pageCount={pageCount} onPage={setPage} className="pt-2" />
+  )
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <dt className="text-foreground/60">{label}</dt>
+      <dd className="tabular-nums text-foreground">{value}</dd>
     </div>
   )
 }

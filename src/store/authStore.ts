@@ -10,7 +10,13 @@ export interface AuthUser {
   phone: string | null
   address: string | null
   zipcode: string | null
+  /** Google profile picture, when the account is linked to Google. */
+  avatarUrl: string | null
   emailVerified: boolean
+  /** Which sign-in methods this account can use (derived server-side). */
+  hasGoogle: boolean
+  /** False for Google-only accounts until they set a password. */
+  hasPassword: boolean
   createdAt?: string
   updatedAt?: string
 }

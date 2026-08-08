@@ -254,6 +254,38 @@
   font-display: swap;
 }
 
+/* ── Manrope (self-hosted variable font) ─────────────────────────────────
+ * One file covers Manrope's full 200–800 weight axis, so a single @font-face
+ * serves every weight. Exposed to Tailwind as `font-manrope` — used for the
+ * Purchase Summary heading and total. */
+@font-face {
+  font-family: 'Manrope';
+  src: url('/fonts/manrope/Manrope-VariableFont_wght.ttf') format('truetype');
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Inter (self-hosted variable font) ───────────────────────────────────
+ * Two files: upright and a true italic. Both carry opsz + wght axes, so each
+ * covers the full 100–900 range and the browser picks the right instance.
+ * Declaring the italic separately matters — without it the browser would
+ * synthesise a slanted fake for `italic` text. Exposed as `font-inter`. */
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/inter/Inter-VariableFont_opsz,wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/inter/Inter-Italic-VariableFont_opsz,wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
 @layer base {
   * {
     box-sizing: border-box;

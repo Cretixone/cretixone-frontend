@@ -44,7 +44,9 @@
       "perItem": "{{price}} per item",
       "removeItem": "Remove item",
       "decreaseQty": "Decrease quantity",
-      "increaseQty": "Increase quantity"
+      "increaseQty": "Increase quantity",
+      "matSize": "Mat:",
+      "matColor": "Mat color:"
     }
   },
   "checkoutPage": {
@@ -94,13 +96,13 @@
     "table": {
       "product": "Product",
       "total": "Total",
-      "finishedSize": "Finished Size: {{w}} x {{h}} cm (approx.)",
-      "imageSize": "Image Size: {{w}} x {{h}} cm",
       "shipping": "Shipping:",
       "subtotal": "Subtotal",
       "paymentMethod": "Payment method:",
       "cashOnDelivery": "Cash on delivery",
-      "totalPayment": "Total payment"
+      "totalPayment": "Total payment:",
+      "finishedSizeLabel": "Finished Size:",
+      "finishedSizeValue": "{{w}} × {{h}} cm (approx.)"
     },
     "addressCard": {
       "title": "Shipping & Billing Address",

@@ -33,6 +33,10 @@ export default {
         display: ['"Helvetica Neue"', 'Helvetica', 'Arial', 'system-ui', 'sans-serif'],
         dm: ['"DM Sans"', 'system-ui', 'sans-serif'],
         jasmine: ['"JasmineUPC"', 'system-ui', 'sans-serif'],
+        // Self-hosted Manrope variable font (see src/index.css @font-face).
+        manrope: ['Manrope', '"Helvetica Neue"', 'Helvetica', 'Arial', 'system-ui', 'sans-serif'],
+        // Self-hosted Inter variable font, upright + true italic.
+        inter: ['Inter', '"Helvetica Neue"', 'Helvetica', 'Arial', 'system-ui', 'sans-serif'],
       },
     },
   },

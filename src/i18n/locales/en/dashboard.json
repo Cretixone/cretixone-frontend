@@ -31,6 +31,19 @@
       "shipped": "Shipped",
       "delivered": "Delivered",
       "cancelled": "Cancelled"
+    },
+    "viewDetails": "View full details",
+    "hideDetails": "Hide details",
+    "downloadInvoice": "Download invoice",
+    "detail": {
+      "deliveryTo": "Delivering to",
+      "notes": "Order notes",
+      "summary": "Payment summary",
+      "subtotal": "Subtotal",
+      "shipping": "Shipping",
+      "paymentMethod": "Payment method",
+      "cashOnDelivery": "Cash on delivery",
+      "total": "Total"
     }
   },
   "profile": {

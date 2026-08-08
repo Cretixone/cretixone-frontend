@@ -22,7 +22,7 @@ export interface StackSliderProps {
 
 export default function StackSlider({
   slides,
-  heightClass = 'h-[420px] md:h-[520px] lg:h-[600px]',
+  heightClass = 'h-[420px] md:h-[520px] lg:h-[550px]',
   className,
 }: StackSliderProps) {
   const [activeIdx, setActiveIdx] = useState(0)

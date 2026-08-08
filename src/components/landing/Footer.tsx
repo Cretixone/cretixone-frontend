@@ -142,12 +142,15 @@ export default function Footer() {
           <div className="flex flex-col gap-3 text-xs text-foreground sm:flex-row sm:items-center sm:justify-between md:text-[14px]">
             <p>©{new Date().getFullYear()} Cretixone. {t('footer.rightsReserved')}</p>
             <div className="flex items-center gap-8">
-              <a
-                href="#privacy"
+              {/* Real route, not the old "#privacy" placeholder anchor. Google's
+                  OAuth verification requires a privacy policy link that is
+                  reachable from the site. */}
+              <Link
+                to="/privacy"
                 className="transition hover:text-brand-navy"
               >
                 {t('footer.privacy')}
-              </a>
+              </Link>
               <Link
                 to="/terms"
                 className="transition hover:text-brand-navy"

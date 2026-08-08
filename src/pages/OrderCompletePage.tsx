@@ -25,6 +25,18 @@ function formatAddress(order: Order): string {
     .join(', ')
 }
 
+/** One "Label: value" line for a chosen option. Renders nothing when the
+ *  option wasn't selected, so unselected options leave no empty row behind. */
+function OptionLine({ label, value }: { label: string; value?: string | null }) {
+  if (!value) return null
+  return (
+    <div className="flex gap-1.5">
+      <dt>{label}</dt>
+      <dd className="text-foreground/70">{value}</dd>
+    </div>
+  )
+}
+
 export default function OrderCompletePage() {
   const { t } = useTranslation('cart')
   const { orderId } = useParams()
@@ -86,26 +98,26 @@ export default function OrderCompletePage() {
         {/* Breadcrumb */}
         <nav
           aria-label={t('breadcrumb.label')}
-          className="flex items-center gap-2 text-xs text-foreground/60 md:text-[13px]"
+          className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-foreground/60 md:text-[13px]"
         >
-          <Link to="/" aria-label={t('breadcrumb.home')} className="inline-flex items-center hover:text-brand-navy">
+          <Link to="/" aria-label={t('breadcrumb.home')} className="inline-flex items-center hover:text-foreground">
             <Home className="h-3.5 w-3.5" strokeWidth={2} />
           </Link>
           <ChevronRight className="h-3 w-3 text-foreground/40" />
-          <Link to="/cart" className="hover:text-brand-navy">{t('cartPage.breadcrumb')}</Link>
+          <Link to="/cart" className="hover:text-foreground">{t('cartPage.breadcrumb')}</Link>
           <ChevronRight className="h-3 w-3 text-foreground/40" />
-          <Link to="/checkout" className="hover:text-brand-navy">{t('checkoutPage.breadcrumbCheckout')}</Link>
+          <Link to="/checkout" className="hover:text-foreground">{t('checkoutPage.breadcrumbCheckout')}</Link>
           <ChevronRight className="h-3 w-3 text-foreground/40" />
           <span className="text-foreground/70">{t('orderComplete.breadcrumb')}</span>
         </nav>
 
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-brand-navy md:text-[40px]">
+        <h1 className="mt-6 text-3xl font-semibold tracking-tight text-brand-navy md:text-[40px]">
           {t('orderComplete.title')}
         </h1>
 
         {loading ? (
           <div className="mt-16 flex justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-brand-navy/50" />
+            <Loader2 className="h-6 w-6 animate-spin text-foreground/50" />
           </div>
         ) : !order || notFound ? (
           <div className="mt-12 flex flex-col items-center justify-center rounded-2xl border border-black/[0.07] py-20 text-center">
@@ -116,78 +128,114 @@ export default function OrderCompletePage() {
           </div>
         ) : (
           <>
-            <p className="mt-2 text-sm text-foreground/70">{t('orderComplete.cashOnDelivery')}</p>
+            {/* Same 12-col split as the checkout page: content on 8, address
+                card on 4. The intro line + rule take their own 8-wide row, so
+                the rule stops at the content's right edge instead of running
+                under the card, and auto-placement drops the card into row 2 —
+                aligning its top edge with "Order details". */}
+            <div className="mt-2 grid grid-cols-1 items-start gap-x-8 lg:grid-cols-12 lg:gap-x-10">
+              <div className="lg:col-span-8">
+                <p className="text-sm text-foreground/70">{t('orderComplete.cashOnDelivery')}</p>
+                <div className="mt-6 border-t border-black/[0.08]" />
+              </div>
 
-            <div className="mt-6 border-t border-black/[0.08]" />
-
-            <div className="mt-8 grid grid-cols-1 items-start gap-8 lg:grid-cols-[1fr_360px] lg:gap-10">
               {/* Order details */}
-              <div className="min-w-0">
-                <h2 className="text-lg font-semibold text-brand-navy">{t('orderComplete.orderDetails')}</h2>
+              <div className="mt-8 min-w-0 lg:col-span-8">
+                <h2 className="text-lg font-semibold text-foreground">{t('orderComplete.orderDetails')}</h2>
 
-                <div className="mt-4">
-                  <div className="flex items-center justify-between border-b border-black/[0.08] pb-2 text-xs font-semibold uppercase tracking-wide text-foreground/50">
+                {/* One `divide-y` list covers the header, the line items and
+                    every total, so each row is separated by a single rule and
+                    there's no trailing rule under "Total payment" — matching
+                    the design. */}
+                <div className="mt-5 divide-y divide-black/[0.08] border-b border-black/[0.08] text-[15px]">
+                  <div className="flex items-center justify-between pb-3 text-foreground/70">
                     <span>{t('orderComplete.table.product')}</span>
                     <span>{t('orderComplete.table.total')}</span>
                   </div>
 
-                  <div className="divide-y divide-black/[0.06]">
-                    {order.items.map((item, i) => (
-                      <div key={i} className="flex items-start justify-between gap-4 py-4">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-brand-navy">{item.name}</p>
-                          {item.subtitle && (
-                            <p className="mt-0.5 text-xs text-foreground/50">{item.subtitle}</p>
-                          )}
-                          <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-foreground/50">
-                            <span>
-                              {t('orderComplete.table.finishedSize', {
-                                w: item.widthCm.toFixed(1),
-                                h: item.heightCm.toFixed(1),
-                              })}
-                            </span>
-                            <span>
-                              {t('orderComplete.table.imageSize', {
-                                w: item.widthCm.toFixed(1),
-                                h: item.heightCm.toFixed(1),
-                              })}
-                            </span>
-                          </div>
-                        </div>
-                        <p className="shrink-0 text-sm font-semibold tabular-nums text-brand-navy">
-                          {formatOMR(item.pricePerItem * item.qty)}
-                        </p>
+                  {/* Rows wrap on phones: name + price share the first line and
+                      the size drops onto its own line below, rather than the
+                      size being hidden outright. Three side-by-side tracks from
+                      sm up (product / size / price). */}
+                  {order.items.map((item, i) => (
+                    <div
+                      key={i}
+                      className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 py-5 sm:flex-nowrap sm:gap-x-6"
+                    >
+                      <div className="order-1 min-w-0 flex-1">
+                        <p className="font-semibold text-foreground">{item.name}</p>
+                        {item.subtitle && (
+                          <p className="mt-1 text-[13px] text-foreground/45">{item.subtitle}</p>
+                        )}
+
+                        {/* The value-add options this line was ordered with.
+                            Each is rendered only when it was actually chosen —
+                            frames that don't offer glass/lamination (e.g.
+                            stretched canvas) simply show nothing here. Same
+                            labels as the cart row, so the two views agree. */}
+                        <dl className="mt-2 space-y-0.5 text-[13px] text-foreground/50">
+                          <OptionLine label={t('cartPage.row.matSize')} value={item.matSizeName} />
+                          <OptionLine label={t('cartPage.row.matColor')} value={item.matColorName} />
+                          <OptionLine label={t('cartPage.row.paperType')} value={item.paperTypeName} />
+                          <OptionLine label={t('cartPage.row.mdfType')} value={item.mdfName} />
+                          <OptionLine label={t('cartPage.row.lamination')} value={item.laminationName} />
+                          <OptionLine label={t('cartPage.row.glassType')} value={item.glassTypeName} />
+                        </dl>
                       </div>
-                    ))}
+
+                      {/* Full width on its own line on phones; from sm up it
+                          claims the middle track (`flex-1`) with the label/value
+                          pair centred in it.
+                          Only the finished size is shown — an order line stores
+                          one size pair (widthCm/heightCm), so an "Image Size"
+                          row would just repeat these exact numbers. Add it back
+                          once artwork dimensions are actually tracked. */}
+                      <div className="order-3 flex w-full items-baseline gap-x-6 text-[13px] text-foreground/60 sm:order-2 sm:w-auto sm:flex-1 sm:justify-center">
+                        <span>{t('orderComplete.table.finishedSizeLabel')}</span>
+                        <span>
+                          {t('orderComplete.table.finishedSizeValue', {
+                            w: item.widthCm.toFixed(1),
+                            h: item.heightCm.toFixed(1),
+                          })}
+                        </span>
+                      </div>
+
+                      <p className="order-2 shrink-0 font-semibold tabular-nums text-foreground sm:order-3">
+                        {formatOMR(item.pricePerItem * item.qty)}
+                      </p>
+                    </div>
+                  ))}
+
+                  <div className="flex items-center justify-between py-4">
+                    <span className="font-semibold text-foreground">{t('orderComplete.table.shipping')}</span>
+                    <span className="flex items-baseline gap-3">
+                      <span className="text-[13px] italic text-foreground/45">{t('cartPage.summary.shipping')}</span>
+                      <span className="font-semibold tabular-nums text-foreground">{formatOMR(order.shipping)}</span>
+                    </span>
                   </div>
 
-                  <div className="space-y-2.5 border-t border-black/[0.08] pt-4 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-foreground">{t('orderComplete.table.shipping')}</span>
-                      <span className="flex items-baseline gap-2">
-                        <span className="text-xs text-foreground/50">{t('cartPage.summary.shipping')}</span>
-                        <span className="font-semibold tabular-nums text-brand-navy">{formatOMR(order.shipping)}</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-foreground">{t('orderComplete.table.subtotal')}</span>
-                      <span className="font-semibold tabular-nums text-brand-navy">{formatOMR(order.total)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-foreground">{t('orderComplete.table.paymentMethod')}</span>
-                      <span className="text-xs text-foreground/50">{t('orderComplete.table.cashOnDelivery')}</span>
-                    </div>
-                    <div className="flex items-center justify-between border-t border-black/[0.08] pt-2.5">
-                      <span className="text-base font-semibold text-brand-navy">{t('orderComplete.table.totalPayment')}</span>
-                      <span className="text-lg font-bold tabular-nums text-brand-navy">{formatOMR(order.total)}</span>
-                    </div>
+                  <div className="flex items-center justify-between py-4">
+                    <span className="font-semibold text-foreground">{t('orderComplete.table.subtotal')}</span>
+                    <span className="font-semibold tabular-nums text-foreground">{formatOMR(order.total)}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-4">
+                    <span className="font-semibold text-foreground">{t('orderComplete.table.paymentMethod')}</span>
+                    <span className="text-[13px] italic text-foreground/45">{t('orderComplete.table.cashOnDelivery')}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-4">
+                    <span className="font-semibold text-foreground">{t('orderComplete.table.totalPayment')}</span>
+                    <span className="font-semibold tabular-nums text-foreground">{formatOMR(order.total)}</span>
                   </div>
                 </div>
 
                 {order.orderNotes && (
-                  <div className="mt-6 rounded-xl bg-black/[0.03] p-4">
-                    <p className="text-sm font-semibold text-brand-navy">{t('orderComplete.orderNotes')}</p>
-                    <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-foreground/60">
+                  <div className="font-sans mt-8 rounded-2xl bg-[#F8F8F8] p-5">
+                    <p className="font-semibold text-foreground">{t('orderComplete.orderNotes')}</p>
+                    {/* break-words so a long unbroken string in free-text notes
+                        can't push the layout wider than the viewport. */}
+                    <p className="mt-2 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-foreground/60">
                       {order.orderNotes}
                     </p>
                   </div>
@@ -197,7 +245,7 @@ export default function OrderCompletePage() {
                   variant="gold"
                   onClick={handleDownload}
                   disabled={downloading}
-                  className="mt-6"
+                  className="mt-8 font-sans"
                 >
                   {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                   {t('orderComplete.downloadInvoice')}
@@ -205,16 +253,20 @@ export default function OrderCompletePage() {
               </div>
 
               {/* Shipping & billing address */}
-              <div className="lg:sticky lg:top-28 lg:self-start">
+              {/* mt-8 only while stacked (below lg) so the card isn't flush
+                  against the order table above it. */}
+              <div className="mt-8 lg:col-span-4 lg:mt-0 lg:sticky lg:top-28 lg:self-start">
                 <div className="rounded-[33px] bg-white p-6 shadow-[0px_0px_21.1px_rgba(0,0,0,0.09)]">
-                  <h2 className="text-lg font-semibold text-brand-navy">{t('orderComplete.addressCard.title')}</h2>
+                  {/* Manrope on the card heading, matching the Purchase
+                      Summary card on cart/checkout. */}
+                  <h2 className="font-manrope text-lg font-medium mb-6">{t('orderComplete.addressCard.title')}</h2>
 
-                  <p className="mt-4 text-sm font-semibold text-foreground">{order.customerName}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-foreground/60">{formatAddress(order)}</p>
+                  <p className="mt-4 break-words font-manrope text-sm font-semibold text-black">{order.customerName}</p>
+                  <p className="mt-1 break-words font-sans text-sm font-normal leading-relaxed text-foreground/80">{formatAddress(order)}</p>
 
-                  <div className="mt-4 border-t border-black/[0.08] pt-4">
-                    <p className="text-xs text-foreground/50">{t('orderComplete.addressCard.deliveryType')}</p>
-                    <p className="mt-0.5 text-sm font-medium text-foreground">
+                  <div className=" border-black/[0.08] pt-4">
+                    <p className="text-[14px] font-manrope font-semibold text-foreground">{t('orderComplete.addressCard.deliveryType')}</p>
+                    <p className="mt-0.5 text-[12px] font-normal font-sans text-foreground/80">
                       {t('orderComplete.addressCard.standardDelivery')}
                     </p>
                   </div>

@@ -53,7 +53,8 @@
       "kitchen": "Kitchen",
       "hallway": "Hallway",
       "lounge": "Lounge",
-      "dining": "Dining"
+      "dining": "Dining",
+      "guestRoom": "Guest Room"
     }
   }
 }

@@ -28,11 +28,16 @@ export default function PhotoStocks() {
         src={STOCKS_VECTOR}
         alt=""
         aria-hidden
-        initial={{ opacity: 0, scale: 0.92, x: '-40%', y: '-47%' }}
-        whileInView={{ opacity: 1, scale: 1, x: '-40%', y: '-47%' }}
+        // -50%/-50% pins the vector's own centre to the section's centre, so it
+        // stays put through every resize. The old -43%/-47% was a percentage of
+        // the *element's* width, which jumps with the responsive w-[…] classes
+        // (460 → 560 → 678) — that drifted it further right the wider it got,
+        // sliding it under the hero image (which sits above it at z-10).
+        initial={{ opacity: 0, scale: 0.92, x: '-50%', y: '-50%' }}
+        whileInView={{ opacity: 1, scale: 1, x: '-50%', y: '-50%' }}
         viewport={{ once: true, margin: '-80px' }}
         transition={{ duration: 1, ease: 'easeOut', delay: 0.1 }}
-        className="pointer-events-none absolute left-1/2 top-1/2 z-0 hidden h-auto w-[460px] md:block lg:w-[560px] xl:w-[640px]"
+        className="pointer-events-none absolute left-1/2 top-1/2 z-0 hidden h-auto w-[460px] md:block lg:w-[560px] xl:w-[678px]"
       />
 
       <div className="relative z-10 grid grid-cols-1 items-center gap-12 md:grid-cols-2 md:gap-10 lg:gap-16">
@@ -64,7 +69,7 @@ export default function PhotoStocks() {
               {t('photoStocks.title')}
             </motion.h2>
             <motion.p
-              className="mt-6 max-w-md text-sm text-foreground/75 md:text-[17px]"
+              className="mt-6 max-w-md text-sm text-foreground/75 md:text-[17px] mb-2"
               variants={{
                 hidden: { opacity: 0, y: 16 },
                 show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
@@ -73,7 +78,7 @@ export default function PhotoStocks() {
               {t('photoStocks.description')}
             </motion.p>
             <motion.p
-              className=" text-3xl font-dm font-medium tracking-tight text-foreground sm:text-4xl lg:text-4xl"
+              className=" text-3xl font-dm font-medium capitalize tracking-tight text-foreground sm:text-4xl lg:text-[46px]"
               variants={{
                 hidden: { opacity: 0, y: 16 },
                 show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
