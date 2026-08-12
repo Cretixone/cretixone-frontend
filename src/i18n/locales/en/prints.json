@@ -1,0 +1,29 @@
+{
+  "breadcrumb": {
+    "aria": "Breadcrumb",
+    "home": "Home",
+    "customPrints": "Custom Prints"
+  },
+  "category": {
+    "fallbackTitle": "Prints",
+    "notFound": "We could not find that category.",
+    "backToPrints": "Back to Custom Prints",
+    "empty": "No prints in this category yet."
+  },
+  "card": {
+    "from": "From {{price}}"
+  },
+  "detail": {
+    "notFound": "We could not find that print.",
+    "addToCart": "Add to cart",
+    "addedToCart": "Added to your cart",
+    "finishedSize": "Finished Size: {{w}} x {{h}} cm (approx.)",
+    "options": {
+      "imageSize": "Image Size",
+      "canvasMaterial": "Canvas Material",
+      "lamination": "Lamination",
+      "canvasEdge": "Canvas Edge"
+    },
+    "specsHeading": "Details"
+  }
+}

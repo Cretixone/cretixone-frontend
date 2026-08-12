@@ -44,7 +44,9 @@
       "paymentMethod": "Payment method",
       "cashOnDelivery": "Cash on delivery",
       "total": "Total"
-    }
+    },
+    "canvasMaterialLabel": "Canvas: {{name}}",
+    "canvasEdgeLabel": "Edge: {{name}}"
   },
   "profile": {
     "title": "Profile settings",

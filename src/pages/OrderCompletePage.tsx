@@ -163,7 +163,17 @@ export default function OrderCompletePage() {
                       className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 py-5 sm:flex-nowrap sm:gap-x-6"
                     >
                       <div className="order-1 min-w-0 flex-1">
-                        <p className="font-semibold text-foreground">{item.name}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-semibold text-foreground">{item.name}</p>
+                          {/* Marks which catalogue the line came from. Only
+                              shown for prints: frames are the default, so
+                              badging every frame line would be noise. */}
+                          {item.kind === 'print' && (
+                            <span className="rounded-full bg-brand-navy/[0.07] px-2 py-0.5 text-[11px] font-medium text-brand-navy">
+                              {t('cartPage.row.printBadge')}
+                            </span>
+                          )}
+                        </div>
                         {item.subtitle && (
                           <p className="mt-1 text-[13px] text-foreground/45">{item.subtitle}</p>
                         )}
@@ -178,7 +188,9 @@ export default function OrderCompletePage() {
                           <OptionLine label={t('cartPage.row.matColor')} value={item.matColorName} />
                           <OptionLine label={t('cartPage.row.paperType')} value={item.paperTypeName} />
                           <OptionLine label={t('cartPage.row.mdfType')} value={item.mdfName} />
+                          <OptionLine label={t('cartPage.row.canvasMaterial')} value={item.canvasMaterialName} />
                           <OptionLine label={t('cartPage.row.lamination')} value={item.laminationName} />
+                          <OptionLine label={t('cartPage.row.canvasEdge')} value={item.canvasEdgeName} />
                           <OptionLine label={t('cartPage.row.glassType')} value={item.glassTypeName} />
                         </dl>
                       </div>

@@ -13,7 +13,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { Lightbox } from '@/components/Lightbox'
+import { ProductGallery } from '@/components/product/ProductGallery'
+import { OptionPillGroup } from '@/components/product/OptionPillGroup'
 import { InquiryDialog } from '@/components/InquiryDialog'
 import { ReviewsSection } from '@/components/ReviewsSection'
 import { useEditorStore } from '@/store/editorStore'
@@ -22,15 +23,9 @@ import { useIsRtl } from '@/store/langStore'
 import { pickLocalized } from '@/lib/localized'
 import { useFetchFrameByIdQuery } from '@/store/api/apiSlice'
 import { formatOMR, formatOMRRate } from '@/lib/format'
+// One shared formula for frames and prints — see src/lib/pricing.ts.
+import { productPrice } from '@/lib/pricing'
 import { cn } from '@/lib/utils'
-
-// Fallback gallery (bundled lifestyle slides) used only when a frame has no
-// thumbnail/full-frame assets to show.
-const FALLBACK_GALLERY = [
-  '/images/webp/slide-1.webp',
-  '/images/webp/slide-2.webp',
-  '/images/webp/slide-3.webp',
-]
 
 // Titles/descriptions live in the productDetail namespace and are resolved with
 // t() at render time (see BuyPanel). The `id` values are logic — keep unchanged.
@@ -69,11 +64,13 @@ export default function ProductDetailPage() {
   //  • gallery has images → show them (thumbnail strip + 1st as the main image)
   //  • gallery empty       → show the frame's thumbnail as the single image
   //    (the strip is hidden by <Gallery> when there's only one image)
+  //  • neither             → empty, and <Gallery> renders a neutral placeholder.
+  //    No stock/bundled fallback photos: showing an unrelated lifestyle image
+  //    for a product with no assets misrepresents the product.
   const gallery = useMemo(() => {
     const own = Array.from(new Set((frame?.gallery ?? []).filter(Boolean)))
     if (own.length) return own
-    if (frame?.imgUrl) return [frame.imgUrl]
-    return FALLBACK_GALLERY
+    return frame?.imgUrl ? [frame.imgUrl] : []
   }, [frame])
 
   // Size presets allow-listed for this frame by the admin (frame add/edit
@@ -190,7 +187,7 @@ export default function ProductDetailPage() {
     draftH >= frame.sizeFrom && draftH <= frame.sizeTo
   const draftPriceLabel =
     frame && frame.pricePerCm > 0 && draftHasSize
-      ? formatOMR(frame.pricePerCm * (draftW + draftH) * 2 + frame.pricePerCm * (frame.wasteValue ?? 0) + optionsPricePerCm * draftW * draftH)
+      ? formatOMR(productPrice(frame.pricePerCm, frame.wasteValue, draftW, draftH, optionsPricePerCm))
       : '—'
   // Price label:
   //  • a size preset is chosen → the total for that size — frame (pricePerCm
@@ -202,7 +199,7 @@ export default function ProductDetailPage() {
   //  • frame isn't priced → em dash
   const priceLabel = (() => {
     if (!frame || frame.pricePerCm <= 0) return '—'
-    if (hasSize) return formatOMR(frame.pricePerCm * (effW + effH) * 2 + frame.pricePerCm * (frame.wasteValue ?? 0) + optionsPricePerCm * effW * effH)
+    if (hasSize) return formatOMR(productPrice(frame.pricePerCm, frame.wasteValue, effW, effH, optionsPricePerCm))
     return `${formatOMRRate(frame.pricePerCm)} / cm`
   })()
 
@@ -212,7 +209,7 @@ export default function ProductDetailPage() {
   const oldPriceLabel = (() => {
     const old = frame?.oldPricePerCm ?? 0
     if (!frame || old <= 0 || old <= frame.pricePerCm) return null
-    if (hasSize) return formatOMR(old * (effW + effH) * 2 + old * (frame.wasteValue ?? 0) + optionsPricePerCm * effW * effH)
+    if (hasSize) return formatOMR(productPrice(old, frame.wasteValue, effW, effH, optionsPricePerCm))
     return `${formatOMRRate(old)} / cm`
   })()
 
@@ -258,7 +255,7 @@ export default function ProductDetailPage() {
       thumbnail: frame.imgUrl || gallery[0],
       widthCm: effW,
       heightCm: effH,
-      pricePerItem: frame.pricePerCm * (effW + effH) * 2 + frame.pricePerCm * (frame.wasteValue ?? 0) + optionsPricePerCm * area,
+      pricePerItem: productPrice(frame.pricePerCm, frame.wasteValue, effW, effH, optionsPricePerCm),
       // No mat chosen from the product page — mat is an editor-only option.
       matSizeId: null,
       matSizeName: null,
@@ -291,7 +288,7 @@ export default function ProductDetailPage() {
   // Numeric estimate stored on the inquiry (0 when the frame isn't priced).
   const inquiryUnitPrice =
     priced && hasSize
-      ? frame!.pricePerCm * (effW + effH) * 2 + frame!.pricePerCm * (frame!.wasteValue ?? 0) + optionsPricePerCm * effW * effH
+      ? productPrice(frame!.pricePerCm, frame!.wasteValue, effW, effH, optionsPricePerCm)
       : 0
 
   return (
@@ -305,20 +302,28 @@ export default function ProductDetailPage() {
         {/* Breadcrumb */}
         <nav
           aria-label={t('aria.breadcrumb')}
-          className="mb-10 flex items-center gap-2 text-sm text-foreground/70"
+          className="mb-10 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-foreground/70"
         >
           <Link to="/" className="inline-flex items-center hover:text-brand-navy">
             <Home className="h-4 w-4" />
           </Link>
           <span className="text-foreground/40">›</span>
           <Link to="/products" className="hover:text-brand-navy">
-            {t('breadcrumb.canvasPrints')}
+            {t('breadcrumb.frames')}
           </Link>
+          {/* Current page: the product itself. Rendered only once the frame has
+              loaded, so the trail never shows an empty trailing separator. */}
+          {localizedTitle && (
+            <>
+              <span className="text-foreground/40">›</span>
+              <span className="min-w-0 break-words text-foreground">{localizedTitle}</span>
+            </>
+          )}
         </nav>
 
         {/* Gallery + buy panel */}
         <div className="mt-5 flex flex-col gap-8 lg:flex-row lg:gap-12">
-          <Gallery images={gallery} className="lg:w-[calc(56%+10px)]" />
+          <ProductGallery images={gallery} className="lg:w-[calc(56%+10px)]" />
           <BuyPanel
             title={localizedTitle || t('fallback.pictureFrame')}
             subtitle={frame?.specifications?.['Frame Type'] ?? t('fallback.customPictureFrame')}
@@ -475,106 +480,6 @@ export default function ProductDetailPage() {
 }
 
 // ── Gallery: thumbnails + main image with fullscreen lightbox ──────────────
-function Gallery({
-  images,
-  className,
-}: {
-  images: string[]
-  className?: string
-}) {
-  const { t } = useTranslation('productDetail')
-  const [active, setActive] = useState(0)
-  const [lightboxOpen, setLightboxOpen] = useState(false)
-  const src = images[active] ?? images[0]
-
-  return (
-    <div className={cn('min-w-0', className)}>
-      <div className="flex flex-col-reverse gap-3 sm:flex-row lg:h-full">
-        {/* Thumbnails — shown only when there's more than one image. Horizontal
-            scroll on mobile, vertical scroll column on ≥sm. */}
-        {images.length > 1 && (
-          <div
-            className={cn(
-              'flex shrink-0 gap-2.5 overflow-x-auto pb-1',
-              'sm:max-h-[480px] sm:w-[84px] sm:flex-col sm:overflow-x-hidden sm:overflow-y-auto sm:pb-0 sm:pr-1',
-              // min-h-0 overrides the flex-item default min-height:auto, which
-              // otherwise forces this column to grow to fit all thumbnails
-              // instead of respecting h-full + scrolling — that growth was
-              // what made the main image (which mirrors this column's full
-              // height) taller than the buy panel.
-              'lg:h-full lg:min-h-0 lg:max-h-none',
-              '[scrollbar-width:thin]',
-            )}
-          >
-            {images.map((img, i) => {
-              const selected = i === active
-              return (
-                <button
-                  key={img}
-                  type="button"
-                  onClick={() => setActive(i)}
-                  aria-label={t('aria.viewImage', { number: i + 1 })}
-                  aria-pressed={selected}
-                  className={cn(
-                    'relative h-[64px] w-[64px] shrink-0 overflow-hidden rounded-lg transition sm:h-[78px] sm:w-full',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/50',
-                  )}
-                  style={{
-                    outline: selected
-                      ? '2px solid #002365'
-                      : '1px solid rgba(0,0,0,0.10)',
-                    outlineOffset: '-1px',
-                  }}
-                >
-                  <img
-                    src={img}
-                    alt=""
-                    loading="lazy"
-                    draggable={false}
-                    className="h-full w-full object-contain"
-                  />
-                </button>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Main image — static (no hover zoom); expand icon opens the lightbox */}
-        <div className="relative min-w-0 flex-1 lg:h-full">
-          <div className="group relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-[#EDE6D6] sm:aspect-auto sm:h-[420px] lg:h-full">
-            {/* absolute + inset-0 takes the img out of the flow entirely —
-                otherwise its percentage height against this box (itself
-                percentage-sized during flex stretch) falls back to the
-                photo's intrinsic aspect ratio, inflating this whole column
-                taller than the buy panel. */}
-            <img
-              src={src}
-              alt={t('gallery.previewAlt')}
-              draggable={false}
-              className="absolute inset-0 h-full w-full object-contain"
-            />
-            <button
-              type="button"
-              onClick={() => setLightboxOpen(true)}
-              aria-label={t('aria.viewFullscreen')}
-              className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white opacity-80 backdrop-blur-sm transition hover:bg-black/70 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-            >
-              <Maximize2 className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <Lightbox
-        images={images}
-        index={active}
-        open={lightboxOpen}
-        onIndex={setActive}
-        onClose={() => setLightboxOpen(false)}
-      />
-    </div>
-  )
-}
 
 // ── Buy panel ───────────────────────────────────────────────────────────────
 function BuyPanel({
@@ -774,46 +679,6 @@ function BuyPanel({
 // A labelled row of pill buttons for a single-choice option (Paper Type, MDF,
 // Lamination, Glass Type). Renders nothing when the frame has no assigned
 // values for this catalog.
-function OptionPillGroup({
-  label,
-  items,
-  value,
-  onChange,
-}: {
-  label: string
-  items: { id: string; name: string }[]
-  value: string | null
-  onChange: (id: string) => void
-}) {
-  if (!items.length) return null
-  return (
-    <div className="mt-6">
-      <p className="text-sm font-semibold text-foreground">{label}</p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {items.map((item) => {
-          const selected = item.id === value
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => onChange(item.id)}
-              aria-pressed={selected}
-              className={cn(
-                'rounded-full px-4 py-1 text-sm font-medium transition',
-                selected
-                  ? 'bg-brand-gold text-white'
-                  : 'bg-black/[0.04] text-foreground/80 hover:bg-black/[0.07]',
-              )}
-            >
-              {item.name}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
 function SizePicker({
   sizes,
   value,

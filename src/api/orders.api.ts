@@ -23,6 +23,8 @@ export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | '
 
 export interface OrderItem {
   frameId: number
+  /** Which catalogue this line came from. Absent on pre-prints orders. */
+  kind?: 'frame' | 'print'
   name: string
   subtitle?: string | null
   thumbnail?: string | null
@@ -36,6 +38,9 @@ export interface OrderItem {
   paperTypeName?: string | null
   laminationName?: string | null
   glassTypeName?: string | null
+  // Print-only options.
+  canvasMaterialName?: string | null
+  canvasEdgeName?: string | null
 }
 
 export interface Order {

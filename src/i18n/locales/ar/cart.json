@@ -34,7 +34,6 @@
     },
     "row": {
       "finishedSize": "المقاس النهائي:",
-      "frameSku": "رمز الإطار:",
       "paperType": "نوع الورق:",
       "mdfType": "نوع MDF:",
       "lamination": "التلمّع:",
@@ -46,7 +45,10 @@
       "decreaseQty": "تقليل الكمية",
       "increaseQty": "زيادة الكمية",
       "matSize": "الباسبارتو:",
-      "matColor": "لون الباسبارتو:"
+      "matColor": "لون الباسبارتو:",
+      "canvasMaterial": "خامة الكانفاس:",
+      "canvasEdge": "حافة الكانفاس:",
+      "printBadge": "مطبوعة"
     }
   },
   "checkoutPage": {

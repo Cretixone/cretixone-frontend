@@ -5,8 +5,17 @@ import { secureStorage } from '@/lib/secure-storage'
 // A single cart line. Each "Checkout" from the editor adds a new line
 // (sizes/options can differ), so identical frames stay as separate lines —
 // matching the cart design.
+/**
+ * Which catalogue a line came from. Frames and prints share one cart, one
+ * checkout and one invoice, so every consumer needs to be able to tell them
+ * apart. Optional for backward compatibility: carts persisted before prints
+ * existed have no `kind` and are treated as frames.
+ */
+export type CartItemKind = 'frame' | 'print'
+
 export interface CartItem {
   id: string // unique line id
+  kind?: CartItemKind
   frameId: number
   name: string
   subtitle: string
@@ -39,6 +48,14 @@ export interface CartItem {
   glassTypeId?: string | null
   glassTypeName?: string | null
   glassTypePrice?: number
+  // Print-only options (kind === 'print'). Lamination above is shared with
+  // frames, so it is not repeated here.
+  canvasMaterialId?: string | null
+  canvasMaterialName?: string | null
+  canvasMaterialPrice?: number
+  canvasEdgeId?: string | null
+  canvasEdgeName?: string | null
+  canvasEdgePrice?: number
 }
 
 // Flat standard shipping (OMR). Placeholder until a shipping engine exists.
@@ -60,6 +77,9 @@ interface CartState {
 }
 
 const sameLine = (a: CartItemContent, b: CartItem) =>
+  // Frames and prints can share a numeric id space only by accident; compare
+  // the kind too so a print never merges into a frame line.
+  (a.kind ?? 'frame') === (b.kind ?? 'frame') &&
   a.frameId === b.frameId &&
   Math.abs(a.widthCm - b.widthCm) < 0.05 &&
   Math.abs(a.heightCm - b.heightCm) < 0.05 &&
@@ -68,7 +88,9 @@ const sameLine = (a: CartItemContent, b: CartItem) =>
   (a.mdfId ?? null) === (b.mdfId ?? null) &&
   (a.paperTypeId ?? null) === (b.paperTypeId ?? null) &&
   (a.laminationId ?? null) === (b.laminationId ?? null) &&
-  (a.glassTypeId ?? null) === (b.glassTypeId ?? null)
+  (a.glassTypeId ?? null) === (b.glassTypeId ?? null) &&
+  (a.canvasMaterialId ?? null) === (b.canvasMaterialId ?? null) &&
+  (a.canvasEdgeId ?? null) === (b.canvasEdgeId ?? null)
 
 const uid = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto

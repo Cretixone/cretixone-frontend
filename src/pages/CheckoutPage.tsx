@@ -105,6 +105,9 @@ export default function CheckoutPage() {
       const order = await ordersApi.create({
         items: items.map((i) => ({
           frameId: i.frameId,
+          // Carried through so the order, invoice and admin can tell a print
+          // from a frame. Defaults to 'frame' for carts saved before prints.
+          kind: i.kind ?? 'frame',
           name: i.name,
           subtitle: i.subtitle,
           thumbnail: i.thumbnail,
@@ -118,6 +121,8 @@ export default function CheckoutPage() {
           paperTypeName: i.paperTypeName ?? null,
           laminationName: i.laminationName ?? null,
           glassTypeName: i.glassTypeName ?? null,
+          canvasMaterialName: i.canvasMaterialName ?? null,
+          canvasEdgeName: i.canvasEdgeName ?? null,
         })),
         customerName: v.fullName,
         customerEmail: v.email,

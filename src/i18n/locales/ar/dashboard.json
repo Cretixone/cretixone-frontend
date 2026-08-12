@@ -44,7 +44,9 @@
       "paymentMethod": "طريقة الدفع",
       "cashOnDelivery": "الدفع عند التسليم",
       "total": "الإجمالي"
-    }
+    },
+    "canvasMaterialLabel": "الكانفاس: {{name}}",
+    "canvasEdgeLabel": "الحافة: {{name}}"
   },
   "profile": {
     "title": "إعدادات الملف الشخصي",

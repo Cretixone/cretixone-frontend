@@ -34,7 +34,6 @@
     },
     "row": {
       "finishedSize": "Finished Size:",
-      "frameSku": "Frame SKU:",
       "paperType": "Paper Type:",
       "mdfType": "MDF Type:",
       "lamination": "Lamination:",
@@ -46,7 +45,10 @@
       "decreaseQty": "Decrease quantity",
       "increaseQty": "Increase quantity",
       "matSize": "Mat:",
-      "matColor": "Mat color:"
+      "matColor": "Mat color:",
+      "canvasMaterial": "Canvas Material:",
+      "canvasEdge": "Canvas Edge:",
+      "printBadge": "Print"
     }
   },
   "checkoutPage": {

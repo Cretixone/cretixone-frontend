@@ -160,7 +160,9 @@ function OrderCard({ order: o }: { order: Order }) {
                     {it.matSizeName ? ` · ${t('orders.matLabel', { name: it.matSizeName })}` : ''}
                     {it.mdfName ? ` · ${t('orders.mdfLabel', { name: it.mdfName })}` : ''}
                     {it.paperTypeName ? ` · ${t('orders.paperTypeLabel', { name: it.paperTypeName })}` : ''}
+                    {it.canvasMaterialName ? ` · ${t('orders.canvasMaterialLabel', { name: it.canvasMaterialName })}` : ''}
                     {it.laminationName ? ` · ${t('orders.laminationLabel', { name: it.laminationName })}` : ''}
+                    {it.canvasEdgeName ? ` · ${t('orders.canvasEdgeLabel', { name: it.canvasEdgeName })}` : ''}
                     {it.glassTypeName ? ` · ${t('orders.glassTypeLabel', { name: it.glassTypeName })}` : ''}
                     {` · ${t('orders.qtyLabel', { qty: it.qty })}`}
                   </p>

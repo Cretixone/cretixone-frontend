@@ -17,18 +17,26 @@ export interface Review {
   createdAt: string
 }
 
-export interface CreateReviewPayload {
-  frameId: number
+/** A review targets exactly one product: a frame or a custom print. */
+export type ReviewTarget = { frameId: number; printId?: never } | { printId: number; frameId?: never }
+
+export type CreateReviewPayload = ReviewTarget & {
   rating: number
   title: string
   body: string
 }
 
+/** Builds the ?frameId= / ?printId= query for whichever target was given. */
+const targetQuery = (target: ReviewTarget): string =>
+  'printId' in target && target.printId !== undefined
+    ? `printId=${target.printId}`
+    : `frameId=${target.frameId}`
+
 export const reviewsApi = {
-  /** Public list of reviews for a frame (by its hashed public id). */
-  async list(frameId: number) {
+  /** Public list of reviews for one product (by its hashed public id). */
+  async list(target: ReviewTarget) {
     const res = await cretixAxios.get<Ok<Review[]>>(
-      `/reviews/public?frameId=${frameId}`,
+      `/reviews/public?${targetQuery(target)}`,
       { ...({ silent: true } as object) },
     )
     return res.data.data

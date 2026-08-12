@@ -32,7 +32,9 @@ export default function Footer() {
   const productLinks = [
     { label: t('footer.products.allFrames'), href: '/products' },
     { label: t('footer.products.framedPrints'), href: '/products?category=framed-prints' },
-    { label: t('footer.products.canvasPrints'), href: '/products?category=canvas-prints' },
+    // Points at the prints module, not the frames listing: frame categories
+    // were removed, so ?category= no longer filters anything there.
+    { label: t('footer.products.canvasPrints'), href: '/custom-prints' },
     { label: t('footer.products.photoPrints'), href: '/products?category=photo-prints' },
     { label: t('footer.products.gifts'), href: '/products?category=gifts' },
     { label: t('footer.products.mirrorWorks'), href: '/products?category=mirror-works' },

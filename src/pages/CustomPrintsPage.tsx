@@ -1,10 +1,13 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { motion, type Variants } from 'framer-motion'
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { useLangStore } from '@/store/langStore'
+import { printsApi, type PrintCategory } from '@/api/prints.api'
+import { resolveAsset } from '@/lib/assets'
+import { pickLocalized } from '@/lib/localized'
 
 // ── Animation variants ───────────────────────────────────────────────────────
 const stagger: Variants = {
@@ -16,18 +19,6 @@ const fadeUp: Variants = {
   hidden: { opacity: 0, y: 24 },
   show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: 'easeOut' } },
 }
-
-// ── Print categories ──────────────────────────────────────────────────────────
-// NOTE: `img` paths are placeholders using existing photos. Drop real print
-// photos in /public/images and update the paths to match.
-const CATEGORIES = [
-  { titleKey: 'photoPrints', img: '/images/prints/print-1.png' },
-  { titleKey: 'canvasPrints', img: '/images/prints/print-2.jpg' },
-  { titleKey: 'fineArt', img: '/images/prints/print-3.jpg' },
-  { titleKey: 'largeFormat', img: '/images/prints/print-4.jpg' },
-  { titleKey: 'wallDecor', img: '/images/prints/print-5.jpg' },
-  { titleKey: 'corporate', img: '/images/prints/print-6.jpg' },
-]
 
 // ── "Why Choose Us?" features ─────────────────────────────────────────────────
 // `highlight` paints the cream background — arranged as a diagonal checkerboard
@@ -51,6 +42,20 @@ export default function CustomPrintsPage() {
   const { t } = useTranslation('pages')
   const isRtl = useLangStore((s) => s.isRtl)
   const navigate = useNavigate()
+
+  // Categories are admin-managed. Nothing is hardcoded: an empty catalogue
+  // simply renders no tiles rather than showing sample photos.
+  const [categories, setCategories] = useState<PrintCategory[]>([])
+  useEffect(() => {
+    let alive = true
+    printsApi
+      .categories()
+      .then((c) => alive && setCategories(c))
+      .catch(() => alive && setCategories([]))
+    return () => {
+      alive = false
+    }
+  }, [])
 
   useEffect(() => {
     const prevBg = document.body.style.background
@@ -171,23 +176,33 @@ export default function CustomPrintsPage() {
             whileInView="show"
             viewport={{ once: true, margin: '-60px' }}
           >
-            {CATEGORIES.map((c) => (
-              <motion.div key={c.titleKey} variants={fadeUp} className="group text-center">
+            {categories.map((c) => (
+              <motion.button
+                key={c.id}
+                type="button"
+                variants={fadeUp}
+                onClick={() => navigate(`/custom-prints/${c.slug}`)}
+                className="group text-center focus-visible:outline-none"
+              >
                 <div className="overflow-hidden rounded-3xl bg-black/5">
                   <div className="h-[380px] w-full">
-                    <img
-                      src={c.img}
-                      alt={t(`customPrints.categories.${c.titleKey}`)}
-                      loading="lazy"
-                      draggable={false}
-                      className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
-                    />
+                    {/* Uploaded image only — no stock fallback, so a category
+                        without one shows the neutral tile behind it. */}
+                    {c.imageUrl && (
+                      <img
+                        src={resolveAsset(c.imageUrl)}
+                        alt={pickLocalized(c.name, c.nameAr, isRtl) ?? c.name}
+                        loading="lazy"
+                        draggable={false}
+                        className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                      />
+                    )}
                   </div>
                 </div>
-                <p className="mt-3 text-[15px] font-normal text-black md:text-base">
-                  {t(`customPrints.categories.${c.titleKey}`)}
+                <p className="mt-3 text-[15px] font-normal text-black transition group-hover:text-brand-navy md:text-base">
+                  {pickLocalized(c.name, c.nameAr, isRtl)}
                 </p>
-              </motion.div>
+              </motion.button>
             ))}
           </motion.div>
         </section>

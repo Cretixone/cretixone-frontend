@@ -218,10 +218,6 @@ function CartRow({
               {t('cartPage.row.dimensions', { w: item.widthCm.toFixed(1), h: item.heightCm.toFixed(1) })}
             </dd>
           </div>
-          <div className="flex gap-2">
-            <dt className="w-24 font-medium text-foreground/80">{t('cartPage.row.frameSku')}</dt>
-            <dd>CF-{Math.abs(item.frameId)}</dd>
-          </div>
           {item.paperTypeName && (
             <div className="flex gap-2">
               <dt className="w-24 font-medium text-foreground/80">{t('cartPage.row.paperType')}</dt>
@@ -232,6 +228,18 @@ function CartRow({
             <div className="flex gap-2">
               <dt className="w-24 font-medium text-foreground/80">{t('cartPage.row.mdfType')}</dt>
               <dd>{item.mdfName}</dd>
+            </div>
+          )}
+          {item.canvasMaterialName && (
+            <div className="flex gap-2">
+              <dt className="w-24 font-medium text-foreground/80">{t('cartPage.row.canvasMaterial')}</dt>
+              <dd>{item.canvasMaterialName}</dd>
+            </div>
+          )}
+          {item.canvasEdgeName && (
+            <div className="flex gap-2">
+              <dt className="w-24 font-medium text-foreground/80">{t('cartPage.row.canvasEdge')}</dt>
+              <dd>{item.canvasEdgeName}</dd>
             </div>
           )}
           {item.laminationName && (

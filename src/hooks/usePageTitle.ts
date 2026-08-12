@@ -21,6 +21,7 @@ const TITLES: Record<string, string> = {
   '/products': 'Shop Picture Frames',
   '/product': 'Frame Details',
   '/custom-mirrors': 'Custom Mirrors',
+  '/custom-prints/product': 'Print Details',
   '/custom-prints': 'Custom Prints',
   '/editor': 'Frame Designer',
   '/cart': 'Your Cart',

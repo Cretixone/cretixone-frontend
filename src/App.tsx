@@ -34,6 +34,8 @@ const TeamPage = lazy(() => import('@/pages/TeamPage'))
 const TestimonialsPage = lazy(() => import('@/pages/TestimonialsPage'))
 const CustomMirrorsPage = lazy(() => import('@/pages/CustomMirrorsPage'))
 const CustomPrintsPage = lazy(() => import('@/pages/CustomPrintsPage'))
+const PrintCategoryPage = lazy(() => import('@/pages/PrintCategoryPage'))
+const PrintDetailPage = lazy(() => import('@/pages/PrintDetailPage'))
 const CheckoutPage = lazy(() => import('@/pages/CheckoutPage'))
 const OrderCompletePage = lazy(() => import('@/pages/OrderCompletePage'))
 const CartPage = lazy(() => import('@/pages/CartPage'))
@@ -112,6 +114,10 @@ export default function App() {
         <Route path="/testimonials" element={<TestimonialsPage />} />
         <Route path="/custom-mirrors" element={<CustomMirrorsPage />} />
         <Route path="/custom-prints" element={<CustomPrintsPage />} />
+        {/* Product route is declared before the :slug catch-all so "product"
+            is never mistaken for a category slug. */}
+        <Route path="/custom-prints/product/:id" element={<PrintDetailPage />} />
+        <Route path="/custom-prints/:slug" element={<PrintCategoryPage />} />
         <Route
           path="/checkout"
           element={

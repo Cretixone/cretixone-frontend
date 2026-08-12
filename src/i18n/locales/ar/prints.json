@@ -1,0 +1,29 @@
+{
+  "breadcrumb": {
+    "aria": "مسار التنقل",
+    "home": "الرئيسية",
+    "customPrints": "المطبوعات المخصصة"
+  },
+  "category": {
+    "fallbackTitle": "المطبوعات",
+    "notFound": "تعذّر العثور على هذه الفئة.",
+    "backToPrints": "العودة إلى المطبوعات المخصصة",
+    "empty": "لا توجد مطبوعات في هذه الفئة بعد."
+  },
+  "card": {
+    "from": "ابتداءً من {{price}}"
+  },
+  "detail": {
+    "notFound": "تعذّر العثور على هذه المطبوعة.",
+    "addToCart": "أضف إلى السلة",
+    "addedToCart": "تمت الإضافة إلى سلتك",
+    "finishedSize": "المقاس النهائي: {{w}} × {{h}} سم (تقريبًا)",
+    "options": {
+      "imageSize": "مقاس الصورة",
+      "canvasMaterial": "خامة الكانفاس",
+      "lamination": "التلميع",
+      "canvasEdge": "حافة الكانفاس"
+    },
+    "specsHeading": "التفاصيل"
+  }
+}

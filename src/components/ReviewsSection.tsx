@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
 import { useAuthUiStore } from '@/store/authUiStore'
-import { reviewsApi, type Review } from '@/api/reviews.api'
+import { reviewsApi, type Review, type ReviewTarget } from '@/api/reviews.api'
 import {
   Dialog,
   DialogContent,
@@ -123,7 +123,13 @@ function ReviewCard({
   )
 }
 
-export function ReviewsSection({ frameId }: { frameId: number }) {
+/**
+ * Reviews for one product. Pass exactly one of frameId / printId — the same
+ * component serves the frame and custom-print detail pages.
+ */
+export function ReviewsSection({ frameId, printId }: { frameId?: number; printId?: number }) {
+  // Normalised target reused by the list and create calls.
+  const target = (printId !== undefined ? { printId } : { frameId: frameId! }) as ReviewTarget
   const { t } = useTranslation('reviews')
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
@@ -153,14 +159,15 @@ export function ReviewsSection({ frameId }: { frameId: number }) {
   const [reporting, setReporting] = useState(false)
 
   const load = useCallback(() => {
-    if (!frameId) return
+    if (printId === undefined && !frameId) return
     setLoading(true)
     reviewsApi
-      .list(frameId)
+      .list(target)
       .then(setReviews)
       .catch(() => setReviews([]))
       .finally(() => setLoading(false))
-  }, [frameId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [frameId, printId])
 
   useEffect(() => {
     load()
@@ -266,7 +273,7 @@ export function ReviewsSection({ frameId }: { frameId: number }) {
     }
     setSubmitting(true)
     try {
-      await reviewsApi.create({ frameId, rating, title: title.trim(), body: body.trim() })
+      await reviewsApi.create({ ...target, rating, title: title.trim(), body: body.trim() })
       toast.success(t('toast.reviewSubmitted'))
       setRating(0)
       setRatingError(false)

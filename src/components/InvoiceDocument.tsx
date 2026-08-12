@@ -140,7 +140,10 @@ function itemOptions(item: Order['items'][number]): string[] {
     item.matColorName ? `Mat color: ${item.matColorName}` : null,
     item.paperTypeName ? `Paper Type: ${item.paperTypeName}` : null,
     item.mdfName ? `MDF Type: ${item.mdfName}` : null,
+    // Print-only options.
+    item.canvasMaterialName ? `Canvas Material: ${item.canvasMaterialName}` : null,
     item.laminationName ? `Lamination: ${item.laminationName}` : null,
+    item.canvasEdgeName ? `Canvas Edge: ${item.canvasEdgeName}` : null,
     item.glassTypeName ? `Glass Type: ${item.glassTypeName}` : null,
   ].filter((v): v is string => !!v)
 }
@@ -205,7 +208,11 @@ export function InvoiceDocument({ order }: { order: Order }) {
           {order.items.map((item, i) => (
             <View key={i} style={styles.tableRow}>
               <View style={styles.colProduct}>
-                <Text style={styles.itemName}>{item.name}</Text>
+                <Text style={styles.itemName}>
+                  {item.name}
+                  {/* Frames are the default, so only prints are labelled. */}
+                  {item.kind === 'print' ? '  (Print)' : ''}
+                </Text>
                 {item.subtitle ? <Text style={styles.itemSubtitle}>{item.subtitle}</Text> : null}
                 {/* Options the customer actually chose. Unselected ones are
                     dropped, so a frame without glass/lamination lists nothing
