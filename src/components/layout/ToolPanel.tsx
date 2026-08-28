@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { useEditorStore, OSS_PREFIX } from '@/store/editorStore'
+import { sameFrameType } from '@/lib/frame-type'
 import {
   useFetchFramesQuery,
   useFetchFrameTypesPublicQuery,
@@ -65,7 +66,9 @@ function PillTabs({
   return (
     <div className="flex items-center gap-1 overflow-x-auto px-3 py-2">
       {items.map((it) => {
-        const active = value === it.id
+        // Same tolerance as the filter: a frame's own spelling of its type
+        // may differ in case from the catalogue entry this tab came from.
+        const active = sameFrameType(value, it.id)
         return (
           <button
             key={it.id}
@@ -445,14 +448,16 @@ export default function ToolPanel() {
       setActiveFrameType(frameTypeTabs[0].name)
       return
     }
-    const stillExists = frameTypeTabs.some((t) => t.name === activeFrameType)
+    const stillExists = frameTypeTabs.some((t) => sameFrameType(t.name, activeFrameType))
     if (!stillExists) setActiveFrameType(frameTypeTabs[0].name)
   }, [frameTypeTabs, activeFrameType, setActiveFrameType])
 
   const filteredFrames = useMemo(() => {
     const all = framesQuery.data ?? []
     if (!activeFrameType) return all
-    return all.filter((f) => f.specifications?.['Frame Type'] === activeFrameType)
+    // Case/space-insensitive: the catalogue and the per-frame spec value are
+    // maintained separately and their casing does not always agree.
+    return all.filter((f) => sameFrameType(f.specifications?.['Frame Type'], activeFrameType))
   }, [framesQuery.data, activeFrameType])
 
   // Auto-select the first frame of the active (first) Frame Type when nothing
@@ -467,8 +472,10 @@ export default function ToolPanel() {
     if (!first) return
     setSelectedFrame(first)
     const firstType = first.specifications?.['Frame Type']
-    if (firstType && firstType !== activeFrameType) {
-      setActiveFrameType(firstType)
+    if (firstType && !sameFrameType(firstType, activeFrameType)) {
+      // Snap to the catalogue spelling so the tab highlights.
+      const tab = frameTypeTabs.find((t) => sameFrameType(t.name, firstType))
+      setActiveFrameType(tab?.name ?? firstType)
     }
   }, [
     selectedFrame,
@@ -478,6 +485,7 @@ export default function ToolPanel() {
     setSelectedFrame,
     activeFrameType,
     setActiveFrameType,
+    frameTypeTabs,
   ])
 
   const matSizes = matSizesQuery.data ?? []
