@@ -74,7 +74,7 @@ export function ProductGallery({
 
         {/* Main image — static (no hover zoom); expand icon opens the lightbox */}
         <div className="relative min-w-0 flex-1 lg:h-full">
-          <div className="group relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-[#EDE6D6] sm:aspect-auto sm:h-[420px] lg:h-full">
+          <div className="group relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-black/10 bg-white sm:aspect-auto sm:h-[420px] lg:h-full">
             {/* absolute + inset-0 takes the img out of the flow entirely —
                 otherwise its percentage height against this box (itself
                 percentage-sized during flex stretch) falls back to the

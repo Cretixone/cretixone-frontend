@@ -25,12 +25,9 @@
     },
     "products": {
       "allFrames": "All Frames",
-      "framedPrints": "Framed Prints",
-      "canvasPrints": "Canvas Prints",
-      "photoPrints": "Photo Prints",
       "gifts": "Gifts",
-      "mirrorWorks": "Mirror Works",
-      "customMirrors": "Custom Mirrors"
+      "customMirrors": "Custom Mirrors",
+      "customPrints": "Custom Prints"
     },
     "company": {
       "about": "About",

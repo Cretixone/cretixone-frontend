@@ -56,6 +56,9 @@ export interface CartItem {
   canvasEdgeId?: string | null
   canvasEdgeName?: string | null
   canvasEdgePrice?: number
+  // Customer artwork uploaded on the product page (public URL from
+  // /uploads/artwork). Shown in the cart and carried into the order snapshot.
+  artworkUrl?: string | null
 }
 
 // Flat standard shipping (OMR). Placeholder until a shipping engine exists.

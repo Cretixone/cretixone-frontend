@@ -1,34 +1,42 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronRight, Home, ImageIcon, Loader2 } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { ChevronRight, Home, Loader2, Upload, X } from 'lucide-react'
+import { toast } from 'sonner'
 
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
-import { Pagination } from '@/components/ui/pagination'
-import { printsApi, type CustomPrint, type PrintCategory } from '@/api/prints.api'
+import { Button } from '@/components/ui/button'
+import { ProductGallery } from '@/components/product/ProductGallery'
+import { OptionPillGroup } from '@/components/product/OptionPillGroup'
+import { CUSTOM_SIZE, CustomSizeDialog, SizePicker } from '@/components/product/SizePicker'
+import { InquiryDialog } from '@/components/InquiryDialog'
+import { printsApi, printPrice, type PrintCategory } from '@/api/prints.api'
 import { resolveAsset } from '@/lib/assets'
 import { pickLocalized } from '@/lib/localized'
+import { sortByNameNatural } from '@/lib/sort'
 import { formatOMR, formatOMRRate } from '@/lib/format'
-import { useLangStore } from '@/store/langStore'
-
-const PAGE_SIZE = 12
+import { ARTWORK_MAX_BYTES, ARTWORK_MIME, uploadArtwork } from '@/api/uploads.api'
+import { useCartStore } from '@/store/cartStore'
+import { useIsRtl } from '@/store/langStore'
 
 /**
- * Products inside one print category. Mirrors the frames listing (/products)
- * layout so the two catalogues feel like one store.
+ * Print category detail page. A category IS the sellable product now — the
+ * storefront goes /custom-prints -> /custom-prints/<slug> with no intermediate
+ * product listing — so this renders exactly the print product design against
+ * the category's own gallery, pricing, options and specs.
+ *
+ * Enquiry-only categories never reach here: the grid sends them straight to
+ * /custom-prints/<slug>/inquiry, and a direct hit is redirected below.
  */
 export default function PrintCategoryPage() {
   const { t } = useTranslation('prints')
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
-  const isRtl = useLangStore((s) => s.isRtl)
+  const isRtl = useIsRtl()
+  const addItem = useCartStore((s) => s.addItem)
 
   const [category, setCategory] = useState<PrintCategory | null>(null)
-  const [items, setItems] = useState<CustomPrint[]>([])
-  const [pageCount, setPageCount] = useState(1)
-  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
@@ -48,142 +56,483 @@ export default function PrintCategoryPage() {
     if (!slug) return
     let alive = true
     setLoading(true)
-    Promise.all([
-      printsApi.categoryBySlug(slug),
-      printsApi.list({ category: slug, page, limit: PAGE_SIZE }),
-    ])
-      .then(([cat, res]) => {
+    setNotFound(false)
+    printsApi
+      .categoryBySlug(slug)
+      .then((c) => {
         if (!alive) return
-        setCategory(cat)
-        setItems(res.items)
-        setPageCount(res.meta?.pageCount ?? 1)
+        // Someone typed / bookmarked the product URL of an enquiry category.
+        if (c.isEnquiryOnly) {
+          navigate(`/custom-prints/${c.slug}/inquiry`, { replace: true })
+          return
+        }
+        setCategory(c)
       })
       .catch(() => alive && setNotFound(true))
       .finally(() => alive && setLoading(false))
     return () => {
       alive = false
     }
-  }, [slug, page])
+  }, [slug, navigate])
+
+  // Selections. Size defaults to the first allowed preset; every other option
+  // starts deselected, matching the frame product page. Size is held by name
+  // (not id) so SizePicker can drive frames and prints with one component.
+  const [sizeName, setSizeName] = useState<string>('')
+  const [customW, setCustomW] = useState(0)
+  const [customH, setCustomH] = useState(0)
+  const [customOpen, setCustomOpen] = useState(false)
+  const [inquiryOpen, setInquiryOpen] = useState(false)
+  // Artwork the shopper attaches from the buy panel. Unlike the frame page's
+  // "Upload a preview image", this never opens the editor — the file rides
+  // along with the inquiry and is emailed to the platform inbox.
+  const [artwork, setArtwork] = useState<File | null>(null)
+  const artworkRef = useRef<HTMLInputElement>(null)
+  const [artworkUrl, setArtworkUrl] = useState<string | null>(null)
+  const [artworkPreview, setArtworkPreview] = useState<string | null>(null)
+  const [artworkUploading, setArtworkUploading] = useState(false)
+  const [canvasMaterialId, setCanvasMaterialId] = useState<string | null>(null)
+  const [laminationId, setLaminationId] = useState<string | null>(null)
+  const [canvasEdgeId, setCanvasEdgeId] = useState<string | null>(null)
+
+  // Reset the picks when navigating between categories.
+  useEffect(() => {
+    setSizeName('')
+    setCustomW(0)
+    setCustomH(0)
+    setArtwork(null)
+    setArtworkUrl(null)
+    setCanvasMaterialId(null)
+    setLaminationId(null)
+    setCanvasEdgeId(null)
+  }, [slug])
+
+  // Sorted naturally so A1, A2, A3, A10 read in order.
+  const sortedSizes = useMemo(
+    () => sortByNameNatural(category?.frameSizes ?? []),
+    [category],
+  )
+
+  useEffect(() => {
+    if (!sizeName && sortedSizes.length) setSizeName(sortedSizes[0].name)
+  }, [sortedSizes, sizeName])
+
+  const isCustom = sizeName === CUSTOM_SIZE
+  const selectedSize = useMemo(
+    () => (isCustom ? null : sortedSizes.find((s) => s.name === sizeName) ?? null),
+    [sortedSizes, sizeName, isCustom],
+  )
+  const selectedMaterial = useMemo(
+    () => category?.canvasMaterials?.find((o) => o.id === canvasMaterialId) ?? null,
+    [category, canvasMaterialId],
+  )
+  const selectedLamination = useMemo(
+    () => category?.laminations?.find((o) => o.id === laminationId) ?? null,
+    [category, laminationId],
+  )
+  const selectedEdge = useMemo(
+    () => category?.canvasEdges?.find((o) => o.id === canvasEdgeId) ?? null,
+    [category, canvasEdgeId],
+  )
+
+  // Each selected option contributes rate × width × height, same as frames.
+  const optionsPricePerCm =
+    (selectedMaterial?.pricePerCm ?? 0) +
+    (selectedLamination?.pricePerCm ?? 0) +
+    (selectedEdge?.pricePerCm ?? 0)
+
+  const w = isCustom ? customW : selectedSize?.widthCm ?? 0
+  const h = isCustom ? customH : selectedSize?.lengthCm ?? 0
+  const hasSize = isCustom ? customW > 0 && customH > 0 : !!selectedSize
+  const priced = !!category && category.pricePerCm > 0
+
+  // Within the category's manufacturable range -> Add to cart; outside it
+  // (or any size when no range is set) -> Request inquiry, same rule as frames.
+  const inRange =
+    !!category && category.sizeTo > 0 &&
+    w >= category.sizeFrom && w <= category.sizeTo &&
+    h >= category.sizeFrom && h <= category.sizeTo
+
+  const sizeDisplay = isCustom
+    ? hasSize
+      ? `${t('sizePicker.customSize', { ns: 'productDetail' })} · ${w}×${h} cm`
+      : t('sizePicker.customSize', { ns: 'productDetail' })
+    : sizeName
+
+  const unitPrice = category && hasSize ? printPrice(category, w, h, optionsPricePerCm) : 0
+
+  const priceLabel = !priced
+    ? '—'
+    : hasSize
+      ? formatOMR(unitPrice)
+      : `${formatOMRRate(category!.pricePerCm)} / cm`
+
+  // Display-only "was" price, using the same shape but the old rate.
+  const oldPriceLabel = (() => {
+    const old = category?.oldPricePerCm ?? 0
+    if (!category || old <= 0 || old <= category.pricePerCm) return null
+    if (!hasSize) return `${formatOMRRate(old)} / cm`
+    return formatOMR((old + optionsPricePerCm) * w * h)
+  })()
+
+  const gallery = useMemo(
+    () => Array.from(new Set((category?.gallery ?? []).filter(Boolean))).map(resolveAsset),
+    [category],
+  )
 
   const title = category ? pickLocalized(category.name, category.nameAr, isRtl) : ''
-  const blurb = category ? pickLocalized(category.description, category.descriptionAr, isRtl) : ''
+  const description = category
+    ? pickLocalized(category.description, category.descriptionAr, isRtl)
+    : ''
+  const specEntries = Object.entries(category?.specifications ?? {}).filter(([, v]) => !!v)
 
+  // Local object URL for the thumbnail; revoked when the file changes.
+  useEffect(() => {
+    if (!artwork) {
+      setArtworkPreview(null)
+      return
+    }
+    const url = URL.createObjectURL(artwork)
+    setArtworkPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [artwork])
+
+  // Uploaded on pick rather than at checkout, so the cart line already has
+  // a URL the order snapshot and admin can render.
+  const pickArtwork = async (file: File | undefined) => {
+    if (!file) return
+    if (!ARTWORK_MIME.includes(file.type)) {
+      toast.error(t('artwork.onlyImages'))
+      return
+    }
+    if (file.size > ARTWORK_MAX_BYTES) {
+      toast.error(t('artwork.tooLarge', { mb: ARTWORK_MAX_BYTES / (1024 * 1024) }))
+      return
+    }
+    setArtworkUploading(true)
+    try {
+      const url = await uploadArtwork(file)
+      setArtwork(file)
+      setArtworkUrl(url)
+    } catch (err) {
+      // Prefer the API's reason (size / type) over the generic fallback.
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(msg || t('artwork.uploadFailed'))
+    } finally {
+      setArtworkUploading(false)
+    }
+  }
+
+  const clearArtwork = () => {
+    setArtwork(null)
+    setArtworkUrl(null)
+  }
+
+  const handleAddToCart = () => {
+    if (!category || !priced || !hasSize) return
+    const area = w * h
+    addItem({
+      kind: 'print',
+      frameId: category.hashedId,
+      name: title || category.name,
+      subtitle: selectedSize?.name ?? '',
+      thumbnail: gallery[0] ?? '',
+      artworkUrl,
+      widthCm: w,
+      heightCm: h,
+      pricePerItem: unitPrice,
+      // Frame-only options never apply to a print.
+      matSizeId: null,
+      matSizeName: null,
+      matPrice: 0,
+      matColorId: null,
+      matColorName: null,
+      mdfId: null,
+      mdfName: null,
+      mdfPrice: 0,
+      paperTypeId: null,
+      paperTypeName: null,
+      paperTypePrice: 0,
+      glassTypeId: null,
+      glassTypeName: null,
+      glassTypePrice: 0,
+      // Shared with frames.
+      laminationId,
+      laminationName: selectedLamination?.name ?? null,
+      laminationPrice: (selectedLamination?.pricePerCm ?? 0) * area,
+      // Print-only.
+      canvasMaterialId,
+      canvasMaterialName: selectedMaterial?.name ?? null,
+      canvasMaterialPrice: (selectedMaterial?.pricePerCm ?? 0) * area,
+      canvasEdgeId,
+      canvasEdgeName: selectedEdge?.name ?? null,
+      canvasEdgePrice: (selectedEdge?.pricePerCm ?? 0) * area,
+    })
+    toast.success(t('detail.addedToCart'))
+  }
+
+  if (loading) {
+    return (
+      <Shell>
+        <div className="mt-24 flex justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-brand-navy/50" />
+        </div>
+      </Shell>
+    )
+  }
+
+  if (notFound || !category) {
+    return (
+      <Shell>
+        <div className="mt-16 rounded-2xl border border-black/[0.07] py-20 text-center">
+          <p className="text-base font-medium text-brand-navy">{t('category.notFound')}</p>
+          <button
+            type="button"
+            onClick={() => navigate('/custom-prints')}
+            className="mt-4 text-sm font-semibold text-brand-gold hover:underline"
+          >
+            {t('category.backToPrints')}
+          </button>
+        </div>
+      </Shell>
+    )
+  }
+
+  return (
+    <Shell>
+      {/* Breadcrumb */}
+      <nav
+        aria-label={t('breadcrumb.aria')}
+        className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-foreground/60 md:text-[13px]"
+      >
+        <Link to="/" aria-label={t('breadcrumb.home')} className="inline-flex items-center hover:text-brand-navy">
+          <Home className="h-3.5 w-3.5" strokeWidth={2} />
+        </Link>
+        <ChevronRight className="h-3 w-3 text-foreground/40" />
+        <Link to="/custom-prints" className="hover:text-brand-navy">{t('breadcrumb.customPrints')}</Link>
+        <ChevronRight className="h-3 w-3 text-foreground/40" />
+        {/* Current page — same emphasis as the frame product breadcrumb. */}
+        <span className="min-w-0 break-words text-foreground">{title}</span>
+      </nav>
+
+      <div className="mt-6 flex flex-col gap-8 lg:flex-row lg:gap-10">
+        <ProductGallery images={gallery} className="lg:w-[calc(56%+10px)]" />
+
+        {/* Buy panel */}
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-brand-navy md:text-[32px]">
+            {title}
+          </h1>
+          {description && (
+            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground/70">
+              {description}
+            </p>
+          )}
+
+          {/* Image Size — quick pills, the rest behind "More sizes", plus a
+              "Custom size" entry that opens the width x height dialog. */}
+          <div className="mt-6">
+            <p className="text-sm font-semibold text-foreground">{t('detail.options.imageSize')}</p>
+            <SizePicker
+              sizes={sortedSizes.map((s) => s.name)}
+              value={sizeName}
+              displayValue={sizeDisplay}
+              onChange={(v) => (v === CUSTOM_SIZE ? setCustomOpen(true) : setSizeName(v))}
+            />
+          </div>
+
+          {/* The remaining three groups render only when the admin assigned
+              values to this category. */}
+          <OptionPillGroup
+            label={t('detail.options.canvasMaterial')}
+            items={category.canvasMaterials ?? []}
+            value={canvasMaterialId}
+            onChange={setCanvasMaterialId}
+          />
+          <OptionPillGroup
+            label={t('detail.options.lamination')}
+            items={category.laminations ?? []}
+            value={laminationId}
+            onChange={setLaminationId}
+          />
+          <OptionPillGroup
+            label={t('detail.options.canvasEdge')}
+            items={category.canvasEdges ?? []}
+            value={canvasEdgeId}
+            onChange={setCanvasEdgeId}
+          />
+
+          {/* Finished size readout */}
+          {hasSize && (
+            <p className="mt-6 text-[13px] italic text-foreground/55">
+              {t('detail.finishedSize', { w: w.toFixed(1), h: h.toFixed(1) })}
+            </p>
+          )}
+
+          {/* Upload — same placement and treatment as the frame product page,
+              but it never opens the editor. The file is uploaded straight away
+              so its URL can ride along on the cart line and into the order; the
+              File itself is also attached if the shopper requests an inquiry. */}
+          <div className="mt-4">
+            {artwork ? (
+              <div className="flex items-center gap-3 rounded-lg border border-black/15 bg-white p-2.5">
+                {artworkPreview && (
+                  <img
+                    src={artworkPreview}
+                    alt=""
+                    className="h-14 w-14 shrink-0 rounded-md border border-black/10 object-cover"
+                    draggable={false}
+                  />
+                )}
+                <span className="min-w-0 flex-1 truncate text-[13px] text-foreground/70">
+                  {artwork.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={clearArtwork}
+                  aria-label={t('artwork.remove')}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-foreground/50 transition hover:bg-black/[0.06] hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => artworkRef.current?.click()}
+                disabled={artworkUploading}
+                className="gap-2 border-brand-navy/40 bg-transparent text-brand-navy hover:bg-brand-navy/5"
+              >
+                {artworkUploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                {t('artwork.upload')}
+              </Button>
+            )}
+          </div>
+          <input
+            ref={artworkRef}
+            type="file"
+            accept={ARTWORK_MIME.join(',')}
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              e.currentTarget.value = ''
+              void pickArtwork(file)
+            }}
+          />
+
+          {/* Price + add to cart — same structure as the frame product page. */}
+          <div className="mt-7 flex flex-wrap items-center justify-between gap-4 border-y border-black/[0.07] py-6">
+            <div className="flex items-baseline gap-2.5">
+              <span className="text-2xl font-bold text-brand-navy tabular-nums">{priceLabel}</span>
+              {oldPriceLabel && (
+                <del className="text-base font-medium text-foreground/40 tabular-nums">
+                  {oldPriceLabel}
+                </del>
+              )}
+            </div>
+            {isCustom && !hasSize ? (
+              <Button variant="navy" size="lg" onClick={() => setCustomOpen(true)} className="min-w-[140px] rounded-lg">
+                {t('buyPanel.enterCustomSize', { ns: 'productDetail' })}
+              </Button>
+            ) : hasSize && !inRange ? (
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => setInquiryOpen(true)}
+                className="min-w-[140px] rounded-lg border-brand-navy/40 text-brand-navy hover:bg-brand-navy/5"
+              >
+                {t('buyPanel.customOrder', { ns: 'productDetail' })}
+              </Button>
+            ) : (
+              <Button
+                variant="navy"
+                size="lg"
+                onClick={handleAddToCart}
+                disabled={!priced || !hasSize}
+                className="min-w-[140px] rounded-lg"
+              >
+                {t('detail.addToCart')}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Specifications — same layout as the frame product page. */}
+      {specEntries.length > 0 && (
+        <section className="mt-10 max-w-lg">
+          <h2 className="text-xl font-bold text-brand-navy">{t('detail.specsHeading')}</h2>
+          <dl className="mt-5 space-y-3 text-[13px]">
+            {specEntries.map(([label, value]) => (
+              <div key={label} className="grid grid-cols-[150px_1fr] gap-4">
+                <dt className="font-semibold text-foreground">{label}:</dt>
+                <dd className="text-foreground/70">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
+      <CustomSizeDialog
+        open={customOpen}
+        onOpenChange={setCustomOpen}
+        sizeFrom={category.sizeFrom}
+        sizeTo={category.sizeTo}
+        initialW={customW || Math.max(1, Math.round(category.sizeFrom || 20))}
+        initialH={customH || Math.max(1, Math.round(category.sizeFrom || 20))}
+        canConfirm={priced}
+        priceLabelFor={(cw, ch) =>
+          priced ? formatOMR(printPrice(category, cw, ch, optionsPricePerCm)) : '—'
+        }
+        onConfirm={(cw, ch) => {
+          setCustomW(cw)
+          setCustomH(ch)
+          setSizeName(CUSTOM_SIZE)
+        }}
+      />
+
+      {/* Out-of-range sizes can't be checked out — collect the request instead. */}
+      <InquiryDialog
+        open={inquiryOpen}
+        onOpenChange={setInquiryOpen}
+        frameName={category.name}
+        displayName={title}
+        thumbnail={gallery[0]}
+        widthCm={w}
+        heightCm={h}
+        unitPrice={unitPrice}
+        priceLabel={priceLabel}
+        initialImage={artwork}
+      />
+    </Shell>
+  )
+}
+
+function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen w-full bg-white font-sans text-[#000000]">
       <header className="relative z-30">
         <Navbar />
       </header>
       <PillNav />
-
       <main className="mx-auto max-w-[1400px] px-5 pt-28 pb-20 md:px-8 md:pt-32 lg:px-10 lg:pt-40">
-        <nav
-          aria-label={t('breadcrumb.aria')}
-          className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-foreground/60 md:text-[13px]"
-        >
-          <Link to="/" aria-label={t('breadcrumb.home')} className="inline-flex items-center hover:text-brand-navy">
-            <Home className="h-3.5 w-3.5" strokeWidth={2} />
-          </Link>
-          <ChevronRight className="h-3 w-3 text-foreground/40" />
-          <Link to="/custom-prints" className="hover:text-brand-navy">{t('breadcrumb.customPrints')}</Link>
-          {title && (
-            <>
-              <ChevronRight className="h-3 w-3 text-foreground/40" />
-              {/* Current page — same emphasis as the product breadcrumbs. */}
-              <span className="min-w-0 break-words text-foreground">{title}</span>
-            </>
-          )}
-        </nav>
-
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-brand-navy md:text-[40px]">
-          {title || t('category.fallbackTitle')}
-        </h1>
-        {blurb && <p className="mt-3 max-w-3xl text-sm leading-relaxed text-foreground/70">{blurb}</p>}
-
-        {loading ? (
-          <div className="mt-20 flex justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-brand-navy/50" />
-          </div>
-        ) : notFound ? (
-          <div className="mt-12 rounded-2xl border border-black/[0.07] py-20 text-center">
-            <p className="text-base font-medium text-brand-navy">{t('category.notFound')}</p>
-            <button
-              type="button"
-              onClick={() => navigate('/custom-prints')}
-              className="mt-4 text-sm font-semibold text-brand-gold hover:underline"
-            >
-              {t('category.backToPrints')}
-            </button>
-          </div>
-        ) : items.length === 0 ? (
-          <div className="mt-12 rounded-2xl border border-dashed border-black/[0.12] py-20 text-center text-sm text-foreground/50">
-            {t('category.empty')}
-          </div>
-        ) : (
-          <>
-            {/* Five across on large screens, stepping down on smaller ones. */}
-            <div className="mt-10 grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {items.map((p) => (
-                <PrintCard key={p.id} print={p} />
-              ))}
-            </div>
-            {pageCount > 1 && (
-              <div className="mt-12 flex justify-center">
-                <Pagination page={page} pageCount={pageCount} onPage={setPage} />
-              </div>
-            )}
-          </>
-        )}
+        {children}
+                <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 z-0 -translate-x-1/2 rounded-full"
+          style={{
+            top: '-186px',
+            width: 'min(1560px, 140vw)',
+            height: '270px',
+            background: 'rgba(65, 105, 226, 0.2)',
+            filter: 'blur(130px)',
+          }}
+        />
       </main>
-
       <Footer />
     </div>
-  )
-}
-
-function PrintCard({ print }: { print: CustomPrint }) {
-  const { t } = useTranslation('prints')
-  const navigate = useNavigate()
-  const isRtl = useLangStore((s) => s.isRtl)
-  // Gallery-only products: the first image is the card thumbnail.
-  const img = print.gallery?.[0]
-
-  // "From" price uses the smallest allowed size so the figure is real rather
-  // than a 1 cm minimum. Falls back to the per-cm rate when no range is set.
-  const from = print.sizeFrom > 0
-    ? print.pricePerCm * (print.sizeFrom + print.sizeFrom) * 2 + print.pricePerCm * (print.wasteValue ?? 0)
-    : 0
-
-  return (
-    <motion.div
-      whileHover={{ y: -3 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-      onClick={() => navigate(`/custom-prints/product/${print.hashedId}`)}
-      className="group cursor-pointer rounded-2xl border-[0.5px] border-transparent p-3 transition-shadow hover:border-[#F1F1F1] hover:bg-white hover:shadow-[0_18px_40px_-18px_rgba(10,31,77,0.18)]"
-    >
-      <div className="flex h-[203px] items-center justify-center overflow-hidden rounded-xl bg-black/[0.03]">
-        {img ? (
-          <img
-            src={resolveAsset(img)}
-            alt={pickLocalized(print.name, print.nameAr, isRtl) ?? print.name}
-            loading="lazy"
-            draggable={false}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-          />
-        ) : (
-          <ImageIcon className="h-6 w-6 text-foreground/20" />
-        )}
-      </div>
-
-      <p className="mt-3 line-clamp-1 text-sm font-medium text-brand-navy">
-        {pickLocalized(print.name, print.nameAr, isRtl)}
-      </p>
-      <p className="mt-1 text-[13px] tabular-nums text-foreground/60">
-        {print.pricePerCm <= 0
-          ? '—'
-          : from > 0
-            ? t('card.from', { price: formatOMR(from) })
-            : `${formatOMRRate(print.pricePerCm)} / cm`}
-      </p>
-    </motion.div>
   )
 }

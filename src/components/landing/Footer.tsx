@@ -31,13 +31,9 @@ export default function Footer() {
   // pre-filter the grid (unknown categories simply fall back to all frames).
   const productLinks = [
     { label: t('footer.products.allFrames'), href: '/products' },
-    { label: t('footer.products.framedPrints'), href: '/products?category=framed-prints' },
-    // Points at the prints module, not the frames listing: frame categories
-    // were removed, so ?category= no longer filters anything there.
-    { label: t('footer.products.canvasPrints'), href: '/custom-prints' },
-    { label: t('footer.products.photoPrints'), href: '/products?category=photo-prints' },
     { label: t('footer.products.gifts'), href: '/products?category=gifts' },
-    { label: t('footer.products.mirrorWorks'), href: '/products?category=mirror-works' },
+    // Repointed from the removed mirror-works filter to the prints module.
+    { label: t('footer.products.customPrints'), href: '/custom-prints' },
     { label: t('footer.products.customMirrors'), href: '/custom-mirrors' },
   ]
   const companyLinks = [

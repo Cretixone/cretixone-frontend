@@ -25,12 +25,9 @@
     },
     "products": {
       "allFrames": "جميع الإطارات",
-      "framedPrints": "المطبوعات المؤطرة",
-      "canvasPrints": "مطبوعات الكانفاس",
-      "photoPrints": "طباعة الصور",
       "gifts": "الهدايا",
-      "mirrorWorks": "أعمال المرايا",
-      "customMirrors": "مرايا مخصصة"
+      "customMirrors": "مرايا مخصصة",
+      "customPrints": "المطبوعات المخصصة"
     },
     "company": {
       "about": "من نحن",

@@ -37,6 +37,12 @@ const cretixAxios = axios.create({
 
 // ── Request: attach the user access token when present ──────────────────────
 cretixAxios.interceptors.request.use((config) => {
+  // FormData must NOT inherit the instance's JSON Content-Type: the browser
+  // has to set multipart/form-data itself so it can append the boundary.
+  // Without this, multer sees a JSON body and every file upload arrives empty.
+  if (config.data instanceof FormData) {
+    delete (config.headers as Record<string, unknown>)['Content-Type']
+  }
   const token = useAuthStore.getState().accessToken
   if (token) {
     config.headers = config.headers ?? {}

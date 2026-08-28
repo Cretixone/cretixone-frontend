@@ -20,6 +20,7 @@ const TITLES: Record<string, string> = {
   '/privacy': 'Privacy Policy',
   '/products': 'Shop Picture Frames',
   '/product': 'Frame Details',
+  '/custom-mirrors/inquiry': 'Mirror Inquiry',
   '/custom-mirrors': 'Custom Mirrors',
   '/custom-prints/product': 'Print Details',
   '/custom-prints': 'Custom Prints',
@@ -33,6 +34,14 @@ const TITLES: Record<string, string> = {
 }
 
 function titleFor(pathname: string): string {
+  // Print categories live at /custom-prints/<slug> and their inquiry form at
+  // /custom-prints/<slug>/inquiry — neither can be reached by a path prefix,
+  // so they're matched on shape before the table lookup.
+  if (pathname.startsWith('/custom-prints/') && pathname !== '/custom-prints/product') {
+    if (pathname.endsWith('/inquiry')) return 'Product Inquiry'
+    if (!pathname.startsWith('/custom-prints/product')) return 'Print Details'
+  }
+
   const exact = TITLES[pathname]
   if (exact) return exact
 

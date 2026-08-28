@@ -48,7 +48,8 @@
       "matColor": "Mat color:",
       "canvasMaterial": "Canvas Material:",
       "canvasEdge": "Canvas Edge:",
-      "printBadge": "Print"
+      "printBadge": "Print",
+      "yourImage": "Your image"
     }
   },
   "checkoutPage": {

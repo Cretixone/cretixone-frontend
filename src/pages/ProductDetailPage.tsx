@@ -6,16 +6,10 @@ import { toast } from 'sonner'
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
 import { ProductGallery } from '@/components/product/ProductGallery'
 import { OptionPillGroup } from '@/components/product/OptionPillGroup'
 import { InquiryDialog } from '@/components/InquiryDialog'
+import { CUSTOM_SIZE, CustomSizeDialog, SizePicker } from '@/components/product/SizePicker'
 import { ReviewsSection } from '@/components/ReviewsSection'
 import { useEditorStore } from '@/store/editorStore'
 import { useCartStore } from '@/store/cartStore'
@@ -26,6 +20,7 @@ import { formatOMR, formatOMRRate } from '@/lib/format'
 // One shared formula for frames and prints — see src/lib/pricing.ts.
 import { productPrice } from '@/lib/pricing'
 import { cn } from '@/lib/utils'
+import { sortByNameNatural } from '@/lib/sort'
 
 // Titles/descriptions live in the productDetail namespace and are resolved with
 // t() at render time (see BuyPanel). The `id` values are logic — keep unchanged.
@@ -33,19 +28,21 @@ const SERVICES = [
   {
     id: 'frame-only',
     titleKey: 'services.frameOnly.title',
+    // Floating frames are stretched, so both services are named accordingly.
+    floatingTitleKey: 'services.frameOnly.titleFloating',
     descKey: 'services.frameOnly.desc',
     icon: '/images/svg/frame-img-icon.svg',
   },
   {
     id: 'print-frame',
     titleKey: 'services.printFrame.title',
+    floatingTitleKey: 'services.printFrame.titleFloating',
     descKey: 'services.printFrame.desc',
     icon: '/images/svg/frame-icon.svg',
   },
 ] as const
 
 // Sentinel value for the "Custom size" entry in the size dropdown.
-const CUSTOM_SIZE = '__custom__'
 
 export default function ProductDetailPage() {
   const { t } = useTranslation('productDetail')
@@ -76,8 +73,9 @@ export default function ProductDetailPage() {
   // Size presets allow-listed for this frame by the admin (frame add/edit
   // form) — shown as quick pills + the "More sizes" dropdown. Just the name
   // (no dimensions) per the size badge.
+  // Sorted naturally so A1, A2, A3, A10 read in order rather than A1, A10, A2.
   const sizes = useMemo(
-    () => (frame?.frameSizes ?? []).map((s) => s.name),
+    () => sortByNameNatural(frame?.frameSizes ?? []).map((s) => s.name),
     [frame],
   )
 
@@ -113,10 +111,6 @@ export default function ProductDetailPage() {
   const [customW, setCustomW] = useState(0)
   const [customH, setCustomH] = useState(0)
   const [customOpen, setCustomOpen] = useState(false)
-  // Draft dims edited inside the dialog — only committed to customW/H on Confirm
-  // (Cancel or closing the popup discards them).
-  const [draftW, setDraftW] = useState(0)
-  const [draftH, setDraftH] = useState(0)
   // Request-inquiry form (custom / out-of-range sizes) — opens over the page.
   const [inquiryOpen, setInquiryOpen] = useState(false)
 
@@ -179,16 +173,6 @@ export default function ProductDetailPage() {
       : t('sizePicker.customSize')
     : size
 
-  // Live draft price/range shown inside the dialog while editing (pre-Confirm).
-  const draftHasSize = draftW > 0 && draftH > 0
-  const draftInRange =
-    !!frame && frame.sizeTo > 0 &&
-    draftW >= frame.sizeFrom && draftW <= frame.sizeTo &&
-    draftH >= frame.sizeFrom && draftH <= frame.sizeTo
-  const draftPriceLabel =
-    frame && frame.pricePerCm > 0 && draftHasSize
-      ? formatOMR(productPrice(frame.pricePerCm, frame.wasteValue, draftW, draftH, optionsPricePerCm))
-      : '—'
   // Price label:
   //  • a size preset is chosen → the total for that size — frame (pricePerCm
   //    × perimeter, plus the admin-configured waste allowance: pricePerCm ×
@@ -228,17 +212,11 @@ export default function ProductDetailPage() {
   const addItem = useCartStore((s) => s.addItem)
   const priced = !!frame && frame.pricePerCm > 0
 
-  // Picking "Custom size" opens the dialog seeded with the current custom size
-  // (or a default). The size isn't applied until the user hits Confirm.
+  // Picking "Custom size" opens the dialog; the dialog seeds itself from the
+  // current custom size and nothing is applied until the user hits Confirm.
   const handleSelectSize = (v: string) => {
-    if (v === CUSTOM_SIZE) {
-      const seed = Math.max(1, Math.round(frame?.sizeFrom || 20))
-      setDraftW(customW || seed)
-      setDraftH(customH || seed)
-      setCustomOpen(true)
-    } else {
-      setSize(v)
-    }
+    if (v === CUSTOM_SIZE) setCustomOpen(true)
+    else setSize(v)
   }
 
   // In-range (preset or custom) → add to cart. Price = frame (pricePerCm ×
@@ -330,7 +308,7 @@ export default function ProductDetailPage() {
             sizes={sizes}
             priceLabel={priceLabel}
             oldPriceLabel={oldPriceLabel}
-            showService={(frame?.specifications?.['Frame Type'] ?? '').toLowerCase() === 'floating'}
+            isFloating={(frame?.specifications?.['Frame Type'] ?? '').toLowerCase().includes('floating')}
             service={service}
             onService={setService}
             size={size}
@@ -363,72 +341,25 @@ export default function ProductDetailPage() {
         {/* Custom size dialog — enter W×H, then Confirm to apply (Cancel or
             closing discards). The Add-to-cart / Custom-order action lives on the
             main button once a size is applied. */}
-        <Dialog open={customOpen} onOpenChange={setCustomOpen}>
-          <DialogContent dir={isRtl ? 'rtl' : 'ltr'} className="max-w-sm">
-            <DialogHeader className="border-b p-6">
-              <DialogTitle>{t('customDialog.title')}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 p-6">
-              {frame && frame.sizeTo > 0 && (
-                <p className="text-[13px] text-foreground/60">
-                  {t('customDialog.range', { from: frame.sizeFrom, to: frame.sizeTo })}
-                </p>
-              )}
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block">
-                  <span className="text-sm font-medium text-foreground">{t('customDialog.width')}</span>
-                  <input
-                    type="number"
-                    min={1}
-                    inputMode="decimal"
-                    value={draftW || ''}
-                    onChange={(e) => setDraftW(Math.max(0, Number(e.target.value) || 0))}
-                    className="mt-1.5 w-full rounded-lg border border-black/15 bg-white px-3 py-2 text-sm text-foreground outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/30"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-sm font-medium text-foreground">{t('customDialog.height')}</span>
-                  <input
-                    type="number"
-                    min={1}
-                    inputMode="decimal"
-                    value={draftH || ''}
-                    onChange={(e) => setDraftH(Math.max(0, Number(e.target.value) || 0))}
-                    className="mt-1.5 w-full rounded-lg border border-black/15 bg-white px-3 py-2 text-sm text-foreground outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/30"
-                  />
-                </label>
-              </div>
-              {draftHasSize && (
-                <div className="flex items-center justify-between rounded-lg bg-black/[0.03] px-3.5 py-2.5">
-                  <span className="text-sm text-foreground/70">{t('customDialog.price')}</span>
-                  <span className="text-base font-bold text-brand-navy tabular-nums">{draftPriceLabel}</span>
-                </div>
-              )}
-              {draftHasSize && !draftInRange && (
-                <p className="text-[12px] leading-relaxed text-amber-600">{t('customDialog.outOfRange')}</p>
-              )}
-            </div>
-            <DialogFooter className="border-t bg-background p-4 sm:p-6">
-              <Button type="button" variant="ghost" onClick={() => setCustomOpen(false)}>
-                {t('customDialog.cancel')}
-              </Button>
-              <Button
-                type="button"
-                variant="navy"
-                disabled={!(frame && frame.pricePerCm > 0) || !draftHasSize}
-                onClick={() => {
-                  if (!draftHasSize) return
-                  setCustomW(draftW)
-                  setCustomH(draftH)
-                  setSize(CUSTOM_SIZE)
-                  setCustomOpen(false)
-                }}
-              >
-                {t('customDialog.confirm')}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <CustomSizeDialog
+          open={customOpen}
+          onOpenChange={setCustomOpen}
+          sizeFrom={frame?.sizeFrom ?? 0}
+          sizeTo={frame?.sizeTo ?? 0}
+          initialW={customW || Math.max(1, Math.round(frame?.sizeFrom || 20))}
+          initialH={customH || Math.max(1, Math.round(frame?.sizeFrom || 20))}
+          canConfirm={priced}
+          priceLabelFor={(w, h) =>
+            frame && frame.pricePerCm > 0
+              ? formatOMR(productPrice(frame.pricePerCm, frame.wasteValue, w, h, optionsPricePerCm))
+              : '—'
+          }
+          onConfirm={(w, h) => {
+            setCustomW(w)
+            setCustomH(h)
+            setSize(CUSTOM_SIZE)
+          }}
+        />
 
         {/* Request-inquiry form — frame + size are read-only (carried in from the
             current selection); only contact details are editable. */}
@@ -491,6 +422,7 @@ function BuyPanel({
   oldPriceLabel,
   service,
   onService,
+  isFloating,
   size,
   onSize,
   paperTypes,
@@ -513,7 +445,6 @@ function BuyPanel({
   hasSize,
   outOfRange,
   isCustom,
-  showService,
   className,
 }: {
   title: string
@@ -524,6 +455,8 @@ function BuyPanel({
   oldPriceLabel: string | null
   service: string
   onService: (id: string) => void
+  /** Floating frames are stretched — their services are labelled "+ Stretch". */
+  isFloating: boolean
   size: string
   onSize: (s: string) => void
   paperTypes: { id: string; name: string }[]
@@ -546,7 +479,6 @@ function BuyPanel({
   hasSize: boolean
   outOfRange: boolean
   isCustom: boolean
-  showService: boolean
   className?: string
 }) {
   const { t } = useTranslation('productDetail')
@@ -559,24 +491,22 @@ function BuyPanel({
         {subtitle}
       </p>
 
-      {/* Service — only shown for floating frames */}
-      {showService && (
-        <>
-          <p className="mt-6 text-base font-semibold text-foreground">
-            {t('buyPanel.chooseService')}
-          </p>
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {SERVICES.map((s) => {
-              const selected = service === s.id
-              return (
+      {/* Service — offered on every frame, whatever its Frame Type. */}
+      <p className="mt-6 text-base font-semibold text-foreground">{t('buyPanel.chooseService')}</p>
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {SERVICES.map((s) => {
+          const selected = service === s.id
+          return (
             <button
               key={s.id}
               type="button"
               onClick={() => onService(s.id)}
               aria-pressed={selected}
-              className="flex items-center gap-3 rounded-lg px-3.5 text-left transition"
+              className="flex items-center gap-3 rounded-lg px-3.5 py-2 text-left transition"
               style={{
-                height: '49px',
+                // min-height, not height: the labels wrap on narrow columns and
+                // at browser zoom, and a fixed box made them spill out of it.
+                minHeight: '49px',
                 background: '#F6F6F6',
                 outline: selected
                   ? '1.5px solid #002365'
@@ -584,30 +514,40 @@ function BuyPanel({
                 outlineOffset: '-1px',
               }}
             >
-              <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center border-black/[0.06]"
-              >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center border-black/[0.06]">
                 <img src={s.icon} alt="" className="h-5 w-auto" />
               </span>
               <span className="min-w-0">
-                <span className="block text-[18px] font-medium leading-none text-foreground">
-                  {t(s.titleKey)}
+                {/* leading-tight/snug rather than leading-none so a wrapped
+                    second line does not collide with the line above it. */}
+                <span className="block text-[16px] font-medium leading-tight text-foreground">
+                  {t(isFloating ? s.floatingTitleKey : s.titleKey)}
                 </span>
-                <span className="mt-1 block text-[11px] font-normal leading-none text-foreground/55">
+                <span className="mt-0.5 block text-[11px] font-normal leading-snug text-foreground/55">
                   {t(s.descKey)}
                 </span>
               </span>
             </button>
-              )
-            })}
-          </div>
-        </>
-      )}
+          )
+        })}
+      </div>
 
       {/* Size */}
       <div className="mt-6">
         <p className="text-sm font-semibold text-foreground">{t('buyPanel.frameSize')}</p>
         <SizePicker sizes={sizes} value={size} displayValue={sizeDisplay} onChange={onSize} />
+        {/* Decorative blue wash behind the buy panel — this page only. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 z-0 -translate-x-1/2 rounded-full"
+          style={{
+            top: '-186px',
+            width: 'min(1560px, 140vw)',
+            height: '270px',
+            background: 'rgba(65, 105, 226, 0.2)',
+            filter: 'blur(130px)',
+          }}
+        />
       </div>
 
       {/* Paper Type / MDF / Lamination / Glass Type — only the values the
@@ -673,143 +613,5 @@ function BuyPanel({
         )}
       </div>
     </div>
-  )
-}
-
-// A labelled row of pill buttons for a single-choice option (Paper Type, MDF,
-// Lamination, Glass Type). Renders nothing when the frame has no assigned
-// values for this catalog.
-function SizePicker({
-  sizes,
-  value,
-  displayValue,
-  onChange,
-}: {
-  sizes: string[]
-  value: string
-  displayValue: string
-  onChange: (s: string) => void
-}) {
-  const { t } = useTranslation('productDetail')
-  const [open, setOpen] = useState(false)
-  // Quick-pick pills for the first few presets; anything else lives behind
-  // "More sizes". If the active selection isn't one of the quick pills (an
-  // overflow preset, or a custom size), show it as its own highlighted pill
-  // so the current choice is never hidden behind the dropdown.
-  const QUICK_COUNT = 3
-  const quickSizes = sizes.slice(0, QUICK_COUNT)
-  const hasOverflowSelection = !!value && !quickSizes.includes(value)
-  return (
-    <>
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        {quickSizes.map((s) => {
-          const selected = s === value
-          return (
-            <button
-              key={s}
-              type="button"
-              onClick={() => onChange(s)}
-              aria-pressed={selected}
-              className={cn(
-                'rounded-full px-4 py-1 text-sm font-medium transition',
-                selected ? 'bg-brand-gold text-white' : 'bg-black/[0.04] text-foreground/80 hover:bg-black/[0.07]',
-              )}
-            >
-              {s}
-            </button>
-          )
-        })}
-        {hasOverflowSelection && (
-          <span className="rounded-full bg-brand-gold px-4 py-1 text-sm font-medium text-white">
-            {displayValue || t('sizePicker.selectSize')}
-          </span>
-        )}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setOpen((o) => !o)}
-            aria-haspopup="listbox"
-            aria-expanded={open}
-            className="inline-flex items-center gap-1 rounded-full bg-black/[0.04] px-4 py-1 text-sm font-medium text-foreground/70 transition hover:bg-black/[0.07] focus-visible:outline-none"
-          >
-            {t('sizePicker.moreSizes')}
-            <ChevronRight
-              className={cn('h-4 w-4 transition-transform', open && 'rotate-90')}
-            />
-          </button>
-          {open && (
-            <>
-              {/* click-away */}
-              <button
-                type="button"
-                aria-hidden
-                tabIndex={-1}
-                onClick={() => setOpen(false)}
-                className="fixed inset-0 z-10 cursor-default"
-              />
-              <ul
-                role="listbox"
-                className="absolute left-0 z-20 mt-1.5 w-44 overflow-hidden rounded-lg border border-black/10 bg-white p-1 shadow-[0_18px_40px_-18px_rgba(10,31,77,0.35)]"
-              >
-                {sizes.map((s) => {
-                  const selected = s === value
-                  return (
-                    <li key={s}>
-                      <button
-                        type="button"
-                        role="option"
-                        aria-selected={selected}
-                        onClick={() => {
-                          onChange(s)
-                          setOpen(false)
-                        }}
-                        className={cn(
-                          'block w-full rounded-md px-3 py-1.5 text-left text-sm transition hover:bg-black/[0.05]',
-                          selected
-                            ? 'font-semibold text-brand-gold'
-                            : 'text-foreground/80',
-                        )}
-                      >
-                        {s}
-                      </button>
-                    </li>
-                  )
-                })}
-                {/* Custom size — opens the size dialog */}
-                <li className={cn(sizes.length > 0 && 'mt-1 border-t border-black/10 pt-1')}>
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={value === CUSTOM_SIZE}
-                    onClick={() => {
-                      onChange(CUSTOM_SIZE)
-                      setOpen(false)
-                    }}
-                    className={cn(
-                      'block w-full rounded-md px-3 py-1.5 text-left text-sm transition hover:bg-black/[0.05]',
-                      value === CUSTOM_SIZE ? 'font-semibold text-brand-gold' : 'text-foreground/80',
-                    )}
-                  >
-                    {t('sizePicker.customSize')}
-                  </button>
-                </li>
-              </ul>
-            </>
-          )}
-        </div>
-        
-      </div>
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 z-0 -translate-x-1/2 rounded-full"
-        style={{
-          top: '-186px',
-          width: 'min(1560px, 140vw)',
-          height: '270px',
-          background: 'rgba(65, 105, 226, 0.2)',
-          filter: 'blur(130px)',
-        }}
-      />
-    </>
   )
 }

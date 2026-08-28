@@ -48,7 +48,8 @@
       "matColor": "لون الباسبارتو:",
       "canvasMaterial": "خامة الكانفاس:",
       "canvasEdge": "حافة الكانفاس:",
-      "printBadge": "مطبوعة"
+      "printBadge": "مطبوعة",
+      "yourImage": "صورتك"
     }
   },
   "checkoutPage": {

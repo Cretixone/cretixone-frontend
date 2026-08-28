@@ -36,6 +36,8 @@ const CustomMirrorsPage = lazy(() => import('@/pages/CustomMirrorsPage'))
 const CustomPrintsPage = lazy(() => import('@/pages/CustomPrintsPage'))
 const PrintCategoryPage = lazy(() => import('@/pages/PrintCategoryPage'))
 const PrintDetailPage = lazy(() => import('@/pages/PrintDetailPage'))
+const PrintInquiryPage = lazy(() => import('@/pages/PrintInquiryPage'))
+const MirrorInquiryPage = lazy(() => import('@/pages/MirrorInquiryPage'))
 const CheckoutPage = lazy(() => import('@/pages/CheckoutPage'))
 const OrderCompletePage = lazy(() => import('@/pages/OrderCompletePage'))
 const CartPage = lazy(() => import('@/pages/CartPage'))
@@ -113,10 +115,14 @@ export default function App() {
         <Route path="/team" element={<TeamPage />} />
         <Route path="/testimonials" element={<TestimonialsPage />} />
         <Route path="/custom-mirrors" element={<CustomMirrorsPage />} />
+        {/* Mirrors are made to order — the page CTAs collect an inquiry. */}
+        <Route path="/custom-mirrors/inquiry" element={<MirrorInquiryPage />} />
         <Route path="/custom-prints" element={<CustomPrintsPage />} />
         {/* Product route is declared before the :slug catch-all so "product"
             is never mistaken for a category slug. */}
         <Route path="/custom-prints/product/:id" element={<PrintDetailPage />} />
+        {/* Enquiry-only categories redirect here instead of the detail page. */}
+        <Route path="/custom-prints/:slug/inquiry" element={<PrintInquiryPage />} />
         <Route path="/custom-prints/:slug" element={<PrintCategoryPage />} />
         <Route
           path="/checkout"
@@ -201,11 +207,20 @@ function EditorApp() {
   // selected), fetch its full detail and swap it in so those admin-curated
   // allow-lists become available to the MDF/Paper/Lamination/Glass tabs.
   const selectedFrameId = useEditorStore((s) => s.selectedFrame?.id)
-  const { data: selectedFrameDetail } = useFetchFrameByIdQuery(selectedFrameId ?? 0, {
+  // `currentData`, NOT `data`: RTK Query keeps `data` pointing at the result
+  // for the PREVIOUS argument while a new one is in flight. Switching frames
+  // (a ?frame= change, or picking another frame) would therefore write the
+  // frame you just left back over the one you just selected. `currentData` is
+  // undefined until the new id resolves, so nothing stale can be written.
+  const { currentData: selectedFrameDetail } = useFetchFrameByIdQuery(selectedFrameId ?? 0, {
     skip: !selectedFrameId,
   })
   useEffect(() => {
-    if (selectedFrameDetail) useEditorStore.getState().setSelectedFrame(selectedFrameDetail)
+    if (!selectedFrameDetail) return
+    // Guard the race from the other side too: by the time this runs the user
+    // may already have moved on to a different frame.
+    if (useEditorStore.getState().selectedFrame?.id !== selectedFrameDetail.id) return
+    useEditorStore.getState().setSelectedFrame(selectedFrameDetail)
   }, [selectedFrameDetail])
 
   // Scope the editor's body bg + theme class so landing/about/terms

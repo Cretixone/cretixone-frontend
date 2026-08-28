@@ -46,7 +46,8 @@
       "total": "الإجمالي"
     },
     "canvasMaterialLabel": "الكانفاس: {{name}}",
-    "canvasEdgeLabel": "الحافة: {{name}}"
+    "canvasEdgeLabel": "الحافة: {{name}}",
+    "yourImage": "صورتك"
   },
   "profile": {
     "title": "إعدادات الملف الشخصي",

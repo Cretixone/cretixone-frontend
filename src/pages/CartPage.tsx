@@ -12,6 +12,7 @@ import {
   SHIPPING_OMR,
   type CartItem,
 } from '@/store/cartStore'
+import { resolveAsset } from '@/lib/assets'
 import { formatOMR } from '@/lib/format'
 import { useAuthStore } from '@/store/authStore'
 import { useAuthUiStore } from '@/store/authUiStore'
@@ -195,13 +196,18 @@ function CartRow({
   const lineTotal = item.pricePerItem * item.qty
   return (
     <div className="flex gap-4 py-6 first:pt-0">
-      {/* Thumbnail */}
+      {/* Thumbnail — the customer's own artwork when they uploaded one,
+          otherwise the catalogue image. */}
       <div className="h-[110px] w-[100px] shrink-0 overflow-hidden rounded-xl border border-black/10 bg-black/[0.03]">
-        {item.thumbnail && (
+        {(item.artworkUrl || item.thumbnail) && (
           <img
-            src={item.thumbnail}
-            alt={item.name}
-            className="h-full w-full object-contain p-1.5"
+            src={item.artworkUrl ? resolveAsset(item.artworkUrl) : item.thumbnail}
+            alt={item.artworkUrl ? t('cartPage.row.yourImage') : item.name}
+            className={
+              item.artworkUrl
+                ? "h-full w-full object-cover"
+                : "h-full w-full object-contain p-1.5"
+            }
             draggable={false}
           />
         )}

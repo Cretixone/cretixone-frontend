@@ -28,6 +28,8 @@ export interface OrderItem {
   name: string
   subtitle?: string | null
   thumbnail?: string | null
+  /** Customer-supplied artwork for this line. */
+  artworkUrl?: string | null
   widthCm: number
   heightCm: number
   pricePerItem: number

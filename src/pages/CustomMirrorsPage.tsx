@@ -5,6 +5,7 @@ import { motion, type Variants } from 'framer-motion'
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { useLangStore } from '@/store/langStore'
+import { MIRROR_CATEGORIES } from '@/lib/mirror-categories'
 import { cn } from '@/lib/utils'
 
 // ── Animation variants ───────────────────────────────────────────────────────
@@ -18,14 +19,6 @@ const fadeUp: Variants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: 'easeOut' } },
 }
 
-const CATEGORIES = [
-  { titleKey: 'wall', img: '/images/mirors/miror-1.png' },
-  { titleKey: 'decorative', img: '/images/mirors/miror-2.png' },
-  { titleKey: 'led', img: '/images/mirors/miror-3.png' },
-  { titleKey: 'customShapes', img: '/images/mirors/miror-4.png' },
-  { titleKey: 'beveled', img: '/images/mirors/miror-6.png' },
-  { titleKey: 'framed', img: '/images/mirors/miror-5.png' },
-]
 
 const COLLAGE = {
   topLeft: '/images/craft-miror.png',
@@ -117,7 +110,7 @@ export default function CustomMirrorsPage() {
 
           <motion.button
             type="button"
-            onClick={() => navigate('/editor')}
+            onClick={() => navigate('/custom-mirrors/inquiry')}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: 'easeOut', delay: 0.35 }}
@@ -158,8 +151,14 @@ export default function CustomMirrorsPage() {
           whileInView="show"
           viewport={{ once: true, margin: '-60px' }}
         >
-          {CATEGORIES.map((c) => (
-            <motion.div key={c.titleKey} variants={fadeUp} className="group text-center">
+          {MIRROR_CATEGORIES.map((c) => (
+            <motion.button
+              key={c.titleKey}
+              type="button"
+              variants={fadeUp}
+              onClick={() => navigate(`/custom-mirrors/inquiry?type=${c.titleKey}`)}
+              className="group text-center focus-visible:outline-none"
+            >
               <div className="overflow-hidden rounded-3xl bg-black/5">
                 <div className="h-[380px] w-full">
                   <img
@@ -171,10 +170,10 @@ export default function CustomMirrorsPage() {
                   />
                 </div>
               </div>
-              <p className="mt-3 text-[16px] font-normal text-black">
+              <p className="mt-3 text-[16px] font-normal text-black transition group-hover:text-brand-navy">
                 {t(`customMirrors.categories.${c.titleKey}`)}
               </p>
-            </motion.div>
+            </motion.button>
           ))}
         </motion.div>
 
@@ -203,7 +202,7 @@ export default function CustomMirrorsPage() {
               <motion.button
                 variants={fadeUp}
                 type="button"
-                onClick={() => navigate('/editor')}
+                onClick={() => navigate('/custom-mirrors/inquiry')}
                 className="mt-7 inline-flex items-center justify-center rounded-md bg-brand-gold px-6 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-brand-gold/90"
               >
                 {t('customMirrors.crafted.cta')}

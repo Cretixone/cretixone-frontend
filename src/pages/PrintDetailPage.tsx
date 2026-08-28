@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronRight, Home, Loader2 } from 'lucide-react'
+import { ChevronRight, Home, Loader2, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 import Navbar, { PillNav } from '@/components/landing/Navbar'
@@ -9,11 +9,15 @@ import Footer from '@/components/landing/Footer'
 import { Button } from '@/components/ui/button'
 import { ProductGallery } from '@/components/product/ProductGallery'
 import { OptionPillGroup } from '@/components/product/OptionPillGroup'
+import { CUSTOM_SIZE, CustomSizeDialog, SizePicker } from '@/components/product/SizePicker'
+import { InquiryDialog } from '@/components/InquiryDialog'
 import { ReviewsSection } from '@/components/ReviewsSection'
 import { printsApi, printPrice, type CustomPrint, type PrintCategory } from '@/api/prints.api'
 import { resolveAsset } from '@/lib/assets'
 import { pickLocalized } from '@/lib/localized'
+import { sortByNameNatural } from '@/lib/sort'
 import { formatOMR, formatOMRRate } from '@/lib/format'
+import { ARTWORK_MAX_BYTES, ARTWORK_MIME, uploadArtwork } from '@/api/uploads.api'
 import { useCartStore } from '@/store/cartStore'
 import { useIsRtl } from '@/store/langStore'
 
@@ -69,19 +73,35 @@ export default function PrintDetailPage() {
   }, [id])
 
   // Selections. Size defaults to the first allowed preset; every other option
-  // starts deselected, matching the frame product page.
-  const [sizeId, setSizeId] = useState<string | null>(null)
+  // starts deselected, matching the frame product page. Size is held by name
+  // (not id) so SizePicker can drive frames and prints with one component.
+  const [sizeName, setSizeName] = useState<string>('')
+  const [customW, setCustomW] = useState(0)
+  const [customH, setCustomH] = useState(0)
+  const [customOpen, setCustomOpen] = useState(false)
+  const [inquiryOpen, setInquiryOpen] = useState(false)
+  // Artwork attached from the buy panel — emailed with the inquiry, never
+  // sent to the editor.
+  const [artwork, setArtwork] = useState<File | null>(null)
+  const artworkRef = useRef<HTMLInputElement>(null)
+  const [artworkUrl, setArtworkUrl] = useState<string | null>(null)
+  const [artworkPreview, setArtworkPreview] = useState<string | null>(null)
+  const [artworkUploading, setArtworkUploading] = useState(false)
   const [canvasMaterialId, setCanvasMaterialId] = useState<string | null>(null)
   const [laminationId, setLaminationId] = useState<string | null>(null)
   const [canvasEdgeId, setCanvasEdgeId] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!sizeId && print?.frameSizes?.length) setSizeId(print.frameSizes[0].id)
-  }, [print, sizeId])
+  // Sorted naturally so A1, A2, A3, A10 read in order.
+  const sortedSizes = useMemo(() => sortByNameNatural(print?.frameSizes ?? []), [print])
 
+  useEffect(() => {
+    if (!sizeName && sortedSizes.length) setSizeName(sortedSizes[0].name)
+  }, [sortedSizes, sizeName])
+
+  const isCustom = sizeName === CUSTOM_SIZE
   const selectedSize = useMemo(
-    () => print?.frameSizes?.find((s) => s.id === sizeId) ?? null,
-    [print, sizeId],
+    () => (isCustom ? null : sortedSizes.find((s) => s.name === sizeName) ?? null),
+    [sortedSizes, sizeName, isCustom],
   )
   const selectedMaterial = useMemo(
     () => print?.canvasMaterials?.find((o) => o.id === canvasMaterialId) ?? null,
@@ -102,10 +122,22 @@ export default function PrintDetailPage() {
     (selectedLamination?.pricePerCm ?? 0) +
     (selectedEdge?.pricePerCm ?? 0)
 
-  const w = selectedSize?.widthCm ?? 0
-  const h = selectedSize?.lengthCm ?? 0
-  const hasSize = !!selectedSize
+  const w = isCustom ? customW : selectedSize?.widthCm ?? 0
+  const h = isCustom ? customH : selectedSize?.lengthCm ?? 0
+  const hasSize = isCustom ? customW > 0 && customH > 0 : !!selectedSize
   const priced = !!print && print.pricePerCm > 0
+
+  // Within the print's manufacturable range -> Add to cart; outside it -> inquiry.
+  const inRange =
+    !!print && print.sizeTo > 0 &&
+    w >= print.sizeFrom && w <= print.sizeTo &&
+    h >= print.sizeFrom && h <= print.sizeTo
+
+  const sizeDisplay = isCustom
+    ? hasSize
+      ? `${t('sizePicker.customSize', { ns: 'productDetail' })} · ${w}×${h} cm`
+      : t('sizePicker.customSize', { ns: 'productDetail' })
+    : sizeName
 
   const unitPrice = print && hasSize ? printPrice(print, w, h, optionsPricePerCm) : 0
 
@@ -120,9 +152,7 @@ export default function PrintDetailPage() {
     const old = print?.oldPricePerCm ?? 0
     if (!print || old <= 0 || old <= print.pricePerCm) return null
     if (!hasSize) return `${formatOMRRate(old)} / cm`
-    return formatOMR(
-      old * (w + h) * 2 + old * (print.wasteValue ?? 0) + optionsPricePerCm * w * h,
-    )
+    return formatOMR((old + optionsPricePerCm) * w * h)
   })()
 
   const gallery = useMemo(
@@ -134,6 +164,48 @@ export default function PrintDetailPage() {
   const description = print ? pickLocalized(print.description, print.descriptionAr, isRtl) : ''
   const specEntries = Object.entries(print?.specifications ?? {}).filter(([, v]) => !!v)
 
+  // Local object URL for the thumbnail; revoked when the file changes.
+  useEffect(() => {
+    if (!artwork) {
+      setArtworkPreview(null)
+      return
+    }
+    const url = URL.createObjectURL(artwork)
+    setArtworkPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [artwork])
+
+  // Uploaded on pick rather than at checkout, so the cart line already has
+  // a URL the order snapshot and admin can render.
+  const pickArtwork = async (file: File | undefined) => {
+    if (!file) return
+    if (!ARTWORK_MIME.includes(file.type)) {
+      toast.error(t('artwork.onlyImages'))
+      return
+    }
+    if (file.size > ARTWORK_MAX_BYTES) {
+      toast.error(t('artwork.tooLarge', { mb: ARTWORK_MAX_BYTES / (1024 * 1024) }))
+      return
+    }
+    setArtworkUploading(true)
+    try {
+      const url = await uploadArtwork(file)
+      setArtwork(file)
+      setArtworkUrl(url)
+    } catch (err) {
+      // Prefer the API's reason (size / type) over the generic fallback.
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(msg || t('artwork.uploadFailed'))
+    } finally {
+      setArtworkUploading(false)
+    }
+  }
+
+  const clearArtwork = () => {
+    setArtwork(null)
+    setArtworkUrl(null)
+  }
+
   const handleAddToCart = () => {
     if (!print || !priced || !hasSize) return
     const area = w * h
@@ -143,6 +215,7 @@ export default function PrintDetailPage() {
       name: title || print.name,
       subtitle: selectedSize?.name ?? '',
       thumbnail: gallery[0] ?? '',
+      artworkUrl,
       widthCm: w,
       heightCm: h,
       pricePerItem: unitPrice,
@@ -203,8 +276,6 @@ export default function PrintDetailPage() {
     )
   }
 
-  const sizeItems = (print.frameSizes ?? []).map((s) => ({ id: s.id, name: s.name }))
-
   return (
     <Shell>
       {/* Breadcrumb */}
@@ -244,15 +315,17 @@ export default function PrintDetailPage() {
             </p>
           )}
 
-          {/* Image Size */}
-          {sizeItems.length > 0 && (
-            <OptionPillGroup
-              label={t('detail.options.imageSize')}
-              items={sizeItems}
-              value={sizeId}
-              onChange={setSizeId}
+          {/* Image Size — quick pills, the rest behind "More sizes", plus a
+              "Custom size" entry that opens the width x height dialog. */}
+          <div className="mt-6">
+            <p className="text-sm font-semibold text-foreground">{t('detail.options.imageSize')}</p>
+            <SizePicker
+              sizes={sortedSizes.map((s) => s.name)}
+              value={sizeName}
+              displayValue={sizeDisplay}
+              onChange={(v) => (v === CUSTOM_SIZE ? setCustomOpen(true) : setSizeName(v))}
             />
-          )}
+          </div>
 
           {/* The remaining three groups render only when the admin assigned
               values to this print. */}
@@ -282,27 +355,95 @@ export default function PrintDetailPage() {
             </p>
           )}
 
-          {/* Price + add to cart. No upload/editor action: prints don't use it. */}
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-y border-black/[0.07] py-6">
-            <div className="flex items-baseline gap-2.5">
-              <span className="text-2xl font-bold tabular-nums text-brand-navy">{priceLabel}</span>
-              {oldPriceLabel && (
-                <span className="text-sm text-foreground/40 line-through tabular-nums">
-                  {oldPriceLabel}
+          {/* Upload — same placement and treatment as the frame product page,
+              but it never opens the editor. The file is uploaded straight away
+              so its URL can ride along on the cart line and into the order; the
+              File itself is also attached if the shopper requests an inquiry. */}
+          <div className="mt-4">
+            {artwork ? (
+              <div className="flex items-center gap-3 rounded-lg border border-black/15 bg-white p-2.5">
+                {artworkPreview && (
+                  <img
+                    src={artworkPreview}
+                    alt=""
+                    className="h-14 w-14 shrink-0 rounded-md border border-black/10 object-cover"
+                    draggable={false}
+                  />
+                )}
+                <span className="min-w-0 flex-1 truncate text-[13px] text-foreground/70">
+                  {artwork.name}
                 </span>
+                <button
+                  type="button"
+                  onClick={clearArtwork}
+                  aria-label={t('artwork.remove')}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-foreground/50 transition hover:bg-black/[0.06] hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => artworkRef.current?.click()}
+                disabled={artworkUploading}
+                className="gap-2 border-brand-navy/40 bg-transparent text-brand-navy hover:bg-brand-navy/5"
+              >
+                {artworkUploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                {t('artwork.upload')}
+              </Button>
+            )}
+          </div>
+          <input
+            ref={artworkRef}
+            type="file"
+            accept={ARTWORK_MIME.join(',')}
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              e.currentTarget.value = ''
+              void pickArtwork(file)
+            }}
+          />
+
+          {/* Price + add to cart — same structure as the frame product page. */}
+          <div className="mt-7 flex flex-wrap items-center justify-between gap-4 border-y border-black/[0.07] py-6">
+            <div className="flex items-baseline gap-2.5">
+              <span className="text-2xl font-bold text-brand-navy tabular-nums">{priceLabel}</span>
+              {oldPriceLabel && (
+                <del className="text-base font-medium text-foreground/40 tabular-nums">
+                  {oldPriceLabel}
+                </del>
               )}
             </div>
-            {/* variant="navy" + size="lg" matches the frame product page's
-                Add to cart button exactly. */}
-            <Button
-              variant="navy"
-              size="lg"
-              onClick={handleAddToCart}
-              disabled={!priced || !hasSize}
-              className="min-w-[140px] rounded-lg"
-            >
-              {t('detail.addToCart')}
-            </Button>
+            {isCustom && !hasSize ? (
+              <Button variant="navy" size="lg" onClick={() => setCustomOpen(true)} className="min-w-[140px] rounded-lg">
+                {t('buyPanel.enterCustomSize', { ns: 'productDetail' })}
+              </Button>
+            ) : hasSize && !inRange ? (
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => setInquiryOpen(true)}
+                className="min-w-[140px] rounded-lg border-brand-navy/40 text-brand-navy hover:bg-brand-navy/5"
+              >
+                {t('buyPanel.customOrder', { ns: 'productDetail' })}
+              </Button>
+            ) : (
+              <Button
+                variant="navy"
+                size="lg"
+                onClick={handleAddToCart}
+                disabled={!priced || !hasSize}
+                className="min-w-[140px] rounded-lg"
+              >
+                {t('detail.addToCart')}
+              </Button>
+            )}
           </div>
 
         </div>
@@ -323,6 +464,38 @@ export default function PrintDetailPage() {
         </section>
       )}
 
+      <CustomSizeDialog
+        open={customOpen}
+        onOpenChange={setCustomOpen}
+        sizeFrom={print.sizeFrom}
+        sizeTo={print.sizeTo}
+        initialW={customW || Math.max(1, Math.round(print.sizeFrom || 20))}
+        initialH={customH || Math.max(1, Math.round(print.sizeFrom || 20))}
+        canConfirm={priced}
+        priceLabelFor={(cw, ch) =>
+          priced ? formatOMR(printPrice(print, cw, ch, optionsPricePerCm)) : '—'
+        }
+        onConfirm={(cw, ch) => {
+          setCustomW(cw)
+          setCustomH(ch)
+          setSizeName(CUSTOM_SIZE)
+        }}
+      />
+
+      {/* Out-of-range sizes can't be checked out — collect the request instead. */}
+      <InquiryDialog
+        open={inquiryOpen}
+        onOpenChange={setInquiryOpen}
+        frameName={print.name}
+        displayName={title}
+        thumbnail={gallery[0]}
+        widthCm={w}
+        heightCm={h}
+        unitPrice={unitPrice}
+        priceLabel={priceLabel}
+        initialImage={artwork}
+      />
+
       {/* Reviews + write-a-review form, scoped to this print. */}
       <ReviewsSection printId={print.hashedId} />
     </Shell>
@@ -331,7 +504,7 @@ export default function PrintDetailPage() {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen w-full bg-white font-sans text-[#000000]">
+    <div className="min-h-screen w-full bg-white font-sans text-[#000000] relative">
       <header className="relative z-30">
         <Navbar />
       </header>

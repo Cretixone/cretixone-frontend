@@ -5,7 +5,6 @@ import { ChevronRight, Home } from 'lucide-react'
 import { motion, type Variants } from 'framer-motion'
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
-import { cn } from '@/lib/utils'
 
 // ── Animation variants ───────────────────────────────────────────────────────
 const stagger: Variants = {
@@ -43,61 +42,99 @@ interface Member {
   /** Founder-only: colour of the small accent dot. */
   dotColor?: string
   /**
-   * Per-avatar horizontal positioning override — some cut-outs aren't centred
-   * within their own image, so they need a nudge to sit right in the blob.
-   * Tailwind classes; defaults to centred (`left-1/2 -translate-x-1/2`).
+   * Per-avatar horizontal offset — some cut-outs aren't centred within their
+   * own image, so they need a nudge to sit right in the blob. Distance in px
+   * from the blob's right edge; negative pushes further right. Omit to centre.
+   *
+   * Deliberately a number applied as an inline style rather than a Tailwind
+   * class: Tailwind only emits arbitrary values like `right-[-25px]` if it
+   * finds that exact string when it scans the source, so a value living in
+   * this array would be missing from the stylesheet until the next rescan —
+   * which is why such a class appeared only after a save or an edit in
+   * DevTools, not on a fresh page load.
    */
-  avatarPos?: string
+  right?: number
+  /**
+   * Rendered photo height in px. Bigger = more zoomed in, since the mask
+   * crops whatever falls outside the blob. Defaults to AVATAR_H
+   * (AVATAR_H_FOUNDER for the founder).
+   */
+  zoom?: number
+  /**
+   * Vertical offset in px from the top of the blob. 0 sits flush with the
+   * top; a negative value pushes the face further up (crops the forehead),
+   * a positive one drops the whole person down. Defaults to 0.
+   */
+  top?: number
 }
 
+// `zoom` (photo height in px) and `top` (offset from the blob top) are tuned
+// per person: the cut-outs range from tight head-and-shoulders crops to
+// full-body shots, so one size does not suit all of them.
 const TEAM: Member[] = [
   {
     name: 'Ayesha Saboor',
     roleKey: 'founder',
-    avatar: '/images/vector-circle.png',
+    avatar: '/images/teams/ayesha.png',
     circleColor: '#FC6875',
     dotColor: '#FC6875',
+    zoom: 250,
+    top: 20,
+    right: 25,
   },
   {
     name: 'Yousif Al Jabri',
     roleKey: 'ceo',
-    avatar: '/images/vector-1-avatar.png',
+    avatar: '/images/teams/yousaif.png',
     bg: '/images/vector-1.png',
-    avatarPos: 'right-[15px]',
+    right: 25,
+    zoom: 200,
+    top: 30,
   },
   {
     name: 'Shantunu Chowdhury',
     roleKey: 'cfo',
-    avatar: '/images/vector-2-avatar.png',
+    avatar: '/images/teams/shantunu.png',
     bg: '/images/vector-2.png',
-    avatarPos: 'right-[0px]',
+    right: 20,
+    zoom: 450,
+    top: 20,
   },
   {
     name: 'Kavinda',
     roleKey: 'designer',
-    avatar: '/images/vector-3-avatar.png',
+    avatar: '/images/teams/kavinda.png',
     bg: '/images/vector-3.png',
+    zoom: 220,
+    top: 20,
+    right: 20,
   },
   {
     name: 'Faisal',
     roleKey: 'framerIndoor',
-    avatar: '/images/vector-4-avatar.png',
+    avatar: '/images/teams/faisal.png',
     bg: '/images/vector-4.png',
-    avatarPos: 'right-[0px]',
+    right: -25,
+    zoom: 200,
+    top: 10,
   },
   {
     name: 'Babar Khan',
     roleKey: 'framerWorkshop',
-    avatar: '/images/vector-5-avatar.png',
+    avatar: '/images/teams/babar.png',
     bg: '/images/vector-5.png',
-    avatarPos: 'right-[0px]',
+    right: -25,
+    zoom: 190,
+    top: 20,
   },
   {
     name: 'Ahsan Farooq',
     roleKey: 'glassSpecialist',
     avatar: '/images/vector-6-avatar.png',
     bg: '/images/vector-6.png',
-    avatarPos: 'right-[20px]',
+    right: 20,
+    zoom: 260,
+    top: 0,
   },
 ]
 
@@ -208,6 +245,19 @@ export default function TeamPage() {
 // PNG's alpha) so it never overflows the blob's edges. The founder has no blob
 // vector — her backdrop is a coral circle, and her avatar is clipped to it with
 // a plain `overflow-hidden rounded-full`.
+//
+// The photo is anchored to the TOP of the blob and rendered taller than it, so
+// the face sits at the top of the shape and the body is cropped off at the
+// bottom instead of the whole person being shrunk to fit.
+const AVATAR_H = 260 // blob cards
+const AVATAR_H_FOUNDER = 220 // the founder's circle is smaller than the blobs
+
+/** Right-anchored when the member sets an offset, centred otherwise. */
+const horizontal = (member: Member): React.CSSProperties =>
+  member.right === undefined
+    ? { left: '50%', transform: 'translateX(-50%)' }
+    : { right: member.right }
+
 function TeamCard({ member }: { member: Member }) {
   const { t } = useTranslation('pages')
   return (
@@ -248,10 +298,12 @@ function TeamCard({ member }: { member: Member }) {
                 alt={member.name}
                 loading="lazy"
                 draggable={false}
-                className={cn(
-                  'absolute bottom-0 h-[196px] w-auto object-contain object-bottom',
-                  member.avatarPos ?? 'left-1/2 -translate-x-1/2',
-                )}
+                style={{
+                  height: member.zoom ?? AVATAR_H,
+                  top: member.top ?? 0,
+                  ...horizontal(member),
+                }}
+                className="absolute w-auto max-w-none object-contain object-top"
               />
             </div>
           </>
@@ -272,7 +324,12 @@ function TeamCard({ member }: { member: Member }) {
                 alt={member.name}
                 loading="lazy"
                 draggable={false}
-                className="absolute inset-x-0 bottom-0 mx-auto h-[160px] w-auto object-contain object-bottom"
+                style={{
+                  height: member.zoom ?? AVATAR_H_FOUNDER,
+                  top: member.top ?? 0,
+                  ...horizontal(member),
+                }}
+                className="absolute w-auto max-w-none object-contain object-top"
               />
             </div>
           </>

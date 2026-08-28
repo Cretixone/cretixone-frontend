@@ -181,16 +181,25 @@ export default function CustomPrintsPage() {
                 key={c.id}
                 type="button"
                 variants={fadeUp}
-                onClick={() => navigate(`/custom-prints/${c.slug}`)}
+                onClick={() =>
+                  // Enquiry categories are not buyable — they open the inquiry
+                  // form instead of the product page.
+                  navigate(
+                    c.isEnquiryOnly
+                      ? `/custom-prints/${c.slug}/inquiry`
+                      : `/custom-prints/${c.slug}`,
+                  )
+                }
                 className="group text-center focus-visible:outline-none"
               >
                 <div className="overflow-hidden rounded-3xl bg-black/5">
                   <div className="h-[380px] w-full">
-                    {/* Uploaded image only — no stock fallback, so a category
-                        without one shows the neutral tile behind it. */}
-                    {c.imageUrl && (
+                    {/* First gallery image — the same one the detail page shows
+                        as its main image. No stock fallback, so a category with an
+                        empty gallery shows the neutral tile behind it. */}
+                    {c.gallery?.[0] && (
                       <img
-                        src={resolveAsset(c.imageUrl)}
+                        src={resolveAsset(c.gallery[0])}
                         alt={pickLocalized(c.name, c.nameAr, isRtl) ?? c.name}
                         loading="lazy"
                         draggable={false}

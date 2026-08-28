@@ -111,6 +111,7 @@ export default function CheckoutPage() {
           name: i.name,
           subtitle: i.subtitle,
           thumbnail: i.thumbnail,
+          artworkUrl: i.artworkUrl ?? null,
           widthCm: i.widthCm,
           heightCm: i.heightCm,
           pricePerItem: i.pricePerItem,

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { ChevronDown, FileText, Loader2, Package } from 'lucide-react'
 import { ordersApi, type Order, type OrderStatus, type PageMeta } from '@/api/orders.api'
+import { resolveAsset } from '@/lib/assets'
 import { formatOMR } from '@/lib/format'
 import { getCountryName } from '@/lib/countries'
 import { downloadInvoice } from '@/lib/invoice'
@@ -146,7 +147,10 @@ function OrderCard({ order: o }: { order: Order }) {
           <div className="mt-4 divide-y divide-black/[0.06] border-t border-black/[0.06]">
             {o.items.map((it, i) => (
               <div key={i} className="flex items-center gap-3 py-3">
-                {it.thumbnail ? (
+                {/* Customer artwork when present, else the catalogue image. */}
+                {it.artworkUrl ? (
+                  <img src={resolveAsset(it.artworkUrl)} alt={t('orders.yourImage')} title={t('orders.yourImage')} className="h-12 w-12 shrink-0 rounded-lg border border-black/10 object-cover" />
+                ) : it.thumbnail ? (
                   <img src={it.thumbnail} alt={it.name} className="h-12 w-12 shrink-0 rounded-lg border border-black/10 object-contain p-1" />
                 ) : (
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-black/10 bg-black/[0.03]">

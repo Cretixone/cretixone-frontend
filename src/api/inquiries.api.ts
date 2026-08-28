@@ -4,6 +4,8 @@ interface Ok<T> {
   success: true
   data: T
   message?: string
+  /** Customer artwork, emailed to the platform inbox as an attachment. */
+  image?: File | null
 }
 
 export interface CreateInquiryPayload {
@@ -18,11 +20,25 @@ export interface CreateInquiryPayload {
   customerEmail: string
   customerPhone?: string
   message?: string
+  /** Customer artwork, emailed to the platform inbox as an attachment. */
+  image?: File | null
 }
 
 export const inquiriesApi = {
   async create(payload: CreateInquiryPayload) {
-    const res = await cretixAxios.post<Ok<{ id: string }>>('/inquiries', payload)
+    const { image, ...rest } = payload
+    // Only switch to multipart when there is a file — a plain JSON body keeps
+    // the common case simple and is what the endpoint has always accepted.
+    if (!image) {
+      const res = await cretixAxios.post<Ok<{ id: string }>>('/inquiries', rest)
+      return res.data.data
+    }
+    const fd = new FormData()
+    for (const [k, v] of Object.entries(rest)) {
+      if (v !== undefined && v !== null) fd.append(k, String(v))
+    }
+    fd.append('image', image)
+    const res = await cretixAxios.post<Ok<{ id: string }>>('/inquiries', fd)
     return res.data.data
   },
 }

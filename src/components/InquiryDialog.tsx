@@ -1,7 +1,5 @@
-import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Loader2 } from 'lucide-react'
-import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -12,11 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { PhoneField } from '@/components/auth/PhoneField'
-import { inquiriesApi } from '@/api/inquiries.api'
-import { useAuthStore } from '@/store/authStore'
+import { InquiryFields, useInquiryForm } from '@/components/InquiryForm'
 import { useIsRtl } from '@/store/langStore'
-import { cn } from '@/lib/utils'
 
 interface Props {
   open: boolean
@@ -33,15 +28,18 @@ interface Props {
   /** Pre-formatted price shown in the summary (e.g. "12.500 OMR" or "—"). */
   priceLabel: string
   currency?: string
+  /** Artwork already picked on the product page, pre-attached to the form. */
+  initialImage?: File | null
 }
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /**
  * "Request an inquiry" form for custom / out-of-range sizes. The frame and size
  * are shown read-only (the shopper can't change them here — they're carried in
  * from the product page) and only the contact details are editable. Submits to
  * POST /inquiries, which records it and emails the platform inbox.
+ *
+ * The fields and submit logic live in InquiryForm so this dialog and the
+ * standalone /custom-prints/:slug/inquiry page never drift apart.
  */
 export function InquiryDialog({
   open,
@@ -54,60 +52,15 @@ export function InquiryDialog({
   unitPrice,
   priceLabel,
   currency = 'OMR',
+  initialImage = null,
 }: Props) {
   const { t } = useTranslation('productDetail')
   const isRtl = useIsRtl()
-  const user = useAuthStore((s) => s.user)
 
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState<string | undefined>(undefined)
-  const [message, setMessage] = useState('')
-  const [touched, setTouched] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-
-  // Prefill from the signed-in profile each time the dialog opens (so a later
-  // login is reflected). Editable — the shopper may want a different contact.
-  useEffect(() => {
-    if (!open) return
-    setTouched(false)
-    setName(user ? `${user.firstName} ${user.lastName}`.trim() : '')
-    setEmail(user?.email ?? '')
-    setPhone(user?.phone ?? undefined)
-    setMessage('')
-  }, [open, user])
-
-  const nameValid = name.trim().length > 0
-  const emailValid = EMAIL_RE.test(email.trim())
-  const canSubmit = nameValid && emailValid && !submitting
-
-  const handleSubmit = async () => {
-    setTouched(true)
-    if (!nameValid || !emailValid) return
-    setSubmitting(true)
-    try {
-      await inquiriesApi.create({
-        frameName,
-        widthCm,
-        heightCm,
-        unitPrice,
-        currency,
-        customerName: name.trim(),
-        customerEmail: email.trim(),
-        customerPhone: phone || undefined,
-        message: message.trim() || undefined,
-      })
-      toast.success(t('inquiry.success'))
-      onOpenChange(false)
-    } catch {
-      toast.error(t('inquiry.error'))
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const fieldClass =
-    'mt-1.5 w-full rounded-lg border border-black/15 bg-white px-3 py-2 text-sm text-foreground outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/30'
+  const form = useInquiryForm(
+    { frameName, widthCm, heightCm, unitPrice, currency },
+    { active: open, onSuccess: () => onOpenChange(false), initialImage },
+  )
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -146,75 +99,16 @@ export function InquiryDialog({
             </div>
           </div>
 
-          {/* Contact fields */}
-          <div className="space-y-4">
-            <label className="block">
-              <span className="text-sm font-medium text-foreground">{t('inquiry.name')}</span>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t('inquiry.namePlaceholder')}
-                className={cn(fieldClass, touched && !nameValid && 'border-red-400 focus:border-red-400 focus:ring-red-200')}
-              />
-              {touched && !nameValid && (
-                <span className="mt-1 block text-[12px] text-red-500">{t('inquiry.invalidName')}</span>
-              )}
-            </label>
-
-            <label className="block">
-              <span className="text-sm font-medium text-foreground">{t('inquiry.email')}</span>
-              <input
-                type="email"
-                dir="ltr"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={t('inquiry.emailPlaceholder')}
-                className={cn(
-                  fieldClass,
-                  isRtl && 'text-right',
-                  touched && !emailValid && 'border-red-400 focus:border-red-400 focus:ring-red-200',
-                )}
-              />
-              {touched && !emailValid && (
-                <span className="mt-1 block text-[12px] text-red-500">{t('inquiry.invalidEmail')}</span>
-              )}
-            </label>
-
-            <div className="block">
-              <span className="text-sm font-medium text-foreground">
-                {t('inquiry.phone')}{' '}
-                <span className="font-normal text-foreground/45">({t('inquiry.optional')})</span>
-              </span>
-              <div className="mt-1.5">
-                <PhoneField value={phone} onChange={setPhone} />
-              </div>
-            </div>
-
-            <label className="block">
-              <span className="text-sm font-medium text-foreground">
-                {t('inquiry.message')}{' '}
-                <span className="font-normal text-foreground/45">({t('inquiry.optional')})</span>
-              </span>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder={t('inquiry.messagePlaceholder')}
-                rows={3}
-                maxLength={5000}
-                className={cn(fieldClass, 'resize-none')}
-              />
-            </label>
-          </div>
+          <InquiryFields form={form} />
         </DialogBody>
 
         <DialogFooter className="border-t border-black/[0.06] pt-4">
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={form.submitting}>
             {t('inquiry.cancel')}
           </Button>
-          <Button type="button" variant="navy" onClick={handleSubmit} disabled={!canSubmit}>
-            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-            {submitting ? t('inquiry.submitting') : t('inquiry.submit')}
+          <Button type="button" variant="navy" onClick={form.submit} disabled={!form.canSubmit}>
+            {form.submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            {form.submitting ? t('inquiry.submitting') : t('inquiry.submit')}
           </Button>
         </DialogFooter>
       </DialogContent>

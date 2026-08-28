@@ -1,5 +1,5 @@
 import cretixAxios from '@/store/api/cretixAxios'
-import { productPrice } from '@/lib/pricing'
+import { customPrintPrice } from '@/lib/pricing'
 
 interface Ok<T> {
   success: true
@@ -34,13 +34,32 @@ export interface PrintSize {
 
 export interface PrintCategory {
   id: string
+  /** Numeric id used where a print-like id is required (reviews, cart). */
+  hashedId: number
   name: string
   nameAr: string | null
   slug: string
-  imageUrl: string | null
   description: string | null
   descriptionAr: string | null
   sortOrder: number
+
+  // A category IS the sellable product: it carries the print fields itself.
+  gallery: string[]
+  pricePerCm: number
+  oldPricePerCm: number
+  wasteValue: number
+  sizeFrom: number
+  sizeTo: number
+  specifications: Record<string, string>
+  isNew: boolean
+  /** True -> the tile opens the inquiry page instead of the product page. */
+  isEnquiryOnly: boolean
+
+  // Resolved option records — present only on the single-category fetch.
+  frameSizes?: PrintSize[]
+  laminations?: PrintOption[]
+  canvasMaterials?: PrintOption[]
+  canvasEdges?: PrintOption[]
 }
 
 export interface CustomPrint {
@@ -91,14 +110,16 @@ export const printsApi = {
 }
 
 /**
- * Price for a print. Thin wrapper over the shared productPrice() helper so
- * frames and prints literally run the same formula.
+ * Price for a print or a print category — the two share one formula. Thin
+ * wrapper over customPrintPrice(), which excludes the waste allowance: on the
+ * prints module waste is an admin costing reference, not a charge. (Frames
+ * still charge it, via productPrice().)
  */
 export function printPrice(
-  print: Pick<CustomPrint, 'pricePerCm' | 'wasteValue'>,
+  print: Pick<CustomPrint, 'pricePerCm'>,
   widthCm: number,
   heightCm: number,
   optionsPricePerCm: number,
 ): number {
-  return productPrice(print.pricePerCm, print.wasteValue, widthCm, heightCm, optionsPricePerCm)
+  return customPrintPrice(print.pricePerCm, widthCm, heightCm, optionsPricePerCm)
 }

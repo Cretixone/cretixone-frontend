@@ -46,7 +46,8 @@
       "total": "Total"
     },
     "canvasMaterialLabel": "Canvas: {{name}}",
-    "canvasEdgeLabel": "Edge: {{name}}"
+    "canvasEdgeLabel": "Edge: {{name}}",
+    "yourImage": "Your image"
   },
   "profile": {
     "title": "Profile settings",

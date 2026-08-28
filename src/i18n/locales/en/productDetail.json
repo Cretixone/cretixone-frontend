@@ -13,11 +13,13 @@
   "services": {
     "frameOnly": {
       "title": "Frame Only",
-      "desc": "Frame it yourself, effortlessly."
+      "desc": "Frame it yourself, effortlessly.",
+      "titleFloating": "Frame + Stretch"
     },
     "printFrame": {
       "title": "Print + Frame",
-      "desc": "Printed, framed & wall-ready."
+      "desc": "Printed, framed & wall-ready.",
+      "titleFloating": "Print + Frame + Stretch"
     }
   },
   "buyPanel": {
@@ -83,6 +85,12 @@
     "success": "Inquiry sent — we'll be in touch soon.",
     "error": "Could not send your inquiry. Please try again.",
     "invalidName": "Please enter your name.",
-    "invalidEmail": "Please enter a valid email address."
+    "invalidEmail": "Please enter a valid email address.",
+    "image": "Your image",
+    "imageUpload": "Upload image",
+    "imageRemove": "Remove image",
+    "imageHint": "PNG, JPG, WEBP or GIF — up to 3 MB. Sent with your inquiry.",
+    "imageTooLarge": "That image is larger than {{mb}} MB.",
+    "imageOnlyImages": "Only PNG, JPEG, WEBP or GIF images are allowed."
   }
 }
