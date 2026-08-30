@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button'
 import { ProductGallery } from '@/components/product/ProductGallery'
 import { OptionPillGroup } from '@/components/product/OptionPillGroup'
 import { CUSTOM_SIZE, CustomSizeDialog, SizePicker } from '@/components/product/SizePicker'
-import { InquiryDialog } from '@/components/InquiryDialog'
 import { printsApi, printPrice, type PrintCategory } from '@/api/prints.api'
 import { resolveAsset } from '@/lib/assets'
 import { pickLocalized } from '@/lib/localized'
@@ -82,7 +81,6 @@ export default function PrintCategoryPage() {
   const [customW, setCustomW] = useState(0)
   const [customH, setCustomH] = useState(0)
   const [customOpen, setCustomOpen] = useState(false)
-  const [inquiryOpen, setInquiryOpen] = useState(false)
   // Artwork the shopper attaches from the buy panel. Unlike the frame page's
   // "Upload a preview image", this never opens the editor — the file rides
   // along with the inquiry and is emailed to the platform inbox.
@@ -442,7 +440,7 @@ export default function PrintCategoryPage() {
               <Button
                 variant="outline"
                 size="lg"
-                onClick={() => setInquiryOpen(true)}
+                onClick={() => navigate(`/custom-prints/${category.slug}/inquiry`)}
                 className="min-w-[140px] rounded-lg border-brand-navy/40 text-brand-navy hover:bg-brand-navy/5"
               >
                 {t('buyPanel.customOrder', { ns: 'productDetail' })}
@@ -494,19 +492,6 @@ export default function PrintCategoryPage() {
         }}
       />
 
-      {/* Out-of-range sizes can't be checked out — collect the request instead. */}
-      <InquiryDialog
-        open={inquiryOpen}
-        onOpenChange={setInquiryOpen}
-        frameName={category.name}
-        displayName={title}
-        thumbnail={gallery[0]}
-        widthCm={w}
-        heightCm={h}
-        unitPrice={unitPrice}
-        priceLabel={priceLabel}
-        initialImage={artwork}
-      />
     </Shell>
   )
 }

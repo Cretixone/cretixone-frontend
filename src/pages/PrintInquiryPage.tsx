@@ -1,38 +1,121 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Controller, useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { CheckCircle2, ChevronRight, Home, Loader2 } from 'lucide-react'
+import type { TFunction } from 'i18next'
+import { useNavigate, useParams } from 'react-router-dom'
+import { isValidPhoneNumber } from 'react-phone-number-input'
+import { Box, CheckCircle2, Loader2, Mail, Maximize2, Send, User } from 'lucide-react'
+import { toast } from 'sonner'
 
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { Button } from '@/components/ui/button'
-import { InquiryFields, useInquiryForm } from '@/components/InquiryForm'
+import { PhoneField } from '@/components/auth/PhoneField'
+import {
+  ChoiceCards,
+  Dropzone,
+  Field,
+  FieldError,
+  InquiryCard,
+  SafetyNote,
+  TextArea,
+  TextInput,
+} from '@/components/inquiry/InquiryFormKit'
+import { inquiriesApi } from '@/api/inquiries.api'
 import { printsApi, type PrintCategory } from '@/api/prints.api'
-import { resolveAsset } from '@/lib/assets'
-import { pickLocalized } from '@/lib/localized'
-import { useIsRtl } from '@/store/langStore'
+import { useAuthStore } from '@/store/authStore'
+
+const FILE_MAX = 20 * 1024 * 1024
+const FILE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'application/pdf',
+  'application/postscript', // .ai / .eps
+  'image/vnd.adobe.photoshop',
+]
+
+/** The three printing services offered. Artwork is added later. */
+const SERVICE_IDS = ['largeFormat', 'wallDecor', 'corporate'] as const
 
 /**
- * Full-page inquiry form for a print category flagged "Enquiry product" in
- * admin. Shareable URL (/custom-prints/<slug>/inquiry) rather than a dialog,
- * so it survives a refresh and can be linked directly. The fields and submit
- * logic are the same ones the product-page InquiryDialog uses.
+ * Validation lives in one schema so the same rules drive the inline messages
+ * and the submit guard — a field can never be reported valid by one and
+ * rejected by the other.
+ *
+ * Every question is required; only the reference file is not, matching the
+ * "(optional)" it carries in the design.
+ */
+function makeSchema(t: TFunction<'inquiry'>) {
+  const requiredText = (max: number) =>
+    z.string().trim().min(1, t('common.required')).max(max, t('common.tooLong'))
+
+  return z.object({
+    service: z.enum(SERVICE_IDS, { message: t('printing.errors.serviceRequired') }),
+    fullName: z
+      .string()
+      .trim()
+      .min(1, t('common.invalidName'))
+      .max(200, t('common.tooLong')),
+    email: z
+      .string()
+      .trim()
+      .min(1, t('common.invalidEmail'))
+      .max(255, t('common.tooLong'))
+      .email(t('common.invalidEmail')),
+    phone: z
+      .string()
+      .min(1, t('common.required'))
+      .refine((v) => isValidPhoneNumber(v), t('common.invalidPhone')),
+    dimensions: requiredText(200),
+    quantity: z
+      .string()
+      .min(1, t('common.required'))
+      .refine((v) => /^\d+$/.test(v) && Number(v) > 0, t('common.invalidQuantity')),
+    message: requiredText(5000),
+  })
+}
+type Values = z.infer<ReturnType<typeof makeSchema>>
+
+/**
+ * Standalone printing-services inquiry, reached from an enquiry-only print
+ * category or the "Request inquiry" action on a print product page.
+ *
+ * Answers the inquiry table does not model as columns (service, dimensions as
+ * typed, quantity) travel in `details`; both the admin notification and the
+ * customer confirmation render them as label/value rows.
  */
 export default function PrintInquiryPage() {
-  const { t } = useTranslation('prints')
+  const { t } = useTranslation('inquiry')
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
-  const isRtl = useIsRtl()
+  const user = useAuthStore((s) => s.user)
 
   const [category, setCategory] = useState<PrintCategory | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [notFound, setNotFound] = useState(false)
   const [sent, setSent] = useState(false)
+  const [file, setFile] = useState<File | null>(null)
+
+  const schema = useMemo(() => makeSchema(t), [t])
+  const form = useForm<Values>({
+    resolver: zodResolver(schema),
+    mode: 'onTouched',
+    defaultValues: {
+      service: SERVICE_IDS[0],
+      fullName: '',
+      email: '',
+      phone: '',
+      dimensions: '',
+      quantity: '',
+      message: '',
+    },
+  })
+  const e = form.formState.errors
 
   useEffect(() => {
     const prevBg = document.body.style.background
     const prevColor = document.body.style.color
-    document.body.style.background = '#ffffff'
+    document.body.style.background = '#F7F8FA'
     document.body.style.color = '#000000'
     window.scrollTo(0, 0)
     return () => {
@@ -41,177 +124,221 @@ export default function PrintInquiryPage() {
     }
   }, [])
 
+  // Prefill from the signed-in profile; still editable.
+  useEffect(() => {
+    if (!user) return
+    form.reset({
+      ...form.getValues(),
+      fullName: `${user.firstName} ${user.lastName}`.trim(),
+      email: user.email ?? '',
+      phone: user.phone ?? '',
+    })
+  }, [user, form])
+
+  // The category only labels the record — the form works without one.
   useEffect(() => {
     if (!slug) return
     let alive = true
-    setLoading(true)
-    setNotFound(false)
     printsApi
       .categoryBySlug(slug)
       .then((c) => alive && setCategory(c))
-      .catch(() => alive && setNotFound(true))
-      .finally(() => alive && setLoading(false))
+      .catch(() => undefined)
     return () => {
       alive = false
     }
   }, [slug])
 
-  const title = category ? pickLocalized(category.name, category.nameAr, isRtl) : ''
-  const blurb = category
-    ? pickLocalized(category.description, category.descriptionAr, isRtl)
-    : ''
-  const image = category?.gallery?.[0] ?? null
-
-  // An enquiry product has no chosen size or price yet — that is the whole
-  // point of the request — so the record is stored with zeroes.
-  const form = useInquiryForm(
-    { frameName: category?.name ?? '', widthCm: 0, heightCm: 0, unitPrice: 0 },
-    { active: !!category, onSuccess: () => setSent(true) },
+  const services = useMemo(
+    () =>
+      SERVICE_IDS.map((id) => ({
+        id,
+        title: t(`printing.services.${id}.title`),
+        description: t(`printing.services.${id}.desc`),
+      })),
+    [t],
   )
 
-  if (loading) {
-    return (
-      <Shell>
-        <div className="mt-24 flex justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-brand-navy/50" />
-        </div>
-      </Shell>
-    )
-  }
+  const onSubmit = form.handleSubmit(async (v) => {
+    // English labels: admin reads these regardless of the visitor's locale.
+    const details: Record<string, string> = {
+      Service: t(`printing.services.${v.service}.title`, { lng: 'en' }),
+    }
+    details['Print size'] = v.dimensions.trim()
+    details['Quantity'] = v.quantity.trim()
 
-  if (notFound || !category) {
-    return (
-      <Shell>
-        <div className="mt-16 rounded-2xl border border-black/[0.07] py-20 text-center">
-          <p className="text-base font-medium text-brand-navy">{t('category.notFound')}</p>
-          <button
-            type="button"
-            onClick={() => navigate('/custom-prints')}
-            className="mt-4 text-sm font-semibold text-brand-gold hover:underline"
-          >
-            {t('category.backToPrints')}
-          </button>
-        </div>
-      </Shell>
-    )
-  }
+    try {
+      await inquiriesApi.create({
+        frameName: category ? `Printing — ${category.name}` : 'Printing Services',
+        widthCm: 0,
+        heightCm: 0,
+        unitPrice: 0,
+        currency: 'OMR',
+        customerName: v.fullName.trim(),
+        customerEmail: v.email.trim(),
+        customerPhone: v.phone,
+        message: v.message.trim(),
+        details,
+        image: file,
+      })
+      setSent(true)
+    } catch {
+      toast.error(t('common.error'))
+    }
+  })
+
+  const submitting = form.formState.isSubmitting
 
   return (
-    <Shell>
-      {/* Breadcrumb */}
-      <nav
-        aria-label={t('breadcrumb.aria')}
-        className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-foreground/60 md:text-[13px]"
-      >
-        <Link to="/" aria-label={t('breadcrumb.home')} className="inline-flex items-center hover:text-brand-navy">
-          <Home className="h-3.5 w-3.5" strokeWidth={2} />
-        </Link>
-        <ChevronRight className="h-3 w-3 text-foreground/40" />
-        <Link to="/custom-prints" className="hover:text-brand-navy">{t('breadcrumb.customPrints')}</Link>
-        <ChevronRight className="h-3 w-3 text-foreground/40" />
-        <span className="min-w-0 break-words text-foreground">{title}</span>
-      </nav>
-
-      <div className="mt-6 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)]">
-        {/* Product side */}
-        <div>
-          <div className="overflow-hidden rounded-2xl border border-black/10 bg-white">
-            <div className="flex h-[380px] w-full items-center justify-center md:h-[460px]">
-              {image && (
-                <img
-                  src={resolveAsset(image)}
-                  alt={title}
-                  draggable={false}
-                  className="h-full w-full object-cover"
-                />
-              )}
-            </div>
-          </div>
-          <h1 className="mt-6 text-2xl font-semibold tracking-tight text-brand-navy md:text-[32px]">
-            {title}
-          </h1>
-          {blurb && (
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground/70">
-              {blurb}
-            </p>
-          )}
-        </div>
-
-        {/* Form side */}
-        <div className="rounded-2xl border border-black/10 bg-white p-6 md:p-7">
-          {sent ? (
-            <div className="py-10 text-center">
-              <CheckCircle2 className="mx-auto h-10 w-10 text-brand-gold" strokeWidth={1.6} />
-              <p className="mt-4 text-lg font-semibold text-brand-navy">
-                {t('inquiryPage.sentTitle')}
-              </p>
-              <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-foreground/60">
-                {t('inquiryPage.sentText')}
-              </p>
-              <Button
-                variant="navy"
-                className="mt-6 rounded-lg"
-                onClick={() => navigate('/custom-prints')}
-              >
-                {t('category.backToPrints')}
-              </Button>
-            </div>
-          ) : (
-            <>
-              <h2 className="text-xl font-bold text-brand-navy">{t('inquiryPage.title')}</h2>
-              <p className="mt-1.5 text-sm leading-relaxed text-foreground/60">
-                {t('inquiryPage.subtitle')}
-              </p>
-
-              <form
-                className="mt-6"
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  void form.submit()
-                }}
-                noValidate
-              >
-                <InquiryFields form={form} />
-                <Button
-                  type="submit"
-                  variant="navy"
-                  size="lg"
-                  disabled={!form.canSubmit}
-                  className="mt-6 w-full rounded-lg"
-                >
-                  {form.submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {form.submitting ? t('inquiryPage.submitting') : t('inquiryPage.submit')}
-                </Button>
-              </form>
-            </>
-          )}
-        </div>
-      </div>
-    </Shell>
-  )
-}
-
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen w-full bg-white font-sans text-[#000000]">
+    <div className="min-h-screen w-full font-sans text-[#000000]" style={{ background: '#F7F8FA' }}>
       <header className="relative z-30">
         <Navbar />
       </header>
       <PillNav />
-      <main className="mx-auto max-w-[1400px] px-5 pt-28 pb-20 md:px-8 md:pt-32 lg:px-10 lg:pt-40">
-        {children}
-                <div
-          aria-hidden
-          className="pointer-events-none absolute left-1/2 z-0 -translate-x-1/2 rounded-full"
-          style={{
-            top: '-186px',
-            width: 'min(1560px, 140vw)',
-            height: '270px',
-            background: 'rgba(65, 105, 226, 0.2)',
-            filter: 'blur(130px)',
-          }}
-        />
+
+      <main className="mx-auto max-w-[1400px] px-4 pb-20 pt-28 md:px-8 md:pt-32 lg:pt-40">
+        {sent ? (
+          <InquiryCard title={t('printing.title')} subtitle={t('printing.subtitle')} wide>
+            <div className="py-10 text-center">
+              <CheckCircle2 className="mx-auto h-11 w-11 text-brand-gold" strokeWidth={1.6} />
+              <p className="mt-4 text-lg font-semibold text-brand-navy">{t('common.sentTitle')}</p>
+              <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-foreground/60">
+                {t('common.sentText')}
+              </p>
+              <Button variant="navy" className="mt-6 rounded-lg" onClick={() => navigate('/custom-prints')}>
+                {t('printing.back')}
+              </Button>
+            </div>
+          </InquiryCard>
+        ) : (
+          <form onSubmit={onSubmit} noValidate>
+            <InquiryCard
+              icon={<span aria-hidden className="text-[34px] leading-none">🖨️</span>}
+              title={t('printing.title')}
+              subtitle={t('printing.subtitle')}
+              wide
+            >
+              <Field step={1} label={t('printing.fields.service')}>
+                <Controller
+                  control={form.control}
+                  name="service"
+                  render={({ field }) => (
+                    <ChoiceCards
+                      name="print-service"
+                      items={services}
+                      value={field.value}
+                      onChange={(id) => field.onChange(id)}
+                    />
+                  )}
+                />
+                <FieldError>{e.service?.message}</FieldError>
+              </Field>
+
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+                <Field step={2} label={t('common.fullName')}>
+                  <TextInput
+                    icon={<User className="h-4 w-4" />}
+                    placeholder={t('common.fullNamePlaceholder')}
+                    invalid={!!e.fullName}
+                    {...form.register('fullName')}
+                  />
+                  <FieldError>{e.fullName?.message}</FieldError>
+                </Field>
+
+                <Field step={3} label={t('common.email')}>
+                  <TextInput
+                    icon={<Mail className="h-4 w-4" />}
+                    type="email"
+                    dir="ltr"
+                    placeholder={t('common.emailPlaceholder')}
+                    invalid={!!e.email}
+                    {...form.register('email')}
+                  />
+                  <FieldError>{e.email?.message}</FieldError>
+                </Field>
+
+                <Field step={4} label={t('common.phone')}>
+                  <Controller
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <PhoneField
+                        value={field.value || undefined}
+                        onChange={(v) => field.onChange(v ?? '')}
+                        invalid={!!e.phone}
+                      />
+                    )}
+                  />
+                  <FieldError>{e.phone?.message}</FieldError>
+                </Field>
+              </div>
+
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+                <Field step={5} label={t('printing.fields.dimensions')}>
+                  <TextInput
+                    icon={<Maximize2 className="h-4 w-4" />}
+                    placeholder={t('printing.fields.dimensionsPlaceholder')}
+                    invalid={!!e.dimensions}
+                    {...form.register('dimensions')}
+                  />
+                  <FieldError>{e.dimensions?.message}</FieldError>
+                </Field>
+
+                <Field step={6} label={t('common.quantity')}>
+                  <TextInput
+                    icon={<Box className="h-4 w-4" />}
+                    inputMode="numeric"
+                    placeholder={t('common.quantityPlaceholder')}
+                    invalid={!!e.quantity}
+                    {...form.register('quantity')}
+                  />
+                  <FieldError>{e.quantity?.message}</FieldError>
+                </Field>
+
+                <Field step={7} label={t('common.message')}>
+                  <TextArea
+                    rows={3}
+                    placeholder={t('printing.fields.messagePlaceholder')}
+                    invalid={!!e.message}
+                    {...form.register('message')}
+                  />
+                  <FieldError>{e.message?.message}</FieldError>
+                </Field>
+              </div>
+
+              <Field step={8} label={t('printing.fields.upload')} optional={t('common.optional')}>
+                <Dropzone
+                  file={file}
+                  onFile={setFile}
+                  accept={FILE_TYPES}
+                  maxBytes={FILE_MAX}
+                  primaryLabel={t('common.dropFiles')}
+                  browseLabel={t('common.browse')}
+                  hint={t('printing.fields.uploadHint')}
+                  tooLargeMessage={t('printing.fields.uploadTooLarge')}
+                  wrongTypeMessage={t('printing.fields.uploadWrongType')}
+                  removeLabel={t('common.removeFile')}
+                  onError={(m) => toast.error(m)}
+                />
+              </Field>
+
+              <div>
+                <Button
+                  type="submit"
+                  variant="navy"
+                  size="lg"
+                  disabled={submitting}
+                  className="w-full gap-2 rounded-lg"
+                >
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {submitting ? t('common.submitting') : t('common.submit')}
+                </Button>
+                <SafetyNote>{t('common.safety')}</SafetyNote>
+              </div>
+            </InquiryCard>
+          </form>
+        )}
       </main>
+
       <Footer />
     </div>
   )

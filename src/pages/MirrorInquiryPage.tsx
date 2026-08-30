@@ -1,40 +1,138 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Controller, useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircle2, ChevronRight, Home, Loader2 } from 'lucide-react'
+import type { TFunction } from 'i18next'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { isValidPhoneNumber } from 'react-phone-number-input'
+import {
+  ArrowLeftRight,
+  Box,
+  CheckCircle2,
+  Loader2,
+  Mail,
+  MoveVertical,
+  Send,
+  User,
+} from 'lucide-react'
+import { toast } from 'sonner'
 
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { Button } from '@/components/ui/button'
-import { InquiryFields, useInquiryForm } from '@/components/InquiryForm'
+import { PhoneField } from '@/components/auth/PhoneField'
+import {
+  ChoiceTiles,
+  Dropzone,
+  Field,
+  FieldError,
+  InquiryCard,
+  SafetyNote,
+  TextArea,
+  TextInput,
+} from '@/components/inquiry/InquiryFormKit'
+import { inquiriesApi } from '@/api/inquiries.api'
 import { findMirrorCategory } from '@/lib/mirror-categories'
+import { useAuthStore } from '@/store/authStore'
+
+const IMAGE_MAX = 5 * 1024 * 1024
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+
+/** Mirror types offered on the form. Icons are added later. */
+const MIRROR_TYPES = [
+  'wall',
+  'bathroom',
+  'decorative',
+  'led',
+  'framed',
+  'fullLength',
+  'customShape',
+  'other',
+] as const
+
+const SHAPES = ['rectangle', 'round', 'oval', 'square', 'arch', 'custom'] as const
 
 /**
- * Custom mirrors are made to order and never priced up front, so the page's
- * calls to action collect an inquiry rather than opening the frame editor.
+ * One schema drives both the inline messages and the submit guard, so a field
+ * can never be accepted by one and rejected by the other.
  *
- * Uses the same form as the print inquiry page and the product-page dialog, so
- * validation, the optional image upload and the submitted payload stay
- * identical across all three entry points.
+ * Every question is required; only the reference image is not, matching the
+ * "(optional)" it carries in the design.
+ */
+function makeSchema(t: TFunction<'inquiry'>) {
+  const positiveNumber = (message: string) =>
+    z
+      .string()
+      .min(1, t('common.required'))
+      .refine((v) => Number.isFinite(Number(v)) && Number(v) > 0, message)
+
+  return z.object({
+    fullName: z.string().trim().min(1, t('common.invalidName')).max(200, t('common.tooLong')),
+    email: z
+      .string()
+      .trim()
+      .min(1, t('common.invalidEmail'))
+      .max(255, t('common.tooLong'))
+      .email(t('common.invalidEmail')),
+    phone: z
+      .string()
+      .min(1, t('common.required'))
+      .refine((v) => isValidPhoneNumber(v), t('common.invalidPhone')),
+    // The product being asked about — without it the inquiry is not actionable.
+    mirrorType: z.enum(MIRROR_TYPES, { message: t('mirror.errors.typeRequired') }),
+    width: positiveNumber(t('mirror.errors.invalidSize')),
+    height: positiveNumber(t('mirror.errors.invalidSize')),
+    quantity: z
+      .string()
+      .min(1, t('common.required'))
+      .refine((v) => /^\d+$/.test(v) && Number(v) > 0, t('common.invalidQuantity')),
+    shape: z.enum(SHAPES, { message: t('mirror.errors.shapeRequired') }),
+    message: z
+      .string()
+      .trim()
+      .min(1, t('common.required'))
+      .max(5000, t('common.tooLong')),
+  })
+}
+type Values = z.infer<ReturnType<typeof makeSchema>>
+
+/**
+ * Standalone custom-mirror inquiry. Mirrors are made to order and never priced
+ * up front, so every entry point on /custom-mirrors leads here. A tile passes
+ * its selection as ?type=, which preselects the Mirror Type.
  */
 export default function MirrorInquiryPage() {
-  const { t } = useTranslation('pages')
+  const { t } = useTranslation('inquiry')
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const [sent, setSent] = useState(false)
+  const user = useAuthStore((s) => s.user)
 
-  // A tile on /custom-mirrors passes which mirror was clicked as ?type=.
-  // Landing here without one (via the page CTAs) is a general enquiry.
-  const category = findMirrorCategory(searchParams.get('type'))
-  const categoryLabel = category
-    ? t(`customMirrors.categories.${category.titleKey}`)
-    : null
-  const heroImage = category?.img ?? '/images/craft-miror.png'
+  const [sent, setSent] = useState(false)
+  const [file, setFile] = useState<File | null>(null)
+
+  const schema = useMemo(() => makeSchema(t), [t])
+  const form = useForm<Values>({
+    resolver: zodResolver(schema),
+    mode: 'onTouched',
+    defaultValues: {
+      fullName: '',
+      email: '',
+      phone: '',
+      mirrorType: undefined as unknown as Values['mirrorType'],
+      width: '',
+      height: '',
+      quantity: '',
+      shape: undefined as unknown as Values['shape'],
+      message: '',
+    },
+  })
+  const e = form.formState.errors
 
   useEffect(() => {
     const prevBg = document.body.style.background
     const prevColor = document.body.style.color
-    document.body.style.background = '#ffffff'
+    document.body.style.background = '#F7F8FA'
     document.body.style.color = '#000000'
     window.scrollTo(0, 0)
     return () => {
@@ -43,131 +141,246 @@ export default function MirrorInquiryPage() {
     }
   }, [])
 
-  // Canonical product name stored on the record and shown in both emails —
-  // forced to English so admin always reads the same label regardless of the
-  // locale the customer browsed in. Size and price are zero: nothing has been
-  // chosen yet, which is exactly what the customer is writing in about.
-  const recordName = category
-    ? `Custom Mirror — ${t(`customMirrors.categories.${category.titleKey}`, { lng: 'en' })}`
-    : 'Custom Mirror'
-  const form = useInquiryForm(
-    { frameName: recordName, widthCm: 0, heightCm: 0, unitPrice: 0 },
-    { onSuccess: () => setSent(true) },
+  useEffect(() => {
+    if (!user) return
+    form.reset({
+      ...form.getValues(),
+      fullName: `${user.firstName} ${user.lastName}`.trim(),
+      email: user.email ?? '',
+      phone: user.phone ?? '',
+    })
+  }, [user, form])
+
+  // A tile on /custom-mirrors passes which mirror was clicked; preselect it so
+  // the visitor does not answer a question they already answered.
+  useEffect(() => {
+    const picked = findMirrorCategory(searchParams.get('type'))
+    if (!picked) return
+    const map: Record<string, (typeof MIRROR_TYPES)[number]> = {
+      wall: 'wall',
+      decorative: 'decorative',
+      led: 'led',
+      customShapes: 'customShape',
+      framed: 'framed',
+      beveled: 'other',
+    }
+    const mapped = map[picked.titleKey]
+    if (mapped) form.setValue('mirrorType', mapped, { shouldValidate: false })
+  }, [searchParams, form])
+
+  const typeTiles = useMemo(
+    () => MIRROR_TYPES.map((id) => ({ id, label: t(`mirror.types.${id}`) })),
+    [t],
+  )
+  const shapeTiles = useMemo(
+    () => SHAPES.map((id) => ({ id, label: t(`mirror.shapes.${id}`) })),
+    [t],
   )
 
+  const onSubmit = form.handleSubmit(async (v) => {
+    // English labels so admin reads the same thing whatever locale was used.
+    const details: Record<string, string> = {
+      'Mirror type': t(`mirror.types.${v.mirrorType}`, { lng: 'en' }),
+    }
+    details['Preferred shape'] = t(`mirror.shapes.${v.shape}`, { lng: 'en' })
+    details['Quantity'] = v.quantity.trim()
+
+    try {
+      // Width/height are real columns, so they go there rather than in details.
+      await inquiriesApi.create({
+        frameName: 'Custom Mirror',
+        widthCm: Number(v.width) || 0,
+        heightCm: Number(v.height) || 0,
+        unitPrice: 0,
+        currency: 'OMR',
+        customerName: v.fullName.trim(),
+        customerEmail: v.email.trim(),
+        customerPhone: v.phone,
+        message: v.message.trim(),
+        details,
+        image: file,
+      })
+      setSent(true)
+    } catch {
+      toast.error(t('common.error'))
+    }
+  })
+
+  const submitting = form.formState.isSubmitting
+
   return (
-    <div className="min-h-screen w-full bg-white font-sans text-[#000000]">
+    <div className="min-h-screen w-full font-sans text-[#000000]" style={{ background: '#F7F8FA' }}>
       <header className="relative z-30">
         <Navbar />
       </header>
       <PillNav />
 
-      <main className="mx-auto max-w-[1400px] px-5 pt-28 pb-20 md:px-8 md:pt-32 lg:px-10 lg:pt-40">
-        <nav
-          aria-label={t('customMirrors.inquiry.breadcrumbAria')}
-          className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-foreground/60 md:text-[13px]"
-        >
-          <Link to="/" aria-label={t('customMirrors.inquiry.home')} className="inline-flex items-center hover:text-brand-navy">
-            <Home className="h-3.5 w-3.5" strokeWidth={2} />
-          </Link>
-          <ChevronRight className="h-3 w-3 text-foreground/40" />
-          <Link to="/custom-mirrors" className="hover:text-brand-navy">
-            {t('customMirrors.inquiry.customMirrors')}
-          </Link>
-          <ChevronRight className="h-3 w-3 text-foreground/40" />
-          {/* Name the mirror the visitor picked, matching how the print
-              pages put the product itself in the last crumb. */}
-          <span className="min-w-0 break-words text-foreground">
-            {categoryLabel ?? t('customMirrors.inquiry.current')}
-          </span>
-        </nav>
-
-        <div className="mt-6 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)]">
-          {/* Product side */}
-          <div>
-            <div className="overflow-hidden rounded-2xl border border-black/10 bg-white">
-              <div className="flex h-[380px] w-full items-center justify-center md:h-[460px]">
-                <img
-                  src={heroImage}
-                  alt={categoryLabel ?? t('customMirrors.inquiry.title')}
-                  draggable={false}
-                  className="h-full w-full object-cover"
-                />
-              </div>
+      <main className="mx-auto max-w-[1400px] px-4 pb-20 pt-28 md:px-8 md:pt-32 lg:pt-40">
+        {sent ? (
+          <InquiryCard title={t('mirror.title')} subtitle={t('mirror.subtitle')}>
+            <div className="py-10 text-center">
+              <CheckCircle2 className="mx-auto h-11 w-11 text-brand-gold" strokeWidth={1.6} />
+              <p className="mt-4 text-lg font-semibold text-brand-navy">{t('common.sentTitle')}</p>
+              <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-foreground/60">
+                {t('common.sentText')}
+              </p>
+              <Button variant="navy" className="mt-6 rounded-lg" onClick={() => navigate('/custom-mirrors')}>
+                {t('mirror.back')}
+              </Button>
             </div>
-            <h1 className="mt-6 text-2xl font-semibold tracking-tight text-brand-navy md:text-[32px]">
-              {categoryLabel ?? t('customMirrors.inquiry.title')}
-            </h1>
-            <p className="mt-3 max-w-xl text-sm leading-relaxed text-foreground/70">
-              {t('customMirrors.inquiry.blurb')}
-            </p>
-          </div>
+          </InquiryCard>
+        ) : (
+          <form onSubmit={onSubmit} noValidate>
+            <InquiryCard
+              icon={<span aria-hidden className="text-[34px] leading-none">🪞</span>}
+              title={t('mirror.title')}
+              subtitle={t('mirror.subtitle')}
+            >
+              <Field step={1} label={t('common.fullName')}>
+                <TextInput
+                  icon={<User className="h-4 w-4" />}
+                  placeholder={t('common.fullNamePlaceholder')}
+                  invalid={!!e.fullName}
+                  {...form.register('fullName')}
+                />
+                <FieldError>{e.fullName?.message}</FieldError>
+              </Field>
 
-          {/* Form side */}
-          <div className="rounded-2xl border border-black/10 bg-white p-6 md:p-7">
-            {sent ? (
-              <div className="py-10 text-center">
-                <CheckCircle2 className="mx-auto h-10 w-10 text-brand-gold" strokeWidth={1.6} />
-                <p className="mt-4 text-lg font-semibold text-brand-navy">
-                  {t('customMirrors.inquiry.sentTitle')}
-                </p>
-                <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-foreground/60">
-                  {t('customMirrors.inquiry.sentText')}
-                </p>
+              <Field step={2} label={t('common.email')}>
+                <TextInput
+                  icon={<Mail className="h-4 w-4" />}
+                  type="email"
+                  dir="ltr"
+                  placeholder={t('common.emailPlaceholder')}
+                  invalid={!!e.email}
+                  {...form.register('email')}
+                />
+                <FieldError>{e.email?.message}</FieldError>
+              </Field>
+
+              <Field step={3} label={t('common.phone')} hint={t('mirror.fields.phoneHint')}>
+                <Controller
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <PhoneField
+                      value={field.value || undefined}
+                      onChange={(v) => field.onChange(v ?? '')}
+                      invalid={!!e.phone}
+                    />
+                  )}
+                />
+                <FieldError>{e.phone?.message}</FieldError>
+              </Field>
+
+              <Field step={4} label={t('mirror.fields.type')}>
+                <Controller
+                  control={form.control}
+                  name="mirrorType"
+                  render={({ field }) => (
+                    <ChoiceTiles
+                      items={typeTiles}
+                      value={field.value ?? null}
+                      onChange={(id) => field.onChange(id)}
+                    />
+                  )}
+                />
+                <FieldError>{e.mirrorType?.message}</FieldError>
+              </Field>
+
+              <Field step={5} label={t('mirror.fields.size')} optional={t('mirror.fields.sizeUnit')}>
+                <div className="flex items-center gap-3">
+                  <TextInput
+                    icon={<ArrowLeftRight className="h-4 w-4" />}
+                    inputMode="decimal"
+                    placeholder={t('mirror.fields.width')}
+                    invalid={!!e.width}
+                    {...form.register('width')}
+                  />
+                  <span aria-hidden className="shrink-0 text-foreground/35">
+                    ×
+                  </span>
+                  <TextInput
+                    icon={<MoveVertical className="h-4 w-4" />}
+                    inputMode="decimal"
+                    placeholder={t('mirror.fields.height')}
+                    invalid={!!e.height}
+                    {...form.register('height')}
+                  />
+                </div>
+                <FieldError>{e.width?.message ?? e.height?.message}</FieldError>
+              </Field>
+
+              <Field step={6} label={t('common.quantity')}>
+                <TextInput
+                  icon={<Box className="h-4 w-4" />}
+                  inputMode="numeric"
+                  placeholder={t('common.quantityPlaceholder')}
+                  invalid={!!e.quantity}
+                  {...form.register('quantity')}
+                />
+                <FieldError>{e.quantity?.message}</FieldError>
+              </Field>
+
+              <Field step={7} label={t('mirror.fields.shape')} hint={t('mirror.fields.shapeHint')}>
+                <Controller
+                  control={form.control}
+                  name="shape"
+                  render={({ field }) => (
+                    <ChoiceTiles
+                      items={shapeTiles}
+                      value={field.value ?? null}
+                      onChange={(id) => field.onChange(id)}
+                      columns={6}
+                    />
+                  )}
+                />
+                <FieldError>{e.shape?.message}</FieldError>
+              </Field>
+
+              <Field step={8} label={t('common.message')}>
+                <TextArea
+                  rows={4}
+                  placeholder={t('mirror.fields.messagePlaceholder')}
+                  invalid={!!e.message}
+                  {...form.register('message')}
+                />
+                <FieldError>{e.message?.message}</FieldError>
+              </Field>
+
+              <Field step={9} label={t('mirror.fields.upload')} optional={t('common.optional')}>
+                <Dropzone
+                  tinted
+                  file={file}
+                  onFile={setFile}
+                  accept={IMAGE_TYPES}
+                  maxBytes={IMAGE_MAX}
+                  primaryLabel={t('mirror.fields.dropImage')}
+                  browseLabel={t('common.browse')}
+                  hint={t('mirror.fields.uploadHint')}
+                  tooLargeMessage={t('mirror.fields.uploadTooLarge')}
+                  wrongTypeMessage={t('mirror.fields.uploadWrongType')}
+                  removeLabel={t('common.removeFile')}
+                  onError={(m) => toast.error(m)}
+                />
+              </Field>
+
+              <div>
                 <Button
+                  type="submit"
                   variant="navy"
-                  className="mt-6 rounded-lg"
-                  onClick={() => navigate('/custom-mirrors')}
+                  size="lg"
+                  disabled={submitting}
+                  className="w-full gap-2 rounded-lg"
                 >
-                  {t('customMirrors.inquiry.back')}
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {submitting ? t('common.submitting') : t('common.submit')}
                 </Button>
+                <SafetyNote>{t('common.safety')}</SafetyNote>
               </div>
-            ) : (
-              <>
-                <h2 className="text-xl font-bold text-brand-navy">
-                  {t('customMirrors.inquiry.formTitle')}
-                </h2>
-                <p className="mt-1.5 text-sm leading-relaxed text-foreground/60">
-                  {t('customMirrors.inquiry.formSubtitle')}
-                </p>
-
-                <form
-                  className="mt-6"
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    void form.submit()
-                  }}
-                  noValidate
-                >
-                  <InquiryFields form={form} showImage={false} />
-                  <Button
-                    type="submit"
-                    variant="navy"
-                    size="lg"
-                    disabled={!form.canSubmit}
-                    className="mt-6 w-full rounded-lg"
-                  >
-                    {form.submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {form.submitting
-                      ? t('customMirrors.inquiry.submitting')
-                      : t('customMirrors.inquiry.submit')}
-                  </Button>
-                </form>
-              </>
-            )}
-          </div>
-        </div>
-                <div
-          aria-hidden
-          className="pointer-events-none absolute left-1/2 z-0 -translate-x-1/2 rounded-full"
-          style={{
-            top: '-186px',
-            width: 'min(1560px, 140vw)',
-            height: '270px',
-            background: 'rgba(65, 105, 226, 0.2)',
-            filter: 'blur(130px)',
-          }}
-        />
+            </InquiryCard>
+          </form>
+        )}
       </main>
 
       <Footer />

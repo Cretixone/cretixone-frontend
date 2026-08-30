@@ -1,0 +1,104 @@
+{
+  "common": {
+    "fullName": "Full Name",
+    "fullNamePlaceholder": "Enter your full name",
+    "email": "Email",
+    "emailPlaceholder": "Enter your email address",
+    "phone": "Phone / WhatsApp",
+    "quantity": "Quantity",
+    "quantityPlaceholder": "Enter quantity",
+    "message": "Message / Requirements",
+    "optional": "optional",
+    "browse": "click to browse",
+    "dropFiles": "Drag and drop your files here or",
+    "removeFile": "Remove file",
+    "submit": "Send Inquiry",
+    "submitting": "Sending…",
+    "safety": "Your information is safe with us. We will never share your details.",
+    "sentTitle": "Inquiry sent",
+    "sentText": "Thanks — we have your request and will be in touch shortly.",
+    "error": "Could not send your inquiry. Please try again.",
+    "invalidName": "Please enter your name",
+    "invalidEmail": "Enter a valid email address",
+    "tooLong": "That is too long",
+    "invalidPhone": "Enter a valid phone number",
+    "invalidQuantity": "Enter a whole number greater than 0",
+    "required": "This field is required"
+  },
+  "printing": {
+    "title": "Printing Services Inquiry",
+    "subtitle": "Tell us what you need and we'll get back to you with a quote.",
+    "back": "Back to Custom Prints",
+    "services": {
+      "largeFormat": {
+        "title": "Large Format Printing",
+        "desc": "High-quality large format prints for banners, posters, displays and more."
+      },
+      "wallDecor": {
+        "title": "Personalized Wall Décor",
+        "desc": "Custom prints and wall décor to personalize your space beautifully."
+      },
+      "corporate": {
+        "title": "Corporate Printing Solutions",
+        "desc": "Professional printing solutions for your business needs and branding."
+      }
+    },
+    "fields": {
+      "service": "Select the type of printing service you need",
+      "dimensions": "Print Size / Dimensions",
+      "dimensionsPlaceholder": "e.g. 120 cm x 200 cm",
+      "messagePlaceholder": "Describe your requirements, design details, colors, installation, delivery date, etc.",
+      "upload": "Upload Reference File / Design",
+      "uploadHint": "JPG, PNG, PDF, AI, EPS or PSD (Max. 20MB)",
+      "uploadTooLarge": "That file is larger than 20 MB.",
+      "uploadWrongType": "Please upload a JPG, PNG, PDF, AI, EPS or PSD file."
+    },
+    "errors": {
+      "serviceRequired": "Choose a printing service"
+    }
+  },
+  "mirror": {
+    "title": "Custom Mirror Inquiry",
+    "subtitle": "Tell us what you need and we'll get back to you with a quote.",
+    "back": "Back to Custom Mirrors",
+    "types": {
+      "wall": "Wall Mirror",
+      "bathroom": "Bathroom Mirror",
+      "decorative": "Decorative Mirror",
+      "led": "LED Mirror",
+      "framed": "Framed Mirror",
+      "fullLength": "Full-Length Mirror",
+      "customShape": "Custom Shape Mirror",
+      "other": "Other"
+    },
+    "shapes": {
+      "rectangle": "Rectangle",
+      "round": "Round",
+      "oval": "Oval",
+      "square": "Square",
+      "arch": "Arch",
+      "custom": "Custom"
+    },
+    "fields": {
+      "phoneHint": "We may contact you on this number for faster response.",
+      "type": "Mirror Type",
+      "size": "Approximate Size",
+      "sizeUnit": "Width × Height",
+      "width": "Width (cm)",
+      "height": "Height (cm)",
+      "shape": "Preferred Shape",
+      "shapeHint": "Select the shape that best matches your requirement.",
+      "messagePlaceholder": "Tell us more about your requirements, preferred style, frame, color, installation, etc.",
+      "upload": "Upload Reference Image",
+      "dropImage": "Drag and drop an image here or",
+      "uploadHint": "JPG, PNG or WEBP (Max. 5MB)",
+      "uploadTooLarge": "That image is larger than 5 MB.",
+      "uploadWrongType": "Please upload a JPG, PNG or WEBP image."
+    },
+    "errors": {
+      "typeRequired": "Choose a mirror type",
+      "invalidSize": "Enter a size greater than 0",
+      "shapeRequired": "Choose a preferred shape"
+    }
+  }
+}
