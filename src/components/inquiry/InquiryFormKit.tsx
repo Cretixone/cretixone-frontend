@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useRef, useState } from 'react'
+import { forwardRef, useRef, useState } from 'react'
 import { UploadCloud, X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -91,12 +91,17 @@ const controlBase =
 const controlIdle = 'border-black/[0.12] focus:border-brand-gold focus:ring-brand-gold/25'
 const controlError = 'border-red-400 focus:border-red-400 focus:ring-red-200'
 
-export function TextInput({
-  icon,
-  invalid,
-  className,
-  ...props
-}: React.InputHTMLAttributes<HTMLInputElement> & { icon?: ReactNode; invalid?: boolean }) {
+/**
+ * forwardRef is required, not cosmetic: react-hook-form's register() returns
+ * a ref, and React 18 silently drops a ref passed to a plain function
+ * component. Without this the ref never reaches the <input>, RHF reads the
+ * field as undefined, and zod rejects even a correctly filled box with its
+ * default "Invalid input" message.
+ */
+export const TextInput = forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement> & { icon?: ReactNode; invalid?: boolean }
+>(function TextInput({ icon, invalid, className, ...props }, ref) {
   return (
     <div className="relative">
       {icon && (
@@ -105,6 +110,7 @@ export function TextInput({
         </span>
       )}
       <input
+        ref={ref}
         {...props}
         className={cn(
           controlBase,
@@ -116,20 +122,21 @@ export function TextInput({
       />
     </div>
   )
-}
+})
 
-export function TextArea({
-  invalid,
-  className,
-  ...props
-}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { invalid?: boolean }) {
+/** Same forwardRef requirement as TextInput — see the note above. */
+export const TextArea = forwardRef<
+  HTMLTextAreaElement,
+  React.TextareaHTMLAttributes<HTMLTextAreaElement> & { invalid?: boolean }
+>(function TextArea({ invalid, className, ...props }, ref) {
   return (
     <textarea
+      ref={ref}
       {...props}
       className={cn(controlBase, invalid ? controlError : controlIdle, 'px-3.5 py-3', className)}
     />
   )
-}
+})
 
 export function FieldError({ children }: { children?: string }) {
   if (!children) return null
