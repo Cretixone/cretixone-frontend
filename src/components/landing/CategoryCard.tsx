@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 import { cn } from '@/lib/utils'
 
 export interface CategoryCardProps {
@@ -5,9 +7,7 @@ export interface CategoryCardProps {
   image: string
   /** Label shown beneath the image */
   label: string
-  /** Optional click target / anchor href */
   href?: string
-  /** Extra classes for the wrapper (lets the parent control sizing/grid behaviour) */
   className?: string
 }
 
@@ -17,23 +17,21 @@ export default function CategoryCard({
   href,
   className,
 }: CategoryCardProps) {
-  const Tag = href ? 'a' : 'div'
-  return (
-    <Tag
-      {...(href ? { href } : {})}
-      className={cn(
-        'group flex flex-col items-center gap-4 transition',
-        href && 'cursor-pointer',
-        className,
-      )}
-    >
+  const wrapperClass = cn(
+    'group flex flex-col items-center gap-4 transition',
+    href && 'cursor-pointer',
+    className,
+  )
+
+  const content = (
+    <>
       <div
         className="relative aspect-square w-full overflow-hidden rounded-[33px] bg-neutral-200 ring-1 ring-black/5 transition-all duration-300 ease-out group-hover:-translate-y-1 group-hover:shadow-[0px_4px_21.4px_4px_rgba(99,104,119,0.15)]"
         style={{
           backgroundImage: `url(${image})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          height: "388px"
+          height: '388px',
         }}
         role="img"
         aria-label={label}
@@ -42,6 +40,24 @@ export default function CategoryCard({
       <span className="text-base font-medium text-brand-gold transition group-hover:text-brand-gold-dark">
         {label}
       </span>
-    </Tag>
+    </>
   )
+
+  if (href?.startsWith('/')) {
+    return (
+      <Link to={href} className={wrapperClass}>
+        {content}
+      </Link>
+    )
+  }
+
+  if (href) {
+    return (
+      <a href={href} className={wrapperClass}>
+        {content}
+      </a>
+    )
+  }
+
+  return <div className={wrapperClass}>{content}</div>
 }

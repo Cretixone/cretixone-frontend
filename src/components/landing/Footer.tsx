@@ -31,7 +31,7 @@ export default function Footer() {
   // pre-filter the grid (unknown categories simply fall back to all frames).
   const productLinks = [
     { label: t('footer.products.allFrames'), href: '/products' },
-    { label: t('footer.products.gifts'), href: '/products?category=gifts' },
+    { label: t('footer.products.gifts'), href: '#' },
     // Repointed from the removed mirror-works filter to the prints module.
     { label: t('footer.products.customPrints'), href: '/custom-prints' },
     { label: t('footer.products.customMirrors'), href: '/custom-mirrors' },
@@ -41,7 +41,7 @@ export default function Footer() {
     { label: t('footer.company.team'), href: '/team' },
     { label: t('footer.company.testimonials'), href: '/testimonials' },
   ]
-
+ 
   return (
     <footer
       className="relative w-full overflow-hidden text-foreground"

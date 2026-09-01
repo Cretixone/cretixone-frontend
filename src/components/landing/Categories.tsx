@@ -4,10 +4,10 @@ import CategoryCard from '@/components/landing/CategoryCard'
 import { Button } from '@/components/ui/button'
 
 const CATEGORIES = [
-  { labelKey: 'categories.items.frames', image: '/images/webp/frames.webp', href: '#frames' },
-  { labelKey: 'categories.items.printing', image: '/images/webp/printing.webp', href: '#printing' },
-  { labelKey: 'categories.items.mirror', image: '/images/webp/miror-galsses.webp', href: '#mirror' },
-  { labelKey: 'categories.items.gifts', image: '/images/webp/gifts.webp', href: '#gifts' },
+  { labelKey: 'categories.items.frames', image: '/images/webp/frames.webp', href: '/products' },
+  { labelKey: 'categories.items.printing', image: '/images/webp/printing.webp', href: '/custom-prints' },
+  { labelKey: 'categories.items.mirror', image: '/images/webp/miror-galsses.webp', href: '/custom-mirrors' },
+  { labelKey: 'categories.items.gifts', image: '/images/webp/gifts.webp', href: '#' },
 ]
 
 const fadeUp: Variants = {
@@ -22,11 +22,6 @@ export default function Categories() {
       aria-labelledby="categories-title"
       className="relative w-full py-20 md:py-24 lg:py-28"
     >
-      {/* Blue blur — figma Ellipse 2521. 494×494 disc with heavy blur,
-          positioned half off-screen on the left so only the right edge of
-          the soft glow is visible behind the first (Frames) card. The
-          section's `overflow-hidden` clips the off-screen-left half so it
-          can't trigger horizontal scroll. */}
       <div
         aria-hidden
         className="pointer-events-none z-10 absolute top-[30%] rounded-full"
