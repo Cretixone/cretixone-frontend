@@ -39,17 +39,23 @@ import { useAuthStore } from '@/store/authStore'
 const IMAGE_MAX = 5 * 1024 * 1024
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
-/** Mirror types offered on the form. Icons are added later. */
-const MIRROR_TYPES = [
-  'wall',
-  'bathroom',
-  'decorative',
-  'led',
-  'framed',
-  'fullLength',
-  'customShape',
-  'other',
-] as const
+/**
+ * Mirror types offered on the form, each with its illustration from
+ * public/images/svg/inquiry. The ids double as the i18n keys under
+ * `mirror.types.*` and as the value stored on the inquiry.
+ */
+const MIRROR_TYPE_ICONS = {
+  wall: '/images/svg/inquiry/wall-mirror.svg',
+  bathroom: '/images/svg/inquiry/bathroom-mirror.svg',
+  decorative: '/images/svg/inquiry/decorative-mirror.svg',
+  led: '/images/svg/inquiry/led-mirror.svg',
+  framed: '/images/svg/inquiry/framed-mirror.svg',
+  fullLength: '/images/svg/inquiry/full-length-mirror.svg',
+  customShape: '/images/svg/inquiry/custom-shape-mirror.svg',
+  other: '/images/svg/inquiry/other.svg',
+} as const
+
+const MIRROR_TYPES = Object.keys(MIRROR_TYPE_ICONS) as (keyof typeof MIRROR_TYPE_ICONS)[]
 
 const SHAPES = ['rectangle', 'round', 'oval', 'square', 'arch', 'custom'] as const
 
@@ -169,7 +175,20 @@ export default function MirrorInquiryPage() {
   }, [searchParams, form])
 
   const typeTiles = useMemo(
-    () => MIRROR_TYPES.map((id) => ({ id, label: t(`mirror.types.${id}`) })),
+    () =>
+      MIRROR_TYPES.map((id) => ({
+        id,
+        label: t(`mirror.types.${id}`),
+        icon: (
+          <img
+            src={MIRROR_TYPE_ICONS[id]}
+            alt=""
+            aria-hidden
+            className="h-8 w-8 object-contain"
+            draggable={false}
+          />
+        ),
+      })),
     [t],
   )
   const shapeTiles = useMemo(

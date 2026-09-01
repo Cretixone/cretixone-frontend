@@ -255,8 +255,14 @@ export function ChoiceTiles({
                 : 'border-black/[0.10] hover:border-black/25',
             )}
           >
-            {/* Icon slot — placeholder square until the real icons land. */}
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-black/[0.06] text-foreground/40">
+            {/* Real artwork renders as-is; the neutral square is only the
+                fallback for a tile that has no icon yet. */}
+            <span
+              className={cn(
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-md',
+                !it.icon && 'bg-black/[0.06] text-foreground/40',
+              )}
+            >
               {it.icon}
             </span>
             <span className="min-w-0 truncate text-[13px] font-medium text-brand-navy">
