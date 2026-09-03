@@ -11,7 +11,7 @@ import { secureStorage } from '@/lib/secure-storage'
  * apart. Optional for backward compatibility: carts persisted before prints
  * existed have no `kind` and are treated as frames.
  */
-export type CartItemKind = 'frame' | 'print'
+export type CartItemKind = 'frame' | 'print' | 'gift'
 
 export interface CartItem {
   id: string // unique line id

@@ -110,15 +110,7 @@
       "titleLine2": "Behind the Work We Love",
       "subtitle": "Our team is a group of passionate experts driven by creativity, innovation, and a commitment to excellence. We bring together diverse skills and experiences to build solutions that make a real difference. United by shared values and a bold vision, we work together to push boundaries, embrace new ideas, and turn challenges into opportunities."
     },
-    "roles": {
-      "founder": "Founder & Executive Chairperson",
-      "ceo": "CEO & Managing Director",
-      "cfo": "Chief Finance & Corporate Affairs Officer",
-      "designer": "Graphic Designer / Design Consultant",
-      "framerIndoor": "Lead Framer / Sales — Indoor",
-      "framerWorkshop": "Lead Framer / Workshop Manager",
-      "glassSpecialist": "Glass Specialist / Sales — Outdoor & Installer"
-    }
+    "empty": "Team members coming soon."
   },
   "testimonials": {
     "breadcrumb": {

@@ -259,10 +259,12 @@ export const apiSlice = createApi({
         limit: number
         frameType?: string[]
         color?: string[]
+        sort?: string
       }
     >({
-      query: ({ page, limit, frameType, color }) => {
+      query: ({ page, limit, frameType, color, sort }) => {
         const parts = [`page=${page}`, `limit=${limit}`]
+        if (sort) parts.push(`sort=${encodeURIComponent(sort)}`)
         const add = (key: string, vals?: string[]) => {
           if (vals && vals.length) parts.push(`${key}=${encodeURIComponent(vals.join(','))}`)
         }

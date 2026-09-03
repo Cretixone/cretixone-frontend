@@ -1,13 +1,12 @@
 import { motion, type Variants } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import CategoryCard from '@/components/landing/CategoryCard'
-import { Button } from '@/components/ui/button'
 
 const CATEGORIES = [
   { labelKey: 'categories.items.frames', image: '/images/webp/frames.webp', href: '/products' },
   { labelKey: 'categories.items.printing', image: '/images/webp/printing.webp', href: '/custom-prints' },
   { labelKey: 'categories.items.mirror', image: '/images/webp/miror-galsses.webp', href: '/custom-mirrors' },
-  { labelKey: 'categories.items.gifts', image: '/images/webp/gifts.webp', href: '#' },
+  { labelKey: 'categories.items.gifts', image: '/images/webp/gifts.webp', href: '/gifts' },
 ]
 
 const fadeUp: Variants = {
@@ -60,26 +59,9 @@ export default function Categories() {
           </motion.p>
         </motion.div>
 
-        {/* "View All" CTA — right aligned above the grid */}
-        <motion.div
-          className="mt-10 flex justify-end md:mt-12"
-          initial={{ opacity: 0, x: 16 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-        >
-          <Button
-            variant="gold"
-            size="sm"
-            className="h-9 rounded-full px-5 text-xs font-medium tracking-wide shadow-md"
-          >
-            {t('categories.viewAll')}
-          </Button>
-        </motion.div>
-
         {/* Card grid: 2 cols on mobile, 4 cols on md+ */}
         <motion.div
-          className="mt-6 grid grid-cols-1 gap-5 md:mt-8 lg:grid-cols-4 md:grid-cols-2 md:gap-6 lg:gap-8"
+          className="mt-10 grid grid-cols-1 gap-5 md:mt-12 lg:grid-cols-4 md:grid-cols-2 md:gap-6 lg:gap-8"
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, margin: '-60px' }}

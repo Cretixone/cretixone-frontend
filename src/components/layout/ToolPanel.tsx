@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
-import { useEditorStore, OSS_PREFIX } from '@/store/editorStore'
+import { useEditorStore, OSS_PREFIX, EDITOR_COMPACT_QUERY } from '@/store/editorStore'
 import { sameFrameType } from '@/lib/frame-type'
 import {
   useFetchFramesQuery,
@@ -14,7 +14,8 @@ import {
 } from '@/store/api/apiSlice'
 import type { ApiFrame, ApiScene, ApiMatColor, ApiEffectItem } from '@/types/api'
 import { formatOMR } from '@/lib/format'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -386,6 +387,7 @@ function NoneTile({
 export default function ToolPanel() {
   const { t } = useTranslation('editor')
   const isRtl = useLangStore((s) => s.isRtl)
+  const isCompact = useMediaQuery(EDITOR_COMPACT_QUERY)
   const {
     activeSidebarTab, setActiveSidebarTab,
     selectedFrame, setSelectedFrame,
@@ -402,6 +404,7 @@ export default function ToolPanel() {
     activeEffectTab, setActiveEffectTab,
     activeFrameType, setActiveFrameType,
     toolPanelCollapsed, setToolPanelCollapsed,
+    mobileBottomBarHeight,
   } = useEditorStore()
 
   const [searchParams] = useSearchParams()
@@ -516,7 +519,13 @@ export default function ToolPanel() {
   }
   const panelTitle = PANEL_TITLES[activeSidebarTab] ?? t('panel.library')
 
-  // Collapsed → a thin rail with an expand button (mirrors the right Inspector).
+  // Collapsed on mobile → render nothing. There's no room for even a thin
+  // rail next to a full-width canvas, and the ToolRail icons are the reopen
+  // affordance there (tapping one already calls setToolPanelCollapsed(false)).
+  if (toolPanelCollapsed && isCompact) return null
+
+  // Collapsed on desktop → a thin rail with an expand button (mirrors the
+  // right Inspector).
   if (toolPanelCollapsed) {
     return (
       <div
@@ -545,16 +554,11 @@ export default function ToolPanel() {
     )
   }
 
-  return (
-    <aside
-      className="flex h-full w-[300px] flex-shrink-0 flex-col"
-      style={{
-        background: 'var(--ed-panel)',
-        borderColor: 'var(--ed-border)',
-        borderLeftWidth: isRtl ? '1px' : '0',
-        borderRightWidth: isRtl ? '0' : '1px',
-      }}
-    >
+  // ── Panel body — identical content on every screen size; only the outer
+  // chrome (static side column on desktop vs. a bottom sheet over the canvas
+  // on mobile) differs, built below. ──
+  const panelBody = (
+    <>
       {/* ── Collapse header ── */}
       <div
         className="flex items-center justify-between border-b px-3 py-2.5"
@@ -570,13 +574,17 @@ export default function ToolPanel() {
           <TooltipTrigger asChild>
             <button
               onClick={() => setToolPanelCollapsed(true)}
-              aria-label={t('panel.collapsePanel')}
+              aria-label={isCompact ? t('panel.collapse') : t('panel.collapsePanel')}
               className="flex h-6 w-6 items-center justify-center rounded-md transition-colors"
               style={{ color: 'var(--ed-fg-muted)' }}
               onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--ed-hover)' }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
             >
-              <ChevronLeft size={13} strokeWidth={1.8} className="rtl:-scale-x-100" />
+              {isCompact ? (
+                <ChevronDown size={14} strokeWidth={1.8} />
+              ) : (
+                <ChevronLeft size={13} strokeWidth={1.8} className="rtl:-scale-x-100" />
+              )}
             </button>
           </TooltipTrigger>
           <TooltipContent side="right">{t('panel.collapse')}</TooltipContent>
@@ -884,6 +892,53 @@ export default function ToolPanel() {
           </ScrollArea>
         </>
       )}
+    </>
+  )
+
+  // Mobile: a bottom sheet over the canvas (not a side column that would
+  // leave nothing for the canvas), with a tap-outside backdrop to dismiss.
+  if (isCompact) {
+    return (
+      <>
+        {/* Leaves the 56px tool rail AND the persistent checkout bar
+            (RightInspector's, measured into mobileBottomBarHeight) clear —
+            the rail so a tap on a different tool switches it instead of
+            just dismissing this backdrop, the checkout bar so pricing/Add
+            to Cart stays reachable while browsing. */}
+        <div
+          className={cn('fixed top-0 z-30 bg-black/40', isRtl ? 'left-0 right-14' : 'left-14 right-0')}
+          style={{ bottom: mobileBottomBarHeight }}
+          onClick={() => setToolPanelCollapsed(true)}
+          aria-hidden
+        />
+        <aside
+          className={cn(
+            'fixed z-40 flex max-h-[75vh] flex-col overflow-hidden rounded-t-2xl border-t shadow-2xl',
+            isRtl ? 'left-0 right-14' : 'left-14 right-0',
+          )}
+          style={{
+            background: 'var(--ed-panel)',
+            borderColor: 'var(--ed-border)',
+            bottom: mobileBottomBarHeight,
+          }}
+        >
+          {panelBody}
+        </aside>
+      </>
+    )
+  }
+
+  return (
+    <aside
+      className="flex h-full w-[300px] flex-shrink-0 flex-col"
+      style={{
+        background: 'var(--ed-panel)',
+        borderColor: 'var(--ed-border)',
+        borderLeftWidth: isRtl ? '1px' : '0',
+        borderRightWidth: isRtl ? '0' : '1px',
+      }}
+    >
+      {panelBody}
     </aside>
   )
 }

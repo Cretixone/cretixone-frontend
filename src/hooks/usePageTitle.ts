@@ -18,6 +18,7 @@ const TITLES: Record<string, string> = {
   '/testimonials': 'Customer Testimonials',
   '/terms': 'Terms & Conditions',
   '/privacy': 'Privacy Policy',
+  '/gifts': 'Gifts',
   '/products': 'Shop Picture Frames',
   '/product': 'Frame Details',
   '/custom-mirrors/inquiry': 'Mirror Inquiry',

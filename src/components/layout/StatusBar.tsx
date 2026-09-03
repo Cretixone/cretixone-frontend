@@ -20,7 +20,9 @@ export default function StatusBar() {
 
   return (
     <footer
-      className="flex h-7 flex-shrink-0 items-center justify-between border-t px-4 text-[11px]"
+      // Hidden below `lg`: on mobile it would render behind the fixed
+      // checkout bar RightInspector pins to the bottom there.
+      className="hidden h-7 flex-shrink-0 items-center justify-between border-t px-4 text-[11px] lg:flex"
       style={{
         background: 'var(--ed-panel)',
         borderColor: 'var(--ed-border)',

@@ -36,8 +36,14 @@ const FILE_TYPES = [
   'image/vnd.adobe.photoshop',
 ]
 
-/** The three printing services offered. Artwork is added later. */
+/** The three printing services offered. */
 const SERVICE_IDS = ['largeFormat', 'wallDecor', 'corporate'] as const
+
+const SERVICE_IMAGES: Record<(typeof SERVICE_IDS)[number], string> = {
+  largeFormat: '/images/prints/inquiry/img1.jpg',
+  wallDecor: '/images/prints/inquiry/img2.jpg',
+  corporate: '/images/prints/inquiry/img3.jpg',
+}
 
 /**
  * Validation lives in one schema so the same rules drive the inline messages
@@ -154,6 +160,7 @@ export default function PrintInquiryPage() {
         id,
         title: t(`printing.services.${id}.title`),
         description: t(`printing.services.${id}.desc`),
+        image: SERVICE_IMAGES[id],
       })),
     [t],
   )

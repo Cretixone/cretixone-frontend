@@ -113,6 +113,7 @@ export default function Topbar() {
         {artworkImageUrl && (
           <button
             onClick={openFilePicker}
+            aria-label={t('topbar.changeImage')}
             className="ml-1 flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors"
             style={{
               color: 'var(--ed-fg-muted)',
@@ -128,7 +129,7 @@ export default function Topbar() {
             }}
           >
             <ImagePlus size={14} strokeWidth={1.8} />
-            {t('topbar.changeImage')}
+            <span className="hidden sm:inline">{t('topbar.changeImage')}</span>
           </button>
         )}
 

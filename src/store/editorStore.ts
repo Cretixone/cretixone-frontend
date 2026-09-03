@@ -15,6 +15,17 @@ import type {
 
 export const OSS_PREFIX = 'https://oss.aiframeit.com/'
 
+// Below this width the editor swaps its 3-panel desktop layout (tool rail +
+// tool panel + canvas + inspector, all sharing the row) for a mobile one
+// (panels become overlays over a full-width canvas) — matches Tailwind's
+// `lg` breakpoint (1024px) so `lg:` classes in the editor components line up
+// with this exactly. Shared by every component that needs to branch on it via
+// `useMediaQuery(EDITOR_COMPACT_QUERY)`.
+export const EDITOR_COMPACT_QUERY = '(max-width: 1023px)'
+
+const isCompactAtLoad = (): boolean =>
+  typeof window !== 'undefined' && window.matchMedia(EDITOR_COMPACT_QUERY).matches
+
 // ─── Store ───────────────────────────────────────────────────────────────────
 
 export type BackgroundMode = 'interior' | 'scenery' | null
@@ -127,6 +138,13 @@ export type EditorState = {
   inspectorCollapsed: boolean
   // Left tool panel (frames / mat / effects library) collapsed state.
   toolPanelCollapsed: boolean
+  // Measured height (px) of the fixed bottom checkout bar RightInspector
+  // pins to the screen below `lg` — 0 on desktop. The canvas reserves this
+  // much bottom space (padding) so the bar overlays empty space instead of
+  // the framed design. Kept in the store since both components (the bar that
+  // measures itself, and the canvas that consumes it) sit far apart in the
+  // tree.
+  mobileBottomBarHeight: number
 
   // Canvas size
   canvasWidth: number
@@ -167,6 +185,7 @@ export type EditorState = {
   toggleEditorTheme: () => void
   setInspectorCollapsed: (c: boolean) => void
   setToolPanelCollapsed: (c: boolean) => void
+  setMobileBottomBarHeight: (h: number) => void
 }
 
 export const useEditorStore = create<EditorState>((set) => ({
@@ -212,8 +231,12 @@ export const useEditorStore = create<EditorState>((set) => ({
   activeSidebarTab: 'frames',
   activeControlTab: 'Width',
   editorTheme: 'light',
-  inspectorCollapsed: false,
-  toolPanelCollapsed: false,
+  // Closed by default on a phone/small-tablet load, so the panels' overlay
+  // form doesn't cover the canvas before the shopper has done anything; open
+  // by default on desktop, matching the existing 3-panel layout.
+  inspectorCollapsed: isCompactAtLoad(),
+  toolPanelCollapsed: isCompactAtLoad(),
+  mobileBottomBarHeight: 0,
 
   canvasWidth: 800,
   canvasHeight: 600,
@@ -302,4 +325,5 @@ export const useEditorStore = create<EditorState>((set) => ({
   toggleEditorTheme: () => set((s) => ({ editorTheme: s.editorTheme === 'light' ? 'dark' : 'light' })),
   setInspectorCollapsed: (c) => set({ inspectorCollapsed: c }),
   setToolPanelCollapsed: (c) => set({ toolPanelCollapsed: c }),
+  setMobileBottomBarHeight: (h) => set({ mobileBottomBarHeight: h }),
 }))

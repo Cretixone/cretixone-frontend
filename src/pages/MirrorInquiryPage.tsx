@@ -57,7 +57,17 @@ const MIRROR_TYPE_ICONS = {
 
 const MIRROR_TYPES = Object.keys(MIRROR_TYPE_ICONS) as (keyof typeof MIRROR_TYPE_ICONS)[]
 
-const SHAPES = ['rectangle', 'round', 'oval', 'square', 'arch', 'custom'] as const
+/** Preferred shapes, each with its illustration from the same icon set. */
+const SHAPE_ICONS = {
+  rectangle: '/images/svg/inquiry/Rectangle.svg',
+  round: '/images/svg/inquiry/Round.svg',
+  oval: '/images/svg/inquiry/Oval.svg',
+  square: '/images/svg/inquiry/Square.svg',
+  arch: '/images/svg/inquiry/Arch.svg',
+  custom: '/images/svg/inquiry/Custom.svg',
+} as const
+
+const SHAPES = Object.keys(SHAPE_ICONS) as (keyof typeof SHAPE_ICONS)[]
 
 /**
  * One schema drives both the inline messages and the submit guard, so a field
@@ -192,7 +202,20 @@ export default function MirrorInquiryPage() {
     [t],
   )
   const shapeTiles = useMemo(
-    () => SHAPES.map((id) => ({ id, label: t(`mirror.shapes.${id}`) })),
+    () =>
+      SHAPES.map((id) => ({
+        id,
+        label: t(`mirror.shapes.${id}`),
+        icon: (
+          <img
+            src={SHAPE_ICONS[id]}
+            alt=""
+            aria-hidden
+            className="h-8 w-8 object-contain"
+            draggable={false}
+          />
+        ),
+      })),
     [t],
   )
 

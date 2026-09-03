@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Lock,
   Sliders,
 } from 'lucide-react'
@@ -10,7 +12,9 @@ import {
   useEditorStore,
   A4_LONG_CM,
   A4_SHORT_CM,
+  EDITOR_COMPACT_QUERY,
 } from '@/store/editorStore'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import type { ApiFrameSize } from '@/types/api'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -588,17 +592,131 @@ function CheckoutFooter() {
 
 // ── Right Inspector ───────────────────────────────────────────────────────
 
+// The Size/Style/Shadow tabs, shared verbatim by the desktop aside and the
+// mobile bottom-sheet drawer — only the chrome around them differs.
+function InspectorTabs({ tab, onTabChange }: { tab: string; onTabChange: (v: string) => void }) {
+  const { t } = useTranslation('editor')
+  return (
+    <Tabs value={tab} onValueChange={onTabChange}>
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="Ratio">{t('inspector.tabs.size')}</TabsTrigger>
+        <TabsTrigger value="Style">{t('inspector.tabs.style')}</TabsTrigger>
+        <TabsTrigger value="Shadow">{t('inspector.tabs.shadow')}</TabsTrigger>
+      </TabsList>
+      <TabsContent value="Ratio">
+        <RatioPanel />
+      </TabsContent>
+      <TabsContent value="Style">
+        <StylePanel />
+      </TabsContent>
+      <TabsContent value="Shadow">
+        <ShadowPanel />
+      </TabsContent>
+    </Tabs>
+  )
+}
+
 export default function RightInspector() {
   const { t } = useTranslation('editor')
   const activeControlTab = useEditorStore((s) => s.activeControlTab)
   const setActiveControlTab = useEditorStore((s) => s.setActiveControlTab)
   const inspectorCollapsed = useEditorStore((s) => s.inspectorCollapsed)
   const setInspectorCollapsed = useEditorStore((s) => s.setInspectorCollapsed)
+  const setToolPanelCollapsed = useEditorStore((s) => s.setToolPanelCollapsed)
+  const mobileBottomBarHeight = useEditorStore((s) => s.mobileBottomBarHeight)
+  const setMobileBottomBarHeight = useEditorStore((s) => s.setMobileBottomBarHeight)
+  const isCompact = useMediaQuery(EDITOR_COMPACT_QUERY)
+  const isRtl = useIsRtl()
+  const barRef = useRef<HTMLDivElement>(null)
 
   // Map old tab keys (Style/Ratio/Shadow) to keep behavior unchanged
   const tab = ['Style', 'Ratio', 'Shadow'].includes(activeControlTab)
     ? activeControlTab
     : 'Ratio'
+
+  // Feed the bar's real (measured) height back to the store so the canvas
+  // can reserve exactly that much bottom space instead of the bar silently
+  // overlaying the framed design. Re-measures whenever the drawer opens or
+  // closes (its content, and therefore height, changes).
+  useEffect(() => {
+    if (!isCompact) {
+      setMobileBottomBarHeight(0)
+      return
+    }
+    const el = barRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(([entry]) => {
+      if (entry) setMobileBottomBarHeight(entry.contentRect.height)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [isCompact, inspectorCollapsed, setMobileBottomBarHeight])
+
+  // Mobile: the size/style/shadow tabs collapse into a drawer that slides up
+  // from behind a pinned checkout bar — pricing and Add to Cart/Request
+  // Inquiry (CheckoutFooter, unchanged) stay reachable at all times instead
+  // of being hidden behind a manual expand, matching a normal mobile PDP.
+  if (isCompact) {
+    return (
+      <>
+        {!inspectorCollapsed && (
+          <>
+            {/* Leaves the 56px tool rail clear (left in LTR, right in RTL)
+                so a tap on a rail tool switches to it (and closes this
+                drawer via the rail's own cross-close) instead of just
+                dismissing this backdrop and going nowhere. Also stops short
+                of the persistent bar below — it's z-40 (above this z-30
+                backdrop) so it stays clickable regardless, but excluding it
+                here too avoids a dead-looking double-tap over it. */}
+            <div
+              className={cn('fixed top-0 z-30 bg-black/40', isRtl ? 'left-0 right-14' : 'left-14 right-0')}
+              style={{ bottom: mobileBottomBarHeight }}
+              onClick={() => setInspectorCollapsed(true)}
+              aria-hidden
+            />
+            {/* The drawer itself — a separate element from the persistent
+                bar below (not stacked inside it) so it can be inset from the
+                rail the same way, instead of covering it. */}
+            <div
+              className={cn(
+                'fixed z-40 flex max-h-[60vh] flex-col overflow-hidden rounded-t-2xl border-t shadow-2xl',
+                isRtl ? 'left-0 right-14' : 'left-14 right-0',
+              )}
+              style={{ background: 'var(--ed-panel)', borderColor: 'var(--ed-border)', bottom: mobileBottomBarHeight }}
+            >
+              <div className="flex-1 overflow-y-auto px-3 pb-2 pt-3">
+                <InspectorTabs tab={tab} onTabChange={setActiveControlTab} />
+              </div>
+            </div>
+          </>
+        )}
+        <div
+          ref={barRef}
+          className="fixed inset-x-0 bottom-0 z-40 flex flex-col rounded-t-2xl border-t shadow-2xl"
+          style={{ background: 'var(--ed-panel)', borderColor: 'var(--ed-border)' }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              const next = !inspectorCollapsed
+              setInspectorCollapsed(next)
+              // Only one bottom sheet at a time — opening this one closes
+              // the tool library's.
+              if (!next) setToolPanelCollapsed(true)
+            }}
+            aria-expanded={!inspectorCollapsed}
+            className="flex items-center justify-center gap-1.5 border-t py-1.5 text-[11px] font-medium"
+            style={{ borderColor: 'var(--ed-border)', color: 'var(--ed-fg-muted)' }}
+          >
+            {inspectorCollapsed ? <ChevronUp size={14} strokeWidth={1.8} /> : <ChevronDown size={14} strokeWidth={1.8} />}
+            {t('inspector.title')}
+          </button>
+
+          <CheckoutFooter />
+        </div>
+      </>
+    )
+  }
 
   if (inspectorCollapsed) {
     return (
@@ -666,22 +784,7 @@ export default function RightInspector() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 pb-4 pt-3">
-        <Tabs value={tab} onValueChange={setActiveControlTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="Ratio">{t('inspector.tabs.size')}</TabsTrigger>
-            <TabsTrigger value="Style">{t('inspector.tabs.style')}</TabsTrigger>
-            <TabsTrigger value="Shadow">{t('inspector.tabs.shadow')}</TabsTrigger>
-          </TabsList>
-          <TabsContent value="Ratio">
-            <RatioPanel />
-          </TabsContent>
-          <TabsContent value="Style">
-            <StylePanel />
-          </TabsContent>
-          <TabsContent value="Shadow">
-            <ShadowPanel />
-          </TabsContent>
-        </Tabs>
+        <InspectorTabs tab={tab} onTabChange={setActiveControlTab} />
       </div>
 
       <CheckoutFooter />

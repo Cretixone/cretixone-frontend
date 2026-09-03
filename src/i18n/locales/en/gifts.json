@@ -1,0 +1,15 @@
+{
+  "title": "Gifts",
+  "blurb": "Ready-made gifts, wrapped and ready to send. Pick one and add it straight to your cart.",
+  "empty": "No gifts available yet.",
+  "breadcrumb": {
+    "aria": "Breadcrumb",
+    "home": "Home"
+  },
+  "detail": {
+    "addToCart": "Add to cart",
+    "addedToCart": "Added to cart",
+    "notFound": "We could not find that gift.",
+    "backToGifts": "Back to Gifts"
+  }
+}

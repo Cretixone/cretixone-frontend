@@ -29,7 +29,7 @@ export function ProductGallery({
           <div
             className={cn(
               'flex shrink-0 gap-2.5 overflow-x-auto pb-1',
-              'sm:max-h-[480px] sm:w-[84px] sm:flex-col sm:overflow-x-hidden sm:overflow-y-auto sm:pb-0 sm:pr-1',
+              'sm:max-h-[600px] sm:min-h-[600px] sm:w-[84px] sm:flex-col sm:overflow-x-hidden sm:overflow-y-auto sm:pb-0 sm:pr-1',
               // min-h-0 overrides the flex-item default min-height:auto, which
               // otherwise forces this column to grow to fit all thumbnails
               // instead of respecting h-full + scrolling — that growth was
@@ -64,7 +64,7 @@ export function ProductGallery({
                     alt=""
                     loading="lazy"
                     draggable={false}
-                    className="h-full w-full object-contain"
+                    className="h-full w-full object-cover"
                   />
                 </button>
               )
@@ -74,7 +74,7 @@ export function ProductGallery({
 
         {/* Main image — static (no hover zoom); expand icon opens the lightbox */}
         <div className="relative min-w-0 flex-1 lg:h-full">
-          <div className="group relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-black/10 bg-white sm:aspect-auto sm:h-[420px] lg:h-full">
+          <div className="group relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-black/10 bg-white sm:aspect-auto sm:h-[600px] lg:h-full lg:min-h-[600px]">
             {/* absolute + inset-0 takes the img out of the flow entirely —
                 otherwise its percentage height against this box (itself
                 percentage-sized during flex stretch) falls back to the
@@ -89,7 +89,7 @@ export function ProductGallery({
                   src={src}
                   alt={t('gallery.previewAlt')}
                   draggable={false}
-                  className="absolute inset-0 h-full w-full object-contain"
+                  className="absolute inset-0 h-full w-full object-cover"
                 />
                 <button
                   type="button"

@@ -309,11 +309,6 @@ export default function PrintDetailPage() {
           <h1 className="text-2xl font-semibold tracking-tight text-brand-navy md:text-[32px]">
             {title}
           </h1>
-          {description && (
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground/70">
-              {description}
-            </p>
-          )}
 
           {/* Image Size — quick pills, the rest behind "More sizes", plus a
               "Custom size" entry that opens the width x height dialog. */}
@@ -448,6 +443,17 @@ export default function PrintDetailPage() {
 
         </div>
       </div>
+
+      {/* Description — its own section below the gallery/buy panel, same as
+          the frame product page, rather than squeezed under the title. */}
+      {description.trim() && (
+        <section className="mt-12 max-w-4xl">
+          <h2 className="text-xl font-semibold text-brand-navy">{t('detail.descriptionHeading')}</h2>
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground/75">
+            {description}
+          </p>
+        </section>
+      )}
 
       {/* Specifications — same layout as the frame product page. */}
       {specEntries.length > 0 && (

@@ -1,6 +1,7 @@
 import { LayoutGrid, Home, Mountain, Square, Layers3, FileImage, Shield, SquareStack, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useEditorStore } from '@/store/editorStore'
+import { useEditorStore, EDITOR_COMPACT_QUERY } from '@/store/editorStore'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import {
   Tooltip,
   TooltipContent,
@@ -29,7 +30,9 @@ export default function ToolRail() {
   const activeSidebarTab = useEditorStore((s) => s.activeSidebarTab)
   const setActiveSidebarTab = useEditorStore((s) => s.setActiveSidebarTab)
   const setToolPanelCollapsed = useEditorStore((s) => s.setToolPanelCollapsed)
+  const setInspectorCollapsed = useEditorStore((s) => s.setInspectorCollapsed)
   const selectedFrame = useEditorStore((s) => s.selectedFrame)
+  const isCompact = useMediaQuery(EDITOR_COMPACT_QUERY)
 
   const tools = TOOLS.filter(
     (tool) => !('frameOption' in tool) || (selectedFrame?.[tool.frameOption]?.length ?? 0) > 0,
@@ -51,7 +54,13 @@ export default function ToolRail() {
           <Tooltip key={id}>
             <TooltipTrigger asChild>
               <button
-                onClick={() => { setActiveSidebarTab(id); setToolPanelCollapsed(false) }}
+                onClick={() => {
+                  setActiveSidebarTab(id)
+                  setToolPanelCollapsed(false)
+                  // Only one bottom sheet at a time on mobile — opening the
+                  // tool library closes the size/style/shadow drawer.
+                  if (isCompact) setInspectorCollapsed(true)
+                }}
                 aria-label={label}
                 aria-pressed={active}
                 className={cn(

@@ -223,8 +223,12 @@ export function InvoiceDocument({ order }: { order: Order }) {
                   </Text>
                 ))}
               </View>
+              {/* Gifts are sold as-is and carry no dimensions, so an em dash
+                  rather than a meaningless "0.0 x 0.0 cm". */}
               <Text style={[styles.cellText, styles.colSize]}>
-                {item.widthCm.toFixed(1)} x {item.heightCm.toFixed(1)} cm
+                {item.widthCm > 0 && item.heightCm > 0
+                  ? `${item.widthCm.toFixed(1)} x ${item.heightCm.toFixed(1)} cm`
+                  : '—'}
               </Text>
               <Text style={[styles.cellText, styles.colQty]}>{item.qty}</Text>
               <Text style={[styles.cellText, styles.colPrice]}>{formatAmount(item.pricePerItem)}</Text>

@@ -24,7 +24,8 @@
       "lamination": "Lamination",
       "canvasEdge": "Canvas Edge"
     },
-    "specsHeading": "Details"
+    "specsHeading": "Details",
+    "descriptionHeading": "Product Description"
   },
   "inquiryPage": {
     "title": "Request an inquiry",

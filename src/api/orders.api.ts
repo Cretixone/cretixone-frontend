@@ -24,7 +24,7 @@ export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | '
 export interface OrderItem {
   frameId: number
   /** Which catalogue this line came from. Absent on pre-prints orders. */
-  kind?: 'frame' | 'print'
+  kind?: 'frame' | 'print' | 'gift'
   name: string
   subtitle?: string | null
   thumbnail?: string | null

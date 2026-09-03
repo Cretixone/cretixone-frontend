@@ -218,12 +218,16 @@ function CartRow({
         <h3 className="text-[15px] font-semibold text-brand-navy">{item.name}</h3>
         <p className="mt-0.5 text-[12px] text-foreground/50">{item.subtitle}</p>
         <dl className="mt-2.5 space-y-1 text-[12px] text-foreground/70">
-          <div className="flex gap-2">
-            <dt className="w-24 font-medium text-foreground/80">{t('cartPage.row.finishedSize')}</dt>
-            <dd>
-              {t('cartPage.row.dimensions', { w: item.widthCm.toFixed(1), h: item.heightCm.toFixed(1) })}
-            </dd>
-          </div>
+          {/* Gifts are sold as-is and carry no dimensions, so the size row
+              would read "0.0 × 0.0 cm". Everything else keeps it. */}
+          {item.widthCm > 0 && item.heightCm > 0 && (
+            <div className="flex gap-2">
+              <dt className="w-24 font-medium text-foreground/80">{t('cartPage.row.finishedSize')}</dt>
+              <dd>
+                {t('cartPage.row.dimensions', { w: item.widthCm.toFixed(1), h: item.heightCm.toFixed(1) })}
+              </dd>
+            </div>
+          )}
           {item.paperTypeName && (
             <div className="flex gap-2">
               <dt className="w-24 font-medium text-foreground/80">{t('cartPage.row.paperType')}</dt>

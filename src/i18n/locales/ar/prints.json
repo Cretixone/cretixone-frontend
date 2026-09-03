@@ -24,7 +24,8 @@
       "lamination": "التلميع",
       "canvasEdge": "حافة الكانفاس"
     },
-    "specsHeading": "التفاصيل"
+    "specsHeading": "التفاصيل",
+    "descriptionHeading": "وصف المنتج"
   },
   "inquiryPage": {
     "title": "طلب استفسار",

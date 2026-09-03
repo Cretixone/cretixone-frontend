@@ -11,6 +11,7 @@ import {
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { cn } from '@/lib/utils'
+import { BannerStrip } from '@/components/product/BannerStrip'
 import { useFetchFacetsQuery, useFetchFramesPageQuery, useFetchFrameSizesQuery } from '@/store/api/apiSlice'
 import { Pagination } from '@/components/ui/pagination'
 import {
@@ -31,13 +32,6 @@ const PAGE_SIZE = 12
 const COUNT_FG = '#7C8AA5'
 
 // ── Banner strip imagery (reuse the bundled lifestyle slides) ──────────────
-const BANNER_IMAGES = [
-  '/images/webp/slide-1.webp',
-  '/images/webp/slide-2.webp',
-  '/images/webp/slide-3.webp',
-  '/images/webp/slide-4.webp',
-]
-
 // ── Filter configuration — labels + counts mirror the Figma spec ───────────
 type FilterGroupKey = 'type' | 'color'
 
@@ -55,6 +49,7 @@ interface FilterGroup {
 
 // Stable keys resolved to labels via t('sort.options.<key>') at render time.
 const SORT_OPTION_KEYS = ['popularity', 'newest', 'priceLowHigh', 'priceHighLow'] as const
+type SortKey = (typeof SORT_OPTION_KEYS)[number]
 
 export default function ProductsPage() {
   const { t } = useTranslation('products')
@@ -74,7 +69,7 @@ export default function ProductsPage() {
   // The landing Frame Types / Frame Colors cards deep-link here with ?type=
   // and ?color= (comma-separated) — seed those into the selection so the
   // grid opens pre-filtered.
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   // Selected filter checkboxes — keyed "groupKey::value".
   const [selected, setSelected] = useState<Set<string>>(() => {
@@ -124,15 +119,47 @@ export default function ProductsPage() {
   const colorSel = pickedFor('color')
 
   // Server-side pagination + filtering. Reset to page 1 when any filter changes.
-  const [page, setPage] = useState(1)
+  // Page and sort live in the URL, not component state: opening a product
+  // and coming back used to reset the grid to page 1 because local state is
+  // discarded when the route unmounts. In the URL the position survives the
+  // round trip, the Back button and a shared link.
+  const pageParam = Number(searchParams.get('page'))
+  const page = Number.isFinite(pageParam) && pageParam >= 1 ? Math.floor(pageParam) : 1
+  const sortParam = searchParams.get('sort') as SortKey | null
+  const sort: SortKey = sortParam && SORT_OPTION_KEYS.includes(sortParam) ? sortParam : SORT_OPTION_KEYS[0]
+
+  const patchParams = (patch: Record<string, string | null>) =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        for (const [k, v] of Object.entries(patch)) {
+          if (v === null) next.delete(k)
+          else next.set(k, v)
+        }
+        return next
+      },
+      { replace: true },
+    )
+
+  // Page 1 is the default — keep it out of the URL so the common case stays
+  // a clean /products.
+  const setPage = (next: number) => patchParams({ page: next <= 1 ? null : String(next) })
+  const setSort = (next: SortKey) =>
+    patchParams({ sort: next === SORT_OPTION_KEYS[0] ? null : next, page: null })
+
   const filterKey = [...selected].sort().join('|')
-  useEffect(() => setPage(1), [filterKey])
+  // A filter change invalidates the current page number.
+  useEffect(() => {
+    if (searchParams.get('page')) patchParams({ page: null })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterKey])
 
   const { data, isLoading, isError } = useFetchFramesPageQuery({
     page,
     limit: PAGE_SIZE,
     frameType: typeSel.length ? typeSel : undefined,
     color: colorSel.length ? colorSel : undefined,
+    sort,
   })
   const total = data?.total ?? 0
   const pageCount = data?.pageCount ?? 1
@@ -172,7 +199,7 @@ export default function ProductsPage() {
         </nav>
 
         {/* Title + intro */}
-        <div className="mt-4 max-w-4xl">
+        <div className="mt-4">
           <h1 className="font-display text-3xl font-medium tracking-tight text-brand-navy md:text-[40px]">
             {t('title')}
           </h1>
@@ -186,7 +213,7 @@ export default function ProductsPage() {
           <FilterSidebar groups={filterGroups} selected={selected} onToggle={toggle} onReset={reset} />
 
           <section className="min-w-0 flex-1">
-            <ResultsBar count={total} loading={isLoading} />
+            <ResultsBar count={total} loading={isLoading} sort={sort} onSort={setSort} />
 
             {isError ? (
               <div className="flex h-64 items-center justify-center rounded-xl border border-black/5 bg-black/[0.02] text-sm text-foreground/60">
@@ -214,30 +241,6 @@ export default function ProductsPage() {
 
       <Footer />
     </div>
-  )
-}
-
-// ── Banner strip: four lifestyle images in a rounded panel ─────────────────
-function BannerStrip() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: 'easeOut' }}
-      className="mt-8 grid grid-cols-2 gap-1 overflow-hidden rounded-3xl bg-[#EDE6D6] md:grid-cols-4"
-    >
-      {BANNER_IMAGES.map((src, i) => (
-        <div
-          key={src}
-          className={cn(
-            'h-44 bg-cover bg-center md:h-[300px]',
-            i === 0 && 'rounded-l-3xl',
-            i === BANNER_IMAGES.length - 1 && 'rounded-r-3xl',
-          )}
-          style={{ backgroundImage: `url(${src})` }}
-        />
-      ))}
-    </motion.div>
   )
 }
 
@@ -392,9 +395,18 @@ function FilterGroupBlock({
 }
 
 // ── Results count + sort ───────────────────────────────────────────────────
-function ResultsBar({ count, loading }: { count: number; loading: boolean }) {
+function ResultsBar({
+  count,
+  loading,
+  sort,
+  onSort,
+}: {
+  count: number
+  loading: boolean
+  sort: SortKey
+  onSort: (s: SortKey) => void
+}) {
   const { t } = useTranslation('products')
-  const [sort, setSort] = useState<(typeof SORT_OPTION_KEYS)[number]>(SORT_OPTION_KEYS[0])
   return (
     <div className="mb-5 flex items-center justify-between">
       <p className="text-base font-semibold text-brand-navy">
@@ -404,7 +416,7 @@ function ResultsBar({ count, loading }: { count: number; loading: boolean }) {
         <span className="text-sm text-foreground/60">{t('sort.label')}</span>
         <Select
           value={sort}
-          onValueChange={(v) => setSort(v as (typeof SORT_OPTION_KEYS)[number])}
+          onValueChange={(v) => onSort(v as SortKey)}
         >
           <SelectTrigger className="h-9 w-[190px] rounded-lg border-black/10 bg-white text-sm text-foreground/80 focus:ring-brand-gold/30">
             <SelectValue />

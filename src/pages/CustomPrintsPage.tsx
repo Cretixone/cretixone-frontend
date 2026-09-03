@@ -169,12 +169,16 @@ export default function CustomPrintsPage() {
             </motion.p>
           </motion.div>
 
+          {/* animate, not whileInView: the tiles are fetched, so they mount
+              after the container has already run its in-view animation and
+              would stay at opacity 0 until some other render (a hover) applied
+              the variant. With `animate` the parent holds the "show" state and
+              late-arriving children inherit it as they mount. */}
           <motion.div
             className="mt-12 grid grid-cols-1 gap-x-12 lg:pt-4 gap-y-9 sm:grid-cols-2 lg:grid-cols-3"
             variants={stagger}
             initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: '-60px' }}
+            animate="show"
           >
             {categories.map((c) => (
               <motion.button

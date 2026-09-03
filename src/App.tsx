@@ -37,6 +37,8 @@ const CustomPrintsPage = lazy(() => import('@/pages/CustomPrintsPage'))
 const PrintCategoryPage = lazy(() => import('@/pages/PrintCategoryPage'))
 const PrintDetailPage = lazy(() => import('@/pages/PrintDetailPage'))
 const PrintInquiryPage = lazy(() => import('@/pages/PrintInquiryPage'))
+const GiftsPage = lazy(() => import('@/pages/GiftsPage'))
+const GiftDetailPage = lazy(() => import('@/pages/GiftDetailPage'))
 const MirrorInquiryPage = lazy(() => import('@/pages/MirrorInquiryPage'))
 const CheckoutPage = lazy(() => import('@/pages/CheckoutPage'))
 const OrderCompletePage = lazy(() => import('@/pages/OrderCompletePage'))
@@ -78,10 +80,14 @@ function FullPageLoader() {
 // Reset scroll to the top on every navigation (pathname or query change) so
 // each page — and footer category links into /products — starts from the top.
 function ScrollToTop() {
-  const { pathname, search } = useLocation()
+  // pathname only, not search: a page that keeps state like sort/page in its
+  // own query string (e.g. /products) updates `search` on every filter click,
+  // and scrolling the user back to the top on each one was jarring. A route
+  // change (a real navigation) still always scrolls to top.
+  const { pathname } = useLocation()
   useEffect(() => {
     window.scrollTo(0, 0)
-  }, [pathname, search])
+  }, [pathname])
   return null
 }
 
@@ -141,6 +147,8 @@ export default function App() {
           }
         />
         <Route path="/cart" element={<CartPage />} />
+        <Route path="/gifts" element={<GiftsPage />} />
+        <Route path="/gifts/:id" element={<GiftDetailPage />} />
         <Route path="/products" element={<ProductsPage />} />
         <Route path="/product" element={<ProductDetailPage />} />
         <Route path="/product/:id" element={<ProductDetailPage />} />
@@ -177,6 +185,10 @@ export default function App() {
 function EditorApp() {
   const [ready, setReady] = useState(false)
   const editorTheme = useEditorStore((s) => s.editorTheme)
+  // 0 on desktop; on mobile, the real measured height of the fixed checkout
+  // bar RightInspector pins to the bottom — reserved as canvas padding so
+  // that bar overlays empty space instead of the framed design.
+  const mobileBottomBarHeight = useEditorStore((s) => s.mobileBottomBarHeight)
   const [searchParams] = useSearchParams()
 
   useEffect(() => {
@@ -251,12 +263,19 @@ function EditorApp() {
       >
         <Topbar />
 
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex min-w-0 flex-1 overflow-hidden">
           <ToolRail />
+          {/* ToolPanel and RightInspector become fixed overlays below the
+              `lg` breakpoint (see EDITOR_COMPACT_QUERY) — they no longer take
+              up row space there, so `main` naturally gets the full width
+              next to the tool rail. */}
           <ToolPanel />
 
-          <main className="flex flex-1 overflow-hidden">
-            <div className="canvas-surface relative flex flex-1 overflow-hidden">
+          <main className="flex min-w-0 flex-1 overflow-hidden">
+            <div
+              className="canvas-surface relative flex min-w-0 flex-1 overflow-hidden"
+              style={{ paddingBottom: mobileBottomBarHeight }}
+            >
               <Suspense fallback={<LoadingCanvas />}>
                 <CanvasStage />
               </Suspense>

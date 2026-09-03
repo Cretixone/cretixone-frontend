@@ -1,10 +1,14 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { ChevronRight, Home } from 'lucide-react'
+import { ChevronRight, Home, Loader2, Mail } from 'lucide-react'
 import { motion, type Variants } from 'framer-motion'
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
+import { teamApi, type TeamMember } from '@/api/team.api'
+import { resolveAsset } from '@/lib/assets'
+import { pickLocalized } from '@/lib/localized'
+import { useIsRtl } from '@/store/langStore'
 
 // ── Animation variants ───────────────────────────────────────────────────────
 const stagger: Variants = {
@@ -26,120 +30,12 @@ const fadeUp: Variants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
 }
 
-// ── Team data ────────────────────────────────────────────────────────────────
-// Each member sits on a coloured "blob" background (a PNG vector) with their
-// cut-out headshot on top. The founder (first card) has no blob vector — her
-// backdrop is a coral circle we draw with a div, plus a small pink accent dot.
-interface Member {
-  name: string
-  /** Key under the `team.roles.*` i18n namespace (role/title is translated). */
-  roleKey: string
-  avatar: string
-  /** Blob background PNG. Omitted for the founder (drawn as a circle instead). */
-  bg?: string
-  /** Founder-only: colour of the circle backdrop drawn with a div. */
-  circleColor?: string
-  /** Founder-only: colour of the small accent dot. */
-  dotColor?: string
-  /**
-   * Per-avatar horizontal offset — some cut-outs aren't centred within their
-   * own image, so they need a nudge to sit right in the blob. Distance in px
-   * from the blob's right edge; negative pushes further right. Omit to centre.
-   *
-   * Deliberately a number applied as an inline style rather than a Tailwind
-   * class: Tailwind only emits arbitrary values like `right-[-25px]` if it
-   * finds that exact string when it scans the source, so a value living in
-   * this array would be missing from the stylesheet until the next rescan —
-   * which is why such a class appeared only after a save or an edit in
-   * DevTools, not on a fresh page load.
-   */
-  right?: number
-  /**
-   * Rendered photo height in px. Bigger = more zoomed in, since the mask
-   * crops whatever falls outside the blob. Defaults to AVATAR_H
-   * (AVATAR_H_FOUNDER for the founder).
-   */
-  zoom?: number
-  /**
-   * Vertical offset in px from the top of the blob. 0 sits flush with the
-   * top; a negative value pushes the face further up (crops the forehead),
-   * a positive one drops the whole person down. Defaults to 0.
-   */
-  top?: number
-}
-
-// `zoom` (photo height in px) and `top` (offset from the blob top) are tuned
-// per person: the cut-outs range from tight head-and-shoulders crops to
-// full-body shots, so one size does not suit all of them.
-const TEAM: Member[] = [
-  {
-    name: 'Ayesha Saboor',
-    roleKey: 'founder',
-    avatar: '/images/teams/ayesha.png',
-    circleColor: '#FC6875',
-    dotColor: '#FC6875',
-    zoom: 250,
-    top: 20,
-    right: 25,
-  },
-  {
-    name: 'Yousif Al Jabri',
-    roleKey: 'ceo',
-    avatar: '/images/teams/yousaif.png',
-    bg: '/images/vector-1.png',
-    right: 25,
-    zoom: 200,
-    top: 30,
-  },
-  {
-    name: 'Shantunu Chowdhury',
-    roleKey: 'cfo',
-    avatar: '/images/teams/shantunu.png',
-    bg: '/images/vector-2.png',
-    right: 20,
-    zoom: 450,
-    top: 20,
-  },
-  {
-    name: 'Kavinda',
-    roleKey: 'designer',
-    avatar: '/images/teams/kavinda.png',
-    bg: '/images/vector-3.png',
-    zoom: 220,
-    top: 20,
-    right: 20,
-  },
-  {
-    name: 'Faisal',
-    roleKey: 'framerIndoor',
-    avatar: '/images/teams/faisal.png',
-    bg: '/images/vector-4.png',
-    right: -25,
-    zoom: 200,
-    top: 10,
-  },
-  {
-    name: 'Babar Khan',
-    roleKey: 'framerWorkshop',
-    avatar: '/images/teams/babar.png',
-    bg: '/images/vector-5.png',
-    right: -25,
-    zoom: 190,
-    top: 20,
-  },
-  {
-    name: 'Ahsan Farooq',
-    roleKey: 'glassSpecialist',
-    avatar: '/images/vector-6-avatar.png',
-    bg: '/images/vector-6.png',
-    right: 20,
-    zoom: 260,
-    top: 0,
-  },
-]
-
 export default function TeamPage() {
   const { t } = useTranslation('pages')
+  const isRtl = useIsRtl()
+
+  const [members, setMembers] = useState<TeamMember[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const prevBg = document.body.style.background
@@ -150,6 +46,18 @@ export default function TeamPage() {
     return () => {
       document.body.style.background = prevBg
       document.body.style.color = prevColor
+    }
+  }, [])
+
+  useEffect(() => {
+    let alive = true
+    teamApi
+      .list()
+      .then((rows) => alive && setMembers(rows))
+      .catch(() => alive && setMembers([]))
+      .finally(() => alive && setLoading(false))
+    return () => {
+      alive = false
     }
   }, [])
 
@@ -223,15 +131,30 @@ export default function TeamPage() {
       {/* ── TEAM GRID ────────────────────────────────────────────────────── */}
       <section className="relative mx-auto max-w-[1120px] px-5 pb-20 pt-15 md:px-8 md:pb-28 md:pt-16 lg:px-10">
         <motion.div
+          // Keyed on loading so the grid remounts (and re-animates in) the
+          // moment real cards replace the spinner, instead of relying on
+          // `whileInView`'s one-shot IntersectionObserver — which can fire
+          // while the grid is still empty and never re-trigger once the
+          // fetched cards actually mount.
+          key={loading ? 'loading' : 'content'}
           className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3"
           variants={stagger}
           initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: '-60px' }}
+          animate="show"
         >
-          {TEAM.map((member) => (
-            <TeamCard key={member.name} member={member} />
-          ))}
+          {loading ? (
+            <div className="col-span-full flex justify-center py-16">
+              <Loader2 className="h-6 w-6 animate-spin text-brand-navy/50" />
+            </div>
+          ) : members.length === 0 ? (
+            <p className="col-span-full text-center text-sm text-foreground/60">
+              {t('team.empty')}
+            </p>
+          ) : (
+            members.map((member) => (
+              <TeamCard key={member.id} member={member} isRtl={isRtl} />
+            ))
+          )}
         </motion.div>
       </section>
 
@@ -240,114 +163,59 @@ export default function TeamPage() {
   )
 }
 
-// ── Member card: coloured blob backdrop + cut-out headshot + name/role ────────
-// The headshot is clipped to the exact blob shape (via a CSS mask using the blob
-// PNG's alpha) so it never overflows the blob's edges. The founder has no blob
-// vector — her backdrop is a coral circle, and her avatar is clipped to it with
-// a plain `overflow-hidden rounded-full`.
-//
-// The photo is anchored to the TOP of the blob and rendered taller than it, so
-// the face sits at the top of the shape and the body is cropped off at the
-// bottom instead of the whole person being shrunk to fit.
-const AVATAR_H = 260 // blob cards
-const AVATAR_H_FOUNDER = 220 // the founder's circle is smaller than the blobs
+// ── Member card: photo, name and position — no backdrop. The photo is a plain
+// upload from the admin, so it is shown as-is (object-cover into a fixed box)
+// rather than clipped to a decorative shape.
+function TeamCard({ member, isRtl }: { member: TeamMember; isRtl: boolean }) {
+  const name = pickLocalized(member.name, member.nameAr, isRtl)
+  const position = pickLocalized(member.position, member.positionAr, isRtl)
 
-/** Right-anchored when the member sets an offset, centred otherwise. */
-const horizontal = (member: Member): React.CSSProperties =>
-  member.right === undefined
-    ? { left: '50%', transform: 'translateX(-50%)' }
-    : { right: member.right }
-
-function TeamCard({ member }: { member: Member }) {
-  const { t } = useTranslation('pages')
   return (
     <motion.div
       variants={cardVariant}
       className="relative flex flex-col mt-8 mt-md-0 items-center text-center"
     >
-      {/* Only the blob + headshot zoom on hover — the name/role stay put. */}
       <motion.div
-        whileHover={{ scale: 1.1, transition: { type: 'spring', stiffness: 300, damping: 20 } }}
-        className="relative h-[210px] w-[250px] hover:z-10"
+        whileHover={{ scale: 1.05, transition: { type: 'spring', stiffness: 300, damping: 20 } }}
+        className="relative h-[210px] w-[250px] max-w-full overflow-hidden rounded-2xl hover:z-10"
       >
-        {member.bg ? (
-          <>
-            {/* coloured blob */}
-            <img
-              src={member.bg}
-              alt=""
-              aria-hidden
-              className="absolute inset-0 h-full w-full object-contain"
-            />
-            {/* headshot, masked to the blob shape so it stays inside it */}
-            <div
-              className="absolute inset-0"
-              style={{
-                WebkitMaskImage: `url(${member.bg})`,
-                maskImage: `url(${member.bg})`,
-                WebkitMaskSize: 'contain',
-                maskSize: 'contain',
-                WebkitMaskPosition: 'center',
-                maskPosition: 'center',
-                WebkitMaskRepeat: 'no-repeat',
-                maskRepeat: 'no-repeat',
-              }}
-            >
-              <img
-                src={member.avatar}
-                alt={member.name}
-                loading="lazy"
-                draggable={false}
-                style={{
-                  height: member.zoom ?? AVATAR_H,
-                  top: member.top ?? 0,
-                  ...horizontal(member),
-                }}
-                className="absolute w-auto max-w-none object-contain object-top"
-              />
-            </div>
-          </>
-        ) : (
-          <>
-            {/* Founder: small pink accent dot, upper-right of the circle */}
-            <div
-              className="absolute right-[10px] top-[20px] z-10 h-[30px] w-[30px] rounded-full"
-              style={{ background: member.dotColor }}
-            />
-            {/* coral circle backdrop with the headshot clipped inside it */}
-            <div
-              className="absolute left-1/2 top-1/2 h-[196px] w-[196px] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full"
-              style={{ background: member.circleColor }}
-            >
-              <img
-                src={member.avatar}
-                alt={member.name}
-                loading="lazy"
-                draggable={false}
-                style={{
-                  height: member.zoom ?? AVATAR_H_FOUNDER,
-                  top: member.top ?? 0,
-                  ...horizontal(member),
-                }}
-                className="absolute w-auto max-w-none object-contain object-top"
-              />
-            </div>
-          </>
+        {member.image && (
+          <img
+            src={resolveAsset(member.image)}
+            alt={name}
+            loading="lazy"
+            draggable={false}
+            className="h-full w-full"
+          />
         )}
       </motion.div>
 
       <h3 className="mt-6 text-[15px] font-semibold tracking-tight text-brand-navy md:text-base">
-        {member.name}
+        {name}
       </h3>
       <p className="mt-1 text-[12px] leading-snug text-foreground/55 md:text-[13px]">
-        {t(`team.roles.${member.roleKey}`)}
+        {position}
       </p>
+      {member.email && (
+        <a
+          href={`mailto:${member.email}`}
+          className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-foreground/45 transition hover:text-brand-gold md:text-[12px]"
+          dir="ltr"
+        >
+          <Mail className="h-3 w-3 shrink-0" strokeWidth={2} />
+          <span className="break-all">{member.email}</span>
+        </a>
+      )}
     </motion.div>
   )
 }
 
 // ── Mesh-gradient background (animated blur, fixed-ish to the top) ─────────────
-export function MeshBackground() {
+// Not exported: this page is React.lazy-loaded, and a lazy module with more
+// than one component export defeats Vite's Fast Refresh for the whole file
+// (it falls back to a full reload, which can leave a long-open tab showing a
+// stale bundle instead of the latest edit).
+function MeshBackground() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
       {/* drifting colour blob */}

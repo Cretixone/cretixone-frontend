@@ -202,15 +202,18 @@ export default function OrderCompletePage() {
                           one size pair (widthCm/heightCm), so an "Image Size"
                           row would just repeat these exact numbers. Add it back
                           once artwork dimensions are actually tracked. */}
-                      <div className="order-3 flex w-full items-baseline gap-x-6 text-[13px] text-foreground/60 sm:order-2 sm:w-auto sm:flex-1 sm:justify-center">
-                        <span>{t('orderComplete.table.finishedSizeLabel')}</span>
-                        <span>
-                          {t('orderComplete.table.finishedSizeValue', {
-                            w: item.widthCm.toFixed(1),
-                            h: item.heightCm.toFixed(1),
-                          })}
-                        </span>
-                      </div>
+                      {/* Gifts carry no dimensions — omit rather than print 0.0 × 0.0. */}
+                      {item.widthCm > 0 && item.heightCm > 0 && (
+                        <div className="order-3 flex w-full items-baseline gap-x-6 text-[13px] text-foreground/60 sm:order-2 sm:w-auto sm:flex-1 sm:justify-center">
+                          <span>{t('orderComplete.table.finishedSizeLabel')}</span>
+                          <span>
+                            {t('orderComplete.table.finishedSizeValue', {
+                              w: item.widthCm.toFixed(1),
+                              h: item.heightCm.toFixed(1),
+                            })}
+                          </span>
+                        </div>
+                      )}
 
                       <p className="order-2 shrink-0 font-semibold tabular-nums text-foreground sm:order-3">
                         {formatOMR(item.pricePerItem * item.qty)}

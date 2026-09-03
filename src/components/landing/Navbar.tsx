@@ -141,7 +141,7 @@ const NAV_LINKS = [
   { key: 'nav.customPrints', href: '/custom-prints' },
   { key: 'nav.stockPhoto', href: '#stock' },
   { key: 'nav.customMirror', href: '/custom-mirrors' },
-  { key: 'nav.gifts', href: '#gifts' },
+  { key: 'nav.gifts', href: '/gifts' },
   { key: 'nav.about', href: '/about' },
 ]
 
@@ -257,13 +257,13 @@ export default function Navbar() {
             <ul className="flex flex-col">
               {NAV_LINKS.map((l) => (
                 <li key={l.key}>
-                  <a
-                    href={l.href}
+                  <Link
+                    to={l.href}
                     onClick={() => setMobileOpen(false)}
                     className="block rounded-lg px-4 py-2.5 text-sm font-medium text-white/95 hover:bg-white/15"
                   >
                     {t(l.key)}
-                  </a>
+                  </Link>
                 </li>
               ))}
               <li className="mt-1.5">
