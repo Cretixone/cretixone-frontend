@@ -1,4 +1,4 @@
-import { LayoutGrid, Home, Mountain, Square, Layers3, FileImage, Shield, SquareStack, Sparkles } from 'lucide-react'
+import { LayoutGrid, Home, Square, Layers3, FileImage, Shield, SquareStack } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEditorStore, EDITOR_COMPACT_QUERY } from '@/store/editorStore'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
@@ -16,13 +16,16 @@ import { cn } from '@/lib/utils'
 const TOOLS = [
   { id: 'frames',      labelKey: 'rail.frames',      icon: LayoutGrid },
   { id: 'interiors',   labelKey: 'rail.interiors',   icon: Home },
-  { id: 'scenery',     labelKey: 'rail.scenery',     icon: Mountain },
+  // Scenery is hidden per request — route/query/ToolPanel tab left intact,
+  // just no rail button to reach it.
+  // { id: 'scenery',  labelKey: 'rail.scenery',      icon: Mountain },
   { id: 'mat',         labelKey: 'rail.mat',         icon: Square },
   { id: 'mdf',         labelKey: 'rail.mdf',         icon: Layers3, frameOption: 'mdfBoards' },
   { id: 'paperType',   labelKey: 'rail.paperType',   icon: FileImage, frameOption: 'paperTypes' },
   { id: 'lamination',  labelKey: 'rail.lamination',  icon: Shield, frameOption: 'laminations' },
   { id: 'glassType',   labelKey: 'rail.glassType',   icon: SquareStack, frameOption: 'glassTypes' },
-  { id: 'effect',      labelKey: 'rail.effects',     icon: Sparkles },
+  // Effects is hidden per request — same treatment as Scenery above.
+  // { id: 'effect',   labelKey: 'rail.effects',      icon: Sparkles },
 ] as const
 
 export default function ToolRail() {

@@ -26,7 +26,10 @@ function hexToNum(hex: string): number {
 
 function resolveUrl(path: string): string {
   if (!path) return ''
-  if (path.startsWith('http')) return path
+  // Absolute (http…) or root-relative (/images/…, our own bundled scene
+  // assets) paths are already resolvable as-is; only a bare relative path
+  // (frameit's own OSS keys, e.g. "bg_scene/xyz.jpg") needs the CDN prefix.
+  if (path.startsWith('http') || path.startsWith('/')) return path
   return OSS_PREFIX + path
 }
 
@@ -311,8 +314,14 @@ export default function CanvasStage({
       // resize, we synchronously resize PIXI's buffer in a
       // useLayoutEffect below (which runs after the DOM commit but
       // BEFORE the next browser paint).
+      // touch-action: none stops the browser's own touch handling (page pan
+      // on a one-finger drag, page pinch-zoom on a two-finger pinch) from
+      // competing with the pointer-driven drag/pinch handlers below — those
+      // fire fine on touch either way (Pointer Events unify mouse/touch/pen),
+      // but without this the browser ALSO scrolls/zooms the page at the same
+      // time, which is what "the page drags/zooms instead of the frame" was.
       ;(app.canvas as HTMLCanvasElement).style.cssText =
-        'display:block;width:100%;height:100%'
+        'display:block;width:100%;height:100%;touch-action:none'
 
       // ── Build layer tree ────────────────────────────────────────────────
 
@@ -443,14 +452,53 @@ export default function CanvasStage({
       let panStartX = 0, panStartY = 0
       let panOrigX = 0, panOrigY = 0
 
+      // Two-finger pinch — tracked by pointerId so a second touch landing
+      // mid-drag reliably cancels whatever single-finger gesture (artwork
+      // drag or frame pan) was in progress and takes over as a pinch, the
+      // same way a trackpad/mouse wheel does for cursor-based zoom below.
+      // `global`/`globalX`/`globalY` on a FederatedPointerEvent are already
+      // in canvas-pixel space (same space openingScreenRectRef is in), so no
+      // getBoundingClientRect conversion is needed here, unlike the wheel
+      // handler which starts from a native ClientXY.
+      const activePointers = new Map<number, { x: number; y: number }>()
+      let pinching = false
+      let pinchStartDist = 0
+      let pinchOverPicture = false
+      let pinchStartArtworkScale = 1
+      let pinchStartDesignZoom = 1
+
+      const beginPinch = () => {
+        dragging = false
+        panning = false
+        pinching = true
+        const [a, b] = [...activePointers.values()].slice(-2)
+        pinchStartDist = Math.hypot(a.x - b.x, a.y - b.y)
+        const midX = (a.x + b.x) / 2
+        const midY = (a.y + b.y) / 2
+        const s2 = useEditorStore.getState()
+        const r = openingScreenRectRef.current
+        pinchOverPicture =
+          !!s2.artworkImageUrl &&
+          midX >= r.x && midX <= r.x + r.w &&
+          midY >= r.y && midY <= r.y + r.h
+        pinchStartArtworkScale = s2.artworkScale
+        pinchStartDesignZoom = s2.designZoom
+      }
+
       artworkCont.on('pointerdown', (e: PIXI.FederatedPointerEvent) => {
         if (!layersRef.current?.artSprite) return
+        if (activePointers.size >= 2) return // a pinch is already starting/active
         dragging = true
         startX = e.globalX; startY = e.globalY
         origX = useEditorStore.getState().artworkX
         origY = useEditorStore.getState().artworkY
       })
       app.stage.on('pointerdown', (e: PIXI.FederatedPointerEvent) => {
+        activePointers.set(e.pointerId, { x: e.globalX, y: e.globalY })
+        if (activePointers.size >= 2) {
+          beginPinch()
+          return
+        }
         if (dragging) return
         panning = true
         panStartX = e.globalX; panStartY = e.globalY
@@ -459,6 +507,24 @@ export default function CanvasStage({
         panOrigY = s2.frameOffsetY
       })
       app.stage.on('pointermove', (e: PIXI.FederatedPointerEvent) => {
+        if (activePointers.has(e.pointerId)) {
+          activePointers.set(e.pointerId, { x: e.globalX, y: e.globalY })
+        }
+        if (pinching) {
+          if (activePointers.size < 2) return
+          const [a, b] = [...activePointers.values()].slice(-2)
+          const dist = Math.hypot(a.x - b.x, a.y - b.y)
+          if (pinchStartDist <= 0) return
+          const ratio = dist / pinchStartDist
+          if (pinchOverPicture) {
+            const next = Math.min(8, Math.max(1, pinchStartArtworkScale * ratio))
+            useEditorStore.getState().setArtworkScale(next)
+          } else {
+            const next = Math.min(maxZoomRef.current, Math.max(1, pinchStartDesignZoom * ratio))
+            useEditorStore.getState().setDesignZoom(next)
+          }
+          return
+        }
         if (dragging) {
           // Clamp to the picture's overflow so it can't be dragged off the
           // opening (no empty space); a dimension with no overflow won't move.
@@ -478,7 +544,14 @@ export default function CanvasStage({
           useEditorStore.getState().setFrameOffset(clampedX, clampedY)
         }
       })
-      const stopDrag = () => { dragging = false; panning = false }
+      const stopDrag = (e?: PIXI.FederatedPointerEvent) => {
+        if (e) activePointers.delete(e.pointerId)
+        dragging = false
+        panning = false
+        // Lifting a finger out of a pinch ends it — putting a single finger
+        // back down starts a fresh drag/pan rather than resuming the pinch.
+        if (activePointers.size < 2) pinching = false
+      }
       app.stage.on('pointerup', stopDrag)
       app.stage.on('pointerupoutside', stopDrag)
 

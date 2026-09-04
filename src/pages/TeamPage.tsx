@@ -185,7 +185,7 @@ function TeamCard({ member, isRtl }: { member: TeamMember; isRtl: boolean }) {
             alt={name}
             loading="lazy"
             draggable={false}
-            className="h-full w-full"
+            className="h-full w-full object-contain"
           />
         )}
       </motion.div>

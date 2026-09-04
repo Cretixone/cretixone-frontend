@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ChevronRight, Home, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -24,8 +24,13 @@ export default function GiftDetailPage() {
   const { t } = useTranslation('gifts')
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const isRtl = useIsRtl()
   const addItem = useCartStore((s) => s.addItem)
+  // Set by GiftCard's navigate() when arriving from /gifts — carries that
+  // page's exact ?page= so "back to Gifts" returns to it instead of
+  // resetting to page 1. Absent on a direct link/refresh.
+  const giftsBackTo = `/gifts${(location.state as { from?: string } | null)?.from ?? ''}`
 
   const [gift, setGift] = useState<Gift | null>(null)
   const [loading, setLoading] = useState(true)
@@ -124,7 +129,7 @@ export default function GiftDetailPage() {
           <p className="text-base font-medium text-brand-navy">{t('detail.notFound')}</p>
           <button
             type="button"
-            onClick={() => navigate('/gifts')}
+            onClick={() => navigate(giftsBackTo)}
             className="mt-4 text-sm font-semibold text-brand-gold hover:underline"
           >
             {t('detail.backToGifts')}
@@ -144,7 +149,7 @@ export default function GiftDetailPage() {
           <Home className="h-3.5 w-3.5" strokeWidth={2} />
         </Link>
         <ChevronRight className="h-3 w-3 text-foreground/40" />
-        <Link to="/gifts" className="hover:text-brand-navy">
+        <Link to={giftsBackTo} className="hover:text-brand-navy">
           {t('title')}
         </Link>
         <ChevronRight className="h-3 w-3 text-foreground/40" />

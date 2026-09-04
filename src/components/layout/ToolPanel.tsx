@@ -166,7 +166,10 @@ function SceneThumb({ item, selected, onClick }: {
   item: ApiScene; selected: boolean; onClick: () => void
 }) {
   const { t } = useTranslation('editor')
-  const bgUrl = item.ossUrl.startsWith('http') ? item.ossUrl : OSS_PREFIX + item.ossUrl
+  // Root-relative paths (our own bundled scenes, e.g. /images/scenes/…) are
+  // already resolvable as-is — only frameit's bare OSS keys need the prefix.
+  const bgUrl =
+    item.ossUrl.startsWith('http') || item.ossUrl.startsWith('/') ? item.ossUrl : OSS_PREFIX + item.ossUrl
   return (
     <button
       onClick={onClick}

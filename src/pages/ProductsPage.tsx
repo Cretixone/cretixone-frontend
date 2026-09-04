@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import {
@@ -148,8 +148,17 @@ export default function ProductsPage() {
     patchParams({ sort: next === SORT_OPTION_KEYS[0] ? null : next, page: null })
 
   const filterKey = [...selected].sort().join('|')
-  // A filter change invalidates the current page number.
+  // A filter change invalidates the current page number — but this effect
+  // still fires once on every MOUNT too (React runs a dependency-array
+  // effect after the first render regardless), which was wiping a perfectly
+  // valid ?page= right back to 1 the instant you arrived here with one
+  // already in the URL (a direct link, or the browser's back button
+  // restoring /products?page=3). The ref makes it fire the reset only on an
+  // actual change to filterKey after mount, never on mount itself.
+  const prevFilterKeyRef = useRef(filterKey)
   useEffect(() => {
+    if (prevFilterKeyRef.current === filterKey) return
+    prevFilterKeyRef.current = filterKey
     if (searchParams.get('page')) patchParams({ page: null })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterKey])
@@ -456,6 +465,7 @@ function ProductGrid({ frames, minPerimeter }: { frames: ApiFrame[]; minPerimete
 function ProductCard({ frame, minPerimeter }: { frame: ApiFrame; minPerimeter: number }) {
   const { t } = useTranslation('products')
   const navigate = useNavigate()
+  const location = useLocation()
   const isRtl = useIsRtl()
   // Show the square thumbnail first (imgUrl = thumbnailUrl), then fall back.
   const img = frame.imgUrl || frame.portraitUrl || frame.landscapeUrl
@@ -473,8 +483,10 @@ function ProductCard({ frame, minPerimeter }: { frame: ApiFrame; minPerimeter: n
   const subtitle = frame.specifications?.['Frame Type'] ?? t('card.fallbackSubtitle')
 
   // Clicking a product opens its detail page (which in turn links into the
-  // editor via "Upload a preview image").
-  const openDetail = () => navigate(`/product/${frame.id}`)
+  // editor via "Upload a preview image"). Carries the current ?page=/?sort=
+  // in location.state so the detail page's "back to products" breadcrumb can
+  // return to this exact page instead of resetting to page 1.
+  const openDetail = () => navigate(`/product/${frame.id}`, { state: { from: location.search } })
 
   return (
     <motion.div

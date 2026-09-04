@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronRight, Home, ImageIcon, Loader2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -24,9 +24,26 @@ export default function GiftsPage() {
   const { t } = useTranslation('gifts')
   const isRtl = useIsRtl()
 
+  // URL-backed (not useState) so navigating to a gift and back preserves the
+  // page you were on — a plain useState resets to 1 on remount, which is
+  // exactly what happens when the browser's back button (or GiftDetailPage's
+  // own back link) returns here, since that's a fresh mount of this page.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const pageParam = Number(searchParams.get('page'))
+  const page = Number.isFinite(pageParam) && pageParam >= 1 ? Math.floor(pageParam) : 1
+  const setPage = (next: number) =>
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev)
+        if (next <= 1) params.delete('page')
+        else params.set('page', String(next))
+        return params
+      },
+      { replace: true },
+    )
+
   const [items, setItems] = useState<Gift[]>([])
   const [pageCount, setPageCount] = useState(1)
-  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -115,6 +132,7 @@ export default function GiftsPage() {
 
 function GiftCard({ gift, isRtl }: { gift: Gift; isRtl: boolean }) {
   const navigate = useNavigate()
+  const location = useLocation()
   // The gallery is ordered by the admin; the first image is the tile.
   const img = gift.gallery?.[0]
 
@@ -122,7 +140,7 @@ function GiftCard({ gift, isRtl }: { gift: Gift; isRtl: boolean }) {
     <motion.div
       whileHover={{ y: -3 }}
       transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-      onClick={() => navigate(`/gifts/${gift.hashedId}`)}
+      onClick={() => navigate(`/gifts/${gift.hashedId}`, { state: { from: location.search } })}
       className="group cursor-pointer rounded-2xl border-[0.5px] border-transparent p-3 transition-shadow hover:border-[#F1F1F1] hover:bg-white hover:shadow-[0_18px_40px_-18px_rgba(10,31,77,0.18)]"
     >
       <div className="flex h-[203px] items-center justify-center overflow-hidden rounded-xl bg-black/[0.03]">

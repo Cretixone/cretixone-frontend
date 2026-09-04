@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ChevronRight, Home, Maximize2, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import Navbar, { PillNav } from '@/components/landing/Navbar'
@@ -48,7 +48,13 @@ export default function ProductDetailPage() {
   const { t } = useTranslation('productDetail')
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const isRtl = useIsRtl()
+  // Set by ProductCard's navigate() when arriving from /products — carries
+  // that page's exact ?page=/?sort= so "back to Frames" returns to it
+  // instead of resetting to page 1. Absent on a direct link/refresh, in
+  // which case the breadcrumb just goes to the un-paginated /products.
+  const productsBackTo = `/products${(location.state as { from?: string } | null)?.from ?? ''}`
 
   // Fetch just this frame by its hashed URL id (single API call, no full list).
   const { data: frame } = useFetchFrameByIdQuery(id ? Number(id) : 0, { skip: !id })
@@ -286,7 +292,7 @@ export default function ProductDetailPage() {
             <Home className="h-4 w-4" />
           </Link>
           <span className="text-foreground/40">›</span>
-          <Link to="/products" className="hover:text-brand-navy">
+          <Link to={productsBackTo} className="hover:text-brand-navy">
             {t('breadcrumb.frames')}
           </Link>
           {/* Current page: the product itself. Rendered only once the frame has

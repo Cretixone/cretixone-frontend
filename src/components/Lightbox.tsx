@@ -119,7 +119,7 @@ export function Lightbox({ images, index, open, onIndex, onClose }: Props) {
                     i === index ? 'border-white' : 'border-white/25 opacity-60 hover:opacity-100',
                   )}
                 >
-                  <img src={img} alt="" draggable={false} className="h-full w-full object-cover" />
+                  <img src={img} alt="" draggable={false} className="h-full w-full object-contain" />
                 </button>
               ))}
             </div>

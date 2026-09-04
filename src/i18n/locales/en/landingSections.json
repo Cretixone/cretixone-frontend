@@ -55,6 +55,8 @@
   "frameShowcase": {
     "frameTypes": "Frame Types",
     "frameColors": "Frame Colors",
+    "prevSlide": "Previous",
+    "nextSlide": "Next",
     "inspiredByOman": "Inspired by Oman",
     "omanDescription": "From majestic mountains and golden deserts to historic forts and breathtaking coastlines, Oman represents a perfect balance of tradition, culture, and modern progress. Our journey is inspired by the country's rich heritage, remarkable architecture, and welcoming spirit."
   }

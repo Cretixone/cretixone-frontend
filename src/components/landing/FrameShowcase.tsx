@@ -5,6 +5,9 @@ import { useDirection } from '@/hooks/useDirection'
 import { localizedName } from '@/lib/localizedName'
 import { motion } from 'framer-motion'
 import { Swiper, SwiperSlide } from 'swiper/react'
+import type { Swiper as SwiperType } from 'swiper'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import {
   useFetchFrameColorsPublicQuery,
   useFetchFrameTypesPublicQuery,
@@ -12,33 +15,140 @@ import {
 
 import 'swiper/css'
 import { useLangStore } from '@/store/langStore'
+import omanSlides from '@/data/omanSlides.json'
 
 // Oman collage — each tile is ABSOLUTELY positioned (as a % of the collage
 // "frame") to reproduce the exact scatter + gaps from the design: a left
 // cluster, a standalone centre image, a gap, then a right cluster with the tall
 // image on the far edge. The frame repeats and scrolls infinitely right → left.
-// Real images live in /public/images/inspired-by-oman (swap for optimised
-// versions later — the current files are large). Reorder freely to change which
-// photo sits where.
-const OMAN = (f: string) => `/images/inspired-by-oman/${f}`
+//
+// The 9 positions/sizes below are the permanent layout — that part of the
+// design never changes. WHICH photo fills each slot does change over time:
+// `slides-chunks/` holds a large pool of photos (see src/data/omanSlides.json),
+// split into "chunks" of AT MOST 9 (never more — there are only 9 physical
+// tile slots). One chunk fills the slots at a time; every CHUNK_DURATION_MS
+// the marquee's scroll loop restarts, `useOmanChunk` below swaps in the next
+// chunk, so the swap lands on the loop boundary instead of mid-scroll.
+const SLIDES_DIR = '/images/inspired-by-oman/slides-chunks/'
+const slideSrc = (filename: string) => SLIDES_DIR + encodeURIComponent(filename)
+
+const TILES_PER_CHUNK = 9
+// Matches OmanMarquee's scroll `transition.duration` (seconds) below — the
+// two are kept in lockstep so the image swap always lands on a loop restart.
+const CHUNK_DURATION_MS = 20_000
+
+// Every photo appears EXACTLY ONCE across the whole rotation — no repeats,
+// ever. 102 isn't a multiple of 9, so the groups can't all be exactly 9;
+// rather than pad a short last group by reusing photos from group 1 (which
+// is a repeat, just a deferred one), the remainder is spread one-per-group
+// across the first few groups instead: with 102 photos that's
+// Math.ceil(102/9) = 12 groups, sizes [9,9,9,9,9,9,8,8,8,8,8,8] (6 nines +
+// 6 eights = 102). A group of 8 simply renders one fewer tile that cycle
+// (see OmanFrame) — a much smaller, once-in-12-cycles visual change than a
+// group showing photos already seen a few cycles ago.
+function buildChunks(pool: readonly string[], tilesPerChunk: number): string[][] {
+  const groupCount = Math.ceil(pool.length / tilesPerChunk)
+  const base = Math.floor(pool.length / groupCount)
+  const remainder = pool.length % groupCount
+  const chunks: string[][] = []
+  let offset = 0
+  for (let c = 0; c < groupCount; c++) {
+    const size = base + (c < remainder ? 1 : 0)
+    chunks.push(pool.slice(offset, offset + size).map(slideSrc))
+    offset += size
+  }
+  return chunks
+}
+
+const OMAN_CHUNKS: string[][] = buildChunks(omanSlides, TILES_PER_CHUNK)
+const CHUNK_COUNT = OMAN_CHUNKS.length
+
+// Module-level (not per-mount) so a URL is only ever handed to `new Image()`
+// once — remounting the section (e.g. navigating away and back) won't
+// re-trigger a network request for a photo the browser already cached.
+const preloadedUrls = new Set<string>()
+
+/**
+ * Fetches AND fully decodes every photo in a chunk, in parallel, without
+ * touching the DOM. `img.decode()` is the important part: just setting
+ * `.src` only warms the HTTP cache — the browser still has to decode the
+ * (often multi-MB, non-optimised) original photo into a paintable bitmap the
+ * first time it's actually displayed, which alone can be enough of a delay to
+ * show the tile's placeholder background before the photo pops in. Awaiting
+ * `decode()` here, ahead of time, means the decoded bitmap is already sitting
+ * in the browser's image cache by the time the chunk is swapped in — so
+ * setting `<img src>` paints immediately.
+ */
+function preloadChunk(chunkIndex: number): void {
+  for (const url of OMAN_CHUNKS[chunkIndex]!) {
+    if (preloadedUrls.has(url)) continue
+    preloadedUrls.add(url)
+    const img = new Image()
+    img.src = url
+    img.decode().catch(() => {
+      // A handful of older browsers (or a genuinely broken file) reject
+      // decode() — falling back to the plain "bytes are cached" preload is
+      // still strictly better than not preloading at all, so just let the
+      // real <img> load it normally when its turn comes.
+    })
+  }
+}
+
+/**
+ * Advances through the photo chunks on a timer, looping forever. Returns
+ * BOTH the current chunk and the one after it: the marquee (see
+ * OmanMarquee) renders two frame copies side by side at all times to fake an
+ * infinite scroll, so both are simultaneously ON SCREEN together, not shown
+ * one after the other — feeding them the same chunk would put the same 8-9
+ * photos in view twice at once. Chunks never overlap (buildChunks), so
+ * "current" and "next" are always a disjoint set of photos.
+ */
+function useOmanChunk(): { current: string[]; next: string[] } {
+  const [chunkIndex, setChunkIndex] = useState(0)
+
+  // Warm chunk N+1 and N+2 the whole time chunk N is current: N+1 is
+  // rendered immediately (as "next", alongside N) the moment N becomes
+  // current, so it must already be ready BEFORE that happens — it's N+2
+  // that this specific effect run actually buys lead time for for the cycle
+  // after next. (On first mount both N=0 and N+1=1 load "cold" regardless,
+  // same as any page's first paint — there's no earlier cycle to have
+  // preloaded them ahead of time.)
+  useEffect(() => {
+    preloadChunk((chunkIndex + 1) % CHUNK_COUNT)
+    preloadChunk((chunkIndex + 2) % CHUNK_COUNT)
+  }, [chunkIndex])
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setChunkIndex((i) => (i + 1) % CHUNK_COUNT)
+    }, CHUNK_DURATION_MS)
+    return () => clearInterval(id)
+  }, [])
+
+  return {
+    current: OMAN_CHUNKS[chunkIndex]!,
+    next: OMAN_CHUNKS[(chunkIndex + 1) % CHUNK_COUNT]!,
+  }
+}
+
 // `width` is the %-of-viewport used at ≥576px. `mw` is a FIXED pixel width used
 // on phones (<576px), where the collage becomes a fixed MOBILE_FRAME_W-wide band
 // (see below) — left/top/height stay as % so the scatter still lines up, only
 // the image widths switch to px. mw defaults track width × MOBILE_FRAME_W; tune
 // any of them freely.
-const OMAN_TILES: { src: string; left: string; top: string; width: string; height: string; mw: number }[] = [
+const OMAN_TILE_LAYOUT: { left: string; top: string; width: string; height: string; mw: number }[] = [
   // ── left cluster ──
-  { src: OMAN('29999408f8994556ce59a632f8675733cd39b6a2.jpg'), left: '0%', top: '7%', width: '19.2%', height: '50%', mw: 157 },   // castle (top-left)
-  { src: OMAN('03486307b5dd46d361550d5793ce1c533fb16af5.jpg'), left: '19.8%', top: '17.8%', width: '24.3%', height: '39%', mw: 199 }, // mountains + valley
-  { src: OMAN('4a5a9610c1ecbc52c9bd53475202e385b1a1a18e.jpg'), left: '6%', top: '58.3%', width: '19.2%', height: '45%', mw: 157 }, // turquoise wadi (bottom-left)
-  { src: OMAN('f475e911ce5cfe2d389e7eccb1fb9fe251ae6c21.jpg'), left: '25.8%', top: '58.2%', width: '18.2%', height: '30.2%', mw: 149 }, // Muscat gate
+  { left: '0%', top: '7%', width: '19.2%', height: '50%', mw: 157 },   // top-left
+  { left: '19.8%', top: '17.8%', width: '24.3%', height: '39%', mw: 199 },
+  { left: '6%', top: '58.3%', width: '19.2%', height: '45%', mw: 157 }, // bottom-left
+  { left: '25.8%', top: '58.2%', width: '18.2%', height: '30.2%', mw: 149 },
   // ── centre (standalone) ──
-  { src: OMAN('971278bacdad911d76d3422fd53dbdf3e11f78b2.jpg'), left: '44.6%', top: '26.2%', width: '15.9%', height: '51%', mw: 130 }, // winding road
+  { left: '44.6%', top: '26.2%', width: '15.9%', height: '51%', mw: 130 },
   // ── right cluster ──
-  { src: OMAN('7de1cfced9260d0ebe8fae7242e0e0c262baff21.jpg'), left: '61%', top: '19%', width: '15.1%', height: '42.1%', mw: 124 }, // waterfalls + pool
-  { src: OMAN('a34fe86058ae3579b15948c527eba7bd4b964a52.jpg'), left: '76.6%', top: '8%', width: '17.3%', height: '53.1%', mw: 142 },  // palm sunset (top-right tall)
-  { src: OMAN('f60421689be700bcf7261527154e84bccf39eef1.jpg'), left: '61%', top: '62.4%', width: '10%', height: '35%', mw: 82 },   // small waterfall
-  { src: OMAN('275c027383a7e6c21227aa2ba5ef68ac4816e214.jpg'), left: '71.6%', top: '62.4%', width: '17.9%', height: '27.4%', mw: 147 },   // fort + mountains
+  { left: '61%', top: '19%', width: '15.1%', height: '42.1%', mw: 124 },
+  { left: '76.6%', top: '8%', width: '17.3%', height: '53.1%', mw: 142 },  // top-right tall
+  { left: '61%', top: '62.4%', width: '10%', height: '35%', mw: 82 },
+  { left: '71.6%', top: '62.4%', width: '17.9%', height: '27.4%', mw: 147 },
 ]
 
 // ── Section heading ──────────────────────────────────────────────────────────
@@ -47,6 +157,99 @@ function Heading({ children }: { children: React.ReactNode }) {
     <h2 className="font-display md:text-5xl font-medium text-center tracking-tight text-brand-navy text-3xl">
       {children}
     </h2>
+  )
+}
+
+// ── Prev/next controls for a Swiper slider ───────────────────────────────────
+// Overlaid on the slider's left/right edges rather than below it — the two
+// showcase sliders have no accompanying label to sit next to (unlike
+// StackSlider's under-slider layout). Bound to `slidePrev`/`slideNext`
+// directly (not Swiper's own Navigation module) so the same pair of buttons
+// works for both sliders without per-instance CSS-selector wiring.
+// Physical position is swapped in RTL so the arrow that visually points
+// "backward" always steps backward, matching the mirrored reading direction.
+function SliderArrows({
+  swiper,
+  isRtl,
+}: {
+  /** The live Swiper instance (null until Swiper's onSwiper fires). */
+  swiper: SwiperType | null
+  isRtl: boolean
+}) {
+  const { t } = useTranslation('landingSections')
+  // Mirrors the instance's own isBeginning/isEnd/isLocked into state so the
+  // buttons actually re-render on each slide change and breakpoint switch —
+  // reading swiper.isBeginning directly wouldn't do that, since it's a plain
+  // property, not observable.
+  const [atStart, setAtStart] = useState(true)
+  const [atEnd, setAtEnd] = useState(false)
+  // Swiper's own flag for "every slide already fits in the view — there is
+  // nothing to slide to" (e.g. Frame Colors shows 6 per view at ≥1300px, so
+  // 6 or fewer colours total means this slider can never move). Hide the
+  // arrows entirely rather than just disabling them, since disabled still
+  // implies "there's more, you're just at the edge," which isn't true here.
+  const [locked, setLocked] = useState(false)
+
+  useEffect(() => {
+    if (!swiper) return
+    const sync = () => {
+      setAtStart(swiper.isBeginning)
+      setAtEnd(swiper.isEnd)
+      setLocked(swiper.isLocked)
+    }
+    sync()
+    swiper.on('slideChange', sync)
+    swiper.on('resize', sync)
+    // `breakpoint` is the important one: Swiper's onSwiper fires with the
+    // BASE config (slidesPerView: 1) still active — the 1300px:{slidesPerView:6}
+    // override, and the isLocked recheck that goes with it, is only applied
+    // moments later, in a separate step. Without this, the initial sync()
+    // above can catch a stale "not locked" (computed for slidesPerView: 1,
+    // which 6 items never fit into) that then never corrects itself.
+    swiper.on('breakpoint', sync)
+    swiper.on('lock', sync)
+    swiper.on('unlock', sync)
+    return () => {
+      swiper.off('slideChange', sync)
+      swiper.off('resize', sync)
+      swiper.off('breakpoint', sync)
+      swiper.off('lock', sync)
+      swiper.off('unlock', sync)
+    }
+  }, [swiper])
+
+  if (locked) return null
+
+  const goToStart = () => (isRtl ? swiper?.slideNext() : swiper?.slidePrev())
+  const goToEnd = () => (isRtl ? swiper?.slidePrev() : swiper?.slideNext())
+  // The physical start/end buttons swap which boundary disables them in RTL,
+  // same swap as goToStart/goToEnd above.
+  const startDisabled = isRtl ? atEnd : atStart
+  const endDisabled = isRtl ? atStart : atEnd
+
+  const btn =
+    'absolute top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-black/10 bg-white text-brand-navy shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition hover:bg-brand-navy hover:text-white sm:h-10 sm:w-10 disabled:pointer-events-none disabled:opacity-30 disabled:shadow-none disabled:hover:bg-white disabled:hover:text-brand-navy'
+  return (
+    <>
+      <button
+        type="button"
+        aria-label={t('frameShowcase.prevSlide')}
+        onClick={goToStart}
+        disabled={startDisabled}
+        className={cn(btn, '-left-2 sm:-left-4 lg:-left-5')}
+      >
+        <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+      </button>
+      <button
+        type="button"
+        aria-label={t('frameShowcase.nextSlide')}
+        onClick={goToEnd}
+        disabled={endDisabled}
+        className={cn(btn, '-right-2 sm:-right-4 lg:-right-5')}
+      >
+        <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
+      </button>
+    </>
   )
 }
 
@@ -129,10 +332,19 @@ function useIsMobile() {
 }
 
 function OmanFrame({
+  images,
   mobile,
   rtl = false,
   style,
 }: {
+  /**
+   * The current chunk's photo URLs, one per OMAN_TILE_LAYOUT slot in order.
+   * Usually 9; occasionally 8 (see buildChunks) — never more than
+   * OMAN_TILE_LAYOUT.length, and only ever sliced to `images.length` tile
+   * slots below, so a shorter chunk just renders one fewer tile rather than
+   * an empty/broken one or a repeated photo filling the gap.
+   */
+  images: string[]
   mobile: boolean
   rtl?: boolean
   style?: React.CSSProperties
@@ -142,7 +354,7 @@ function OmanFrame({
       className="relative h-[360px] shrink-0 md:h-[420px] lg:h-[688px]"
       style={{ width: mobile ? MOBILE_FRAME_W : '100vw', ...style }}
     >
-      {OMAN_TILES.map((t, i) => (
+      {OMAN_TILE_LAYOUT.slice(0, images.length).map((t, i) => (
         <div
           key={i}
           className="absolute overflow-hidden bg-black/5 [transform:translateZ(0)] [backface-visibility:hidden]"
@@ -154,7 +366,7 @@ function OmanFrame({
           }}
         >
           <img
-            src={t.src}
+            src={images[i]}
             alt=""
             aria-hidden
             decoding="async"
@@ -169,6 +381,10 @@ function OmanFrame({
 function OmanMarquee() {
   const mobile = useIsMobile()
   const isRtl = useLangStore((s) => s.isRtl)
+  // Two DIFFERENT (guaranteed non-overlapping) chunks — see useOmanChunk for
+  // why: both frame copies below are on screen at once, so they must never
+  // show the same photo set.
+  const { current, next } = useOmanChunk()
 
   const xAnimation = useMemo(() => {
     if (mobile) {
@@ -200,16 +416,19 @@ function OmanMarquee() {
         repeat: Infinity,
       }}
     >
+      {/* First-rendered copy is always the "current" chunk, second is
+          "next" — DOM order (not the isRtl branch) is what the scroll
+          animation above treats as first-in-view vs. scrolling-in-behind. */}
       <>
         {isRtl ? (
           <>
-            <OmanFrame mobile={mobile} style={overlapStyle} />
-            <OmanFrame mobile={mobile} />
+            <OmanFrame images={current} mobile={mobile} style={overlapStyle} />
+            <OmanFrame images={next} mobile={mobile} />
           </>
         ) : (
           <>
-            <OmanFrame mobile={mobile} />
-            <OmanFrame mobile={mobile} style={overlapStyle} />
+            <OmanFrame images={current} mobile={mobile} />
+            <OmanFrame images={next} mobile={mobile} style={overlapStyle} />
           </>
         )}
       </>
@@ -223,6 +442,10 @@ export default function FrameShowcase() {
   const isRtl = dir === 'rtl'
   const { data: frameTypes } = useFetchFrameTypesPublicQuery()
   const { data: frameColors } = useFetchFrameColorsPublicQuery()
+  // State (not a ref) so SliderArrows re-renders — and can react to
+  // slideChange events — once the Swiper instance becomes available.
+  const [frameTypesSwiper, setFrameTypesSwiper] = useState<SwiperType | null>(null)
+  const [frameColorsSwiper, setFrameColorsSwiper] = useState<SwiperType | null>(null)
 
   return (
     <section className="relative w-full overflow-hidden pt-16 md:pt-20">
@@ -234,10 +457,11 @@ export default function FrameShowcase() {
           {!!frameTypes?.length && (
             <>
               <Heading>{t('frameShowcase.frameTypes')}</Heading>
-              <div className="mt-9">
+              <div className="relative mt-9">
                 <Swiper
                   key={dir}
                   dir={dir}
+                  onSwiper={setFrameTypesSwiper}
                   slidesPerView={1}
                   spaceBetween={18}
                   grabCursor
@@ -259,6 +483,7 @@ export default function FrameShowcase() {
                     </SwiperSlide>
                   ))}
                 </Swiper>
+                <SliderArrows swiper={frameTypesSwiper} isRtl={isRtl} />
               </div>
             </>
           )}
@@ -267,10 +492,11 @@ export default function FrameShowcase() {
           {!!frameColors?.length && (
             <div className="mt-16 md:mt-20">
               <Heading>{t('frameShowcase.frameColors')}</Heading>
-              <div className="mt-9">
+              <div className="relative mt-9">
                 <Swiper
                   key={dir}
                   dir={dir}
+                  onSwiper={setFrameColorsSwiper}
                   slidesPerView={1}
                   spaceBetween={10}
                   grabCursor
@@ -295,6 +521,7 @@ export default function FrameShowcase() {
                     </SwiperSlide>
                   ))}
                 </Swiper>
+                <SliderArrows swiper={frameColorsSwiper} isRtl={isRtl} />
               </div>
             </div>
           )}

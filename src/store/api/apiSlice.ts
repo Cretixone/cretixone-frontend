@@ -13,6 +13,7 @@ import type {
   ApiMdf,
   ApiEffectCategory,
 } from '@/types/api'
+import localInteriors from '@/data/localInteriors.json'
 
 // ─── Custom Axios baseQuery for RTK Query ────────────────────────────────────
 //
@@ -346,13 +347,13 @@ export const apiSlice = createApi({
     }),
 
     // ── Interiors (type 50) ────────────────────────────────────────────────
+    // A fixed set of 10 scenes bundled with the app (images + full configs in
+    // src/data/localInteriors.json + public/images/scenes/interiors/) instead
+    // of a live call to frameit's /findScene — same shape CanvasStage already
+    // renders, so nothing downstream changed, only where the data comes from.
+    // Scenery (below) is untouched and still hits the live API.
     fetchInteriors: builder.query<ApiScene[], void>({
-      query: () => ({
-        url: '/findScene',
-        method: 'POST',
-        data: { type: 50 },
-      }),
-      transformResponse: (response: ApiResponse<ApiScene[]>) => response.data,
+      queryFn: () => ({ data: localInteriors as unknown as ApiScene[] }),
     }),
 
     // ── Scenery (type 32) ──────────────────────────────────────────────────

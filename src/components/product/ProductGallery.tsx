@@ -64,7 +64,7 @@ export function ProductGallery({
                     alt=""
                     loading="lazy"
                     draggable={false}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-contain"
                   />
                 </button>
               )
@@ -89,7 +89,7 @@ export function ProductGallery({
                   src={src}
                   alt={t('gallery.previewAlt')}
                   draggable={false}
-                  className="absolute inset-0 h-full w-full object-cover"
+                  className="absolute inset-0 h-full w-full object-contain"
                 />
                 <button
                   type="button"
