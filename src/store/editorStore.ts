@@ -257,16 +257,28 @@ export const useEditorStore = create<EditorState>((set) => ({
         : {}),
     })),
 
+  // Reset designZoom/frameOffset here for the same reason setFrameAspectRatio
+  // does: each scene fits the frame to its OWN `position` rect at zoom 1 (see
+  // CanvasStage's render) — a designZoom left over from mouse-wheel zooming
+  // (or a pan offset from dragging) on the PREVIOUS scene/no-background view
+  // then multiplies on top of the new scene's natural fit size, which is
+  // what made the frame render "very big" right after picking an interior.
   setSelectedInterior: (scene) => set({
     selectedInterior: scene,
     selectedScenery: null,
     backgroundMode: scene ? 'interior' : null,
+    designZoom: 1,
+    frameOffsetX: 0,
+    frameOffsetY: 0,
   }),
 
   setSelectedScenery: (scene) => set({
     selectedScenery: scene,
     selectedInterior: null,
     backgroundMode: scene ? 'scenery' : null,
+    designZoom: 1,
+    frameOffsetX: 0,
+    frameOffsetY: 0,
   }),
 
   setSelectedEffect: (item) => set({ selectedEffect: item }),
