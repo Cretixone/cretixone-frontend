@@ -189,9 +189,22 @@ export default function Navbar() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
       >
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-5 py-4 md:px-10 md:py-5">
-          {/* Socials */}
-          <div className="flex items-center gap-2">
+        <div
+          className={cn(
+            // Below 575px: only 2 tracks (logo, utilities) — socials are
+            // hidden there, so nothing is ever placed in a 3rd column to
+            // begin with, and the logo naturally lands left, utilities
+            // right. At 575px+: 3 tracks, all with content again, so the
+            // logo naturally auto-places into the centre one. Auto-placement
+            // just follows DOM order into however many columns are active at
+            // each breakpoint — no explicit column assignment needed for
+            // either layout.
+            'mx-auto grid max-w-[1400px] grid-cols-[auto_1fr] items-center gap-x-3 px-5 py-4',
+            'min-[575px]:grid-cols-[1fr_auto_1fr] md:px-10 md:py-5',
+          )}
+        >
+          {/* Socials — already duplicated in the footer, so hidden below 575px. */}
+          <div className="hidden items-center gap-2 min-[575px]:flex">
             {SOCIALS.map(({ Icon, label, href }) => (
               <motion.a
                 key={label}
@@ -207,11 +220,14 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* Logo center */}
-          <CretixoneLogo />
+          {/* Logo — left-aligned below 575px (own right margin for breathing
+              room before the utilities column) since it isn't sharing the
+              row with a matching socials column there to balance a centred
+              look; centred at 575px+ once that column is back. */}
+          <CretixoneLogo className="mr-4 min-[575px]:mr-0 min-[575px]:justify-self-center" />
 
           {/* Right utilities */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 justify-self-end">
             <LanguageSwitcher />
             <button
               type="button"
