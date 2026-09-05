@@ -767,10 +767,34 @@ export default function CanvasStage({
     }
 
     // ── 2. Design group zoom + position ─────────────────────────────────
+    // Pivots around the CANVAS centre by default (a point at local (cx,cy)
+    // maps to screen (cx,cy) at any zoom — the standard "zoom from centre"
+    // formula) — correct for the no-background case, where the frame is
+    // itself fit centred on (cx,cy) below.
+    //
+    // But with an interior applied, the frame is instead fit to sit inside
+    // that scene's own `position` rect (e.g. on a console table, usually
+    // OFF-CENTRE in the photo) — pivoting from the canvas centre in that case
+    // scales the frame away from its anchored spot on every zoom step,
+    // since only content already AT (cx,cy) stays put under this transform;
+    // everything else drifts outward/inward proportional to zoom. That drift
+    // is what eventually pushes the frame outside the interior's intended
+    // area. Pivoting from the position rect's own centre instead keeps the
+    // frame anchored to that spot in the room at any zoom level — it only
+    // grows/shrinks in place, exactly like scaling a real object sitting
+    // there would look.
+    const earlyInteriorPos = (bgMode === 'interior' && interior?.position) ? interior.position : null
+    let zoomPivotX = cx
+    let zoomPivotY = cy
+    if (earlyInteriorPos && bgSceneW > 0) {
+      zoomPivotX = bgOffX + (earlyInteriorPos.x + earlyInteriorPos.w / 2) * bgScale
+      zoomPivotY = bgOffY + (earlyInteriorPos.y + earlyInteriorPos.h / 2) * bgScale
+    }
+
     const zoom = s.designZoom
     L.designGroup.scale.set(zoom)
-    L.designGroup.x = cx - cx * zoom + s.frameOffsetX
-    L.designGroup.y = cy - cy * zoom + s.frameOffsetY
+    L.designGroup.x = zoomPivotX - zoomPivotX * zoom + s.frameOffsetX
+    L.designGroup.y = zoomPivotY - zoomPivotY * zoom + s.frameOffsetY
 
     // ── Compute frame dimensions ────────────────────────────────────────
     // Three modes — the FRAME OUTER is always drawn at the chosen source
@@ -783,7 +807,7 @@ export default function CanvasStage({
     //     otherwise). The cm dimensions only shape the PICTURE rect
     //     INSIDE the opening — the picture rect is fit at width:height
     //     aspect, top-anchored, and the mat fills the surrounding gap.
-    const interiorPos = (bgMode === 'interior' && interior?.position) ? interior.position : null
+    const interiorPos = earlyInteriorPos
     const isCustom = s.frameAspectRatio === 'custom'
     // Square is "wanted" by either the Square radio OR Custom mode with
     // exactly equal width × height (e.g. 40 × 40 cm). When the admin
@@ -885,8 +909,11 @@ export default function CanvasStage({
     if (interiorPos && bgSceneW > 0) {
       const posCanvasW = interiorPos.w * bgScale
       const posCanvasH = interiorPos.h * bgScale
-      const posCenterX = bgOffX + (interiorPos.x + interiorPos.w / 2) * bgScale
-      const posCenterY = bgOffY + (interiorPos.y + interiorPos.h / 2) * bgScale
+      // Same point the zoom pivot above uses — the frame is drawn centred
+      // exactly on the pivot, which is what keeps it anchored there at any
+      // zoom level instead of drifting off it.
+      const posCenterX = zoomPivotX
+      const posCenterY = zoomPivotY
       const fitByW = posCanvasW / aspectRatio <= posCanvasH
       outerW = fitByW ? posCanvasW : posCanvasH * aspectRatio
       outerH = fitByW ? posCanvasW / aspectRatio : posCanvasH

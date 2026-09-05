@@ -185,14 +185,6 @@ function SceneThumb({ item, selected, onClick }: {
       }}
     >
       <img src={bgUrl} alt={t('panel.sceneAlt', { id: item.id })} className="h-full w-full object-cover" loading="lazy" draggable={false} />
-      {item.isVip && (
-        <div
-          className="absolute right-1 top-1 rounded-sm px-1 py-0.5 text-[7px] font-bold leading-none"
-          style={{ background: 'var(--ed-accent)', color: 'var(--ed-accent-fg)' }}
-        >
-          {t('panel.badgePro')}
-        </div>
-      )}
     </button>
   )
 }
