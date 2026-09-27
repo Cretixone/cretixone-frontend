@@ -12,6 +12,7 @@ export interface TeamMember {
   position: string
   positionAr: string | null
   email: string | null
+  linkedin: string | null
   image: string | null
 }
 

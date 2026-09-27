@@ -112,6 +112,13 @@
     },
     "empty": "Team members coming soon."
   },
+  "stock": {
+    "breadcrumb": {
+      "home": "Home",
+      "aria": "Breadcrumb",
+      "current": "Stock Photo"
+    }
+  },
   "testimonials": {
     "breadcrumb": {
       "home": "Home",

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { ChevronRight, Home, Loader2, Mail } from 'lucide-react'
+import { ChevronRight, Home, Linkedin, Loader2, Mail } from 'lucide-react'
 import { motion, type Variants } from 'framer-motion'
 import Navbar, { PillNav } from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
@@ -204,6 +204,17 @@ function TeamCard({ member, isRtl }: { member: TeamMember; isRtl: boolean }) {
         >
           <Mail className="h-3 w-3 shrink-0" strokeWidth={2} />
           <span className="break-all">{member.email}</span>
+        </a>
+      )}
+      {member.linkedin && (
+        <a
+          href={member.linkedin}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="LinkedIn"
+          className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-foreground/45 transition hover:text-brand-gold md:text-[12px]"
+        >
+          <Linkedin className="h-4 w-4 shrink-0" strokeWidth={2} />
         </a>
       )}
     </motion.div>

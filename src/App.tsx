@@ -31,6 +31,7 @@ const AboutPage = lazy(() => import('@/pages/AboutPage'))
 const ProductsPage = lazy(() => import('@/pages/ProductsPage'))
 const ProductDetailPage = lazy(() => import('@/pages/ProductDetailPage'))
 const TeamPage = lazy(() => import('@/pages/TeamPage'))
+const StockPage = lazy(() => import('@/pages/StockPage'))
 const TestimonialsPage = lazy(() => import('@/pages/TestimonialsPage'))
 const CustomMirrorsPage = lazy(() => import('@/pages/CustomMirrorsPage'))
 const CustomPrintsPage = lazy(() => import('@/pages/CustomPrintsPage'))
@@ -119,6 +120,7 @@ export default function App() {
         <Route path="/privacy" element={<PrivacyPolicyPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/team" element={<TeamPage />} />
+        <Route path="/stock" element={<StockPage />} />
         <Route path="/testimonials" element={<TestimonialsPage />} />
         <Route path="/custom-mirrors" element={<CustomMirrorsPage />} />
         {/* Mirrors are made to order — the page CTAs collect an inquiry. */}

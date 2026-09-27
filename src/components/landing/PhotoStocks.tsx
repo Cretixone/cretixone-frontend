@@ -11,7 +11,12 @@ const STOCKS_VECTOR = '/images/svg/stocks-vector.svg'
 // 1400px-centered content area on wide viewports, while never going below 2.5rem.
 //   max(2.5rem, (100vw - 1400px) / 2 + 2.5rem)
 
-export default function PhotoStocks() {
+interface PhotoStocksProps {
+  /** The landing-page teaser shows the hero photo; the dedicated /stock page doesn't. */
+  showImage?: boolean
+}
+
+export default function PhotoStocks({ showImage = true }: PhotoStocksProps) {
   const { t } = useTranslation('landingSections')
   const isRtl = useLangStore((s) => s.isRtl)
   const CONTENT_LEFT_PAD = useMemo(
@@ -22,7 +27,13 @@ export default function PhotoStocks() {
   return (
     <section
       aria-labelledby="photostocks-title"
-      className="relative w-full overflow-hidden bg-white pb-20 md:pb-24 lg:pb-28"
+      className={cn('relative w-full  bg-white pb-20 md:pb-24 lg:pb-28', {
+        // The vector is sized/centred for the two-column layout's ~587px-tall
+        // section. Without the image column the section would otherwise
+        // shrink to the text's height, clipping the vector top and bottom
+        // against overflow-hidden — so give it a floor to grow into instead.
+        'md:min-h-[420px] lg:min-h-[480px] xl:min-h-[600px]': !showImage,
+      })}
     >
       <motion.img
         src={STOCKS_VECTOR}
@@ -33,14 +44,25 @@ export default function PhotoStocks() {
         // the *element's* width, which jumps with the responsive w-[…] classes
         // (460 → 560 → 678) — that drifted it further right the wider it got,
         // sliding it under the hero image (which sits above it at z-10).
-        initial={{ opacity: 0, scale: 0.92, x: '-50%', y: '-50%' }}
-        whileInView={{ opacity: 1, scale: 1, x: '-50%', y: '-50%' }}
+        //
+        // On the no-image /stock page it's anchored from the top instead
+        // (y: 0%) rather than vertically centred, so it sits higher in the
+        // section instead of dead-centre.
+        initial={{ opacity: 0, scale: 0.92, x: '-50%', y: showImage ? '-50%' : '0%' }}
+        whileInView={{ opacity: 1, scale: 1, x: '-50%', y: showImage ? '-50%' : '0%' }}
         viewport={{ once: true, margin: '-80px' }}
         transition={{ duration: 1, ease: 'easeOut', delay: 0.1 }}
-        className="pointer-events-none absolute left-1/2 top-1/2 z-0 hidden h-auto w-[460px] md:block lg:w-[560px] xl:w-[678px]"
+        className={cn(
+          'pointer-events-none absolute left-1/2 z-0 hidden h-auto w-[460px] md:block lg:w-[560px] xl:w-[678px]',
+          showImage ? 'top-1/2' : 'top-[-100px]',
+        )}
       />
 
-      <div className="relative z-10 grid grid-cols-1 items-center gap-12 md:grid-cols-2 md:gap-10 lg:gap-16">
+      <div
+        className={cn('relative z-10 grid grid-cols-1 items-center gap-12', {
+          'md:grid-cols-2 md:gap-10 lg:gap-16': showImage,
+        })}
+      >
         <motion.div
           className={`relative px-6 ${CONTENT_LEFT_PAD}`}
           initial={{ opacity: 0, x: -40 }}
@@ -88,27 +110,29 @@ export default function PhotoStocks() {
             </motion.p>
           </motion.div>
         </motion.div>
-        
-        <motion.div
-          className="relative px-6 md:px-0"
-          initial={{ opacity: 0, x: 40 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.9, ease: 'easeOut', delay: 0.1 }}
-        >
-          <div
-            className={cn(
-              'ml-auto aspect-[666/587] md:rounded-l-[32px] w-full max-w-[666px] overflow-hidden bg-neutral-200 bg-cover bg-center shadow-[0_24px_50px_-20px_rgba(0,0,0,0.25)] ring-1 ring-black/5 rounded-[28px]',
-              {
-                'md:rounded-l-[32px]': isRtl,
-                'md:rounded-r-none': !isRtl,
-              }
-            )}
-            style={{ backgroundImage: `url(${HERO_IMAGE})` }}
-            role="img"
-            aria-label={t('photoStocks.imageAlt')}
-          />
-        </motion.div>
+
+        {showImage && (
+          <motion.div
+            className="relative px-6 md:px-0"
+            initial={{ opacity: 0, x: 40 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: '-80px' }}
+            transition={{ duration: 0.9, ease: 'easeOut', delay: 0.1 }}
+          >
+            <div
+              className={cn(
+                'ml-auto aspect-[666/587] md:rounded-l-[32px] w-full max-w-[666px] overflow-hidden bg-neutral-200 bg-cover bg-center shadow-[0_24px_50px_-20px_rgba(0,0,0,0.25)] ring-1 ring-black/5 rounded-[28px]',
+                {
+                  'md:rounded-l-[32px]': isRtl,
+                  'md:rounded-r-none': !isRtl,
+                }
+              )}
+              style={{ backgroundImage: `url(${HERO_IMAGE})` }}
+              role="img"
+              aria-label={t('photoStocks.imageAlt')}
+            />
+          </motion.div>
+        )}
       </div>
     </section>
   )

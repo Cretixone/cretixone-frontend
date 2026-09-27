@@ -15,6 +15,7 @@ const TITLES: Record<string, string> = {
   '/': 'Custom Picture Frames & Printing in Oman',
   '/about': 'About Us',
   '/team': 'Our Team',
+  '/stock': 'Stock Photo',
   '/testimonials': 'Customer Testimonials',
   '/terms': 'Terms & Conditions',
   '/privacy': 'Privacy Policy',

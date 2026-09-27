@@ -139,7 +139,7 @@ function AccountButton() {
 const NAV_LINKS = [
   { key: 'nav.allFrames', href: '/products' },
   { key: 'nav.customPrints', href: '/custom-prints' },
-  { key: 'nav.stockPhoto', href: '#stock' },
+  { key: 'nav.stockPhoto', href: '/stock' },
   { key: 'nav.customMirror', href: '/custom-mirrors' },
   { key: 'nav.gifts', href: '/gifts' },
   { key: 'nav.about', href: '/about' },

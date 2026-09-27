@@ -112,6 +112,13 @@
     },
     "empty": "أعضاء الفريق قريباً."
   },
+  "stock": {
+    "breadcrumb": {
+      "home": "الرئيسية",
+      "aria": "مسار التنقل",
+      "current": "صور جاهزة"
+    }
+  },
   "testimonials": {
     "breadcrumb": {
       "home": "الرئيسية",
